@@ -1,14 +1,15 @@
-import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sidebar } from "@/components/sidebar";
 import { ConnectionDialog } from "@/components/connection-dialog";
 import { TableViewer } from "@/components/table-viewer";
 import { QueryEditor } from "@/components/query-editor";
+import { AIChat } from "@/components/ai-chat";
 import { WelcomeScreen } from "@/components/welcome-screen";
 import { CommandPalette } from "@/components/command-palette";
 import { PasswordPromptDialog } from "@/components/password-prompt-dialog";
-import { useConnectionStore } from "@/lib/store";
+import { useConnectionStore, useAIQueryStore } from "@/lib/store";
 import type { SavedConnection } from "@/lib/types";
 
 export const Route = createFileRoute("/")({
@@ -20,6 +21,10 @@ function App() {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [passwordPromptConnection, setPasswordPromptConnection] = useState<SavedConnection | null>(null);
   const connection = useConnectionStore((s) => s.connection);
+  
+  // Active tab from store for cross-component navigation
+  const activeTab = useAIQueryStore((s) => s.activeTab);
+  const setActiveTab = useAIQueryStore((s) => s.setActiveTab);
 
   const handleSelectSavedConnection = (savedConnection: SavedConnection) => {
     // If it's a connection string, it has the password embedded, so connect directly
@@ -62,7 +67,7 @@ function App() {
       <Sidebar />
 
       <main className="flex flex-1 flex-col overflow-hidden">
-        <Tabs defaultValue="data" className="flex h-full flex-col">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex h-full flex-col">
           <div className="border-b border-zinc-800 px-4">
             <TabsList className="h-12 bg-transparent">
               <TabsTrigger
@@ -77,6 +82,12 @@ function App() {
               >
                 Query
               </TabsTrigger>
+              <TabsTrigger
+                value="ai"
+                className="data-[state=active]:bg-zinc-800"
+              >
+                AI Assistant
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -86,6 +97,10 @@ function App() {
 
           <TabsContent value="query" className="mt-0 flex-1 overflow-hidden">
             <QueryEditor />
+          </TabsContent>
+
+          <TabsContent value="ai" className="mt-0 flex-1 overflow-hidden">
+            <AIChat />
           </TabsContent>
         </Tabs>
       </main>

@@ -8,6 +8,7 @@ A modern, lightweight PostgreSQL client built with Tauri, React, and Rust.
 - **Table Browser** - Browse schemas and tables with row counts
 - **Data Viewer** - Paginated table data with column types and primary key indicators
 - **Query Editor** - Execute custom SQL queries with Cmd+Enter
+- **AI Assistant** - Natural language interface to explore your database (powered by GPT-4.1)
 - **CRUD Operations**
   - Add rows with smart defaults for SERIAL/auto-increment columns
   - Edit rows via right-click context menu
@@ -19,6 +20,7 @@ A modern, lightweight PostgreSQL client built with Tauri, React, and Rust.
 - **Frontend**: React, TypeScript, TailwindCSS, shadcn/ui
 - **Backend**: Rust, Tauri v2
 - **Database**: PostgreSQL via tokio-postgres
+- **AI**: OpenAI GPT-4.1 with function calling
 
 ## Getting Started
 
@@ -76,6 +78,22 @@ Right-click on any cell to:
 1. Switch to the "Query" tab
 2. Write your SQL
 3. Press Cmd+Enter (or Ctrl+Enter) to execute
+
+### AI Assistant
+
+The AI Assistant lets you explore your database using natural language:
+
+1. Switch to the "AI Assistant" tab
+2. Enter your OpenAI API key (stored locally, required once)
+3. Ask questions like:
+   - "What tables do I have?"
+   - "Show me the schema for the users table"
+   - "Find the top 10 orders by amount"
+   - "How many users signed up last month?"
+
+The AI can only read data (SELECT queries) - it cannot modify your database.
+
+**Note:** Requires an OpenAI API key with access to GPT-4.1.
 
 ## Keyboard Shortcuts
 

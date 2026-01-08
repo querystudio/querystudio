@@ -1,5 +1,13 @@
 import { useState } from "react";
-import { Key, ChevronLeft, ChevronRight, Plus, Copy, Pencil, Trash2 } from "lucide-react";
+import {
+  Key,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Copy,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import {
   Table,
   TableBody,
@@ -28,11 +36,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { AddRowSheet } from "@/components/add-row-sheet";
 import { EditRowSheet } from "@/components/edit-row-sheet";
 import { useConnectionStore } from "@/lib/store";
-import { useTableData, useTableColumns, useTableCount, useDeleteRow } from "@/lib/hooks";
+import {
+  useTableData,
+  useTableColumns,
+  useTableCount,
+  useDeleteRow,
+} from "@/lib/hooks";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { ColumnInfo } from "@/lib/types";
@@ -45,16 +57,22 @@ export function TableViewer() {
   const [page, setPage] = useState(0);
   const [addRowOpen, setAddRowOpen] = useState(false);
   const [editRowOpen, setEditRowOpen] = useState(false);
-  const [editRowData, setEditRowData] = useState<Record<string, unknown> | null>(null);
+  const [editRowData, setEditRowData] = useState<Record<
+    string,
+    unknown
+  > | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deleteRowData, setDeleteRowData] = useState<Record<string, unknown> | null>(null);
+  const [deleteRowData, setDeleteRowData] = useState<Record<
+    string,
+    unknown
+  > | null>(null);
 
   const connectionId = connection?.id ?? null;
 
   const { data: columns, isLoading: columnsLoading } = useTableColumns(
     connectionId,
     selectedTable?.schema ?? null,
-    selectedTable?.name ?? null
+    selectedTable?.name ?? null,
   );
 
   const { data: tableData, isLoading: dataLoading } = useTableData(
@@ -62,13 +80,13 @@ export function TableViewer() {
     selectedTable?.schema ?? null,
     selectedTable?.name ?? null,
     PAGE_SIZE,
-    page * PAGE_SIZE
+    page * PAGE_SIZE,
   );
 
   const { data: totalCount } = useTableCount(
     connectionId,
     selectedTable?.schema ?? null,
-    selectedTable?.name ?? null
+    selectedTable?.name ?? null,
   );
 
   const deleteRow = useDeleteRow(connectionId ?? "");
@@ -95,7 +113,10 @@ export function TableViewer() {
     return String(value);
   };
 
-  const rowToRecord = (row: unknown[], cols: ColumnInfo[]): Record<string, unknown> => {
+  const rowToRecord = (
+    row: unknown[],
+    cols: ColumnInfo[],
+  ): Record<string, unknown> => {
     const record: Record<string, unknown> = {};
     cols.forEach((col, i) => {
       record[col.name] = row[i];
@@ -227,7 +248,7 @@ export function TableViewer() {
         </div>
       </div>
 
-      <ScrollArea className="flex-1">
+      <div className="flex-1 overflow-auto">
         <div className="min-w-max">
           <Table>
             <TableHeader>
@@ -254,11 +275,16 @@ export function TableViewer() {
               {isLoading ? (
                 Array.from({ length: 10 }).map((_, i) => (
                   <TableRow key={i} className="border-zinc-800">
-                    {Array.from({ length: columns?.length || 5 }).map((_, j) => (
-                      <TableCell key={j} className="border-r border-zinc-800 last:border-r-0">
-                        <Skeleton className="h-4 w-full" />
-                      </TableCell>
-                    ))}
+                    {Array.from({ length: columns?.length || 5 }).map(
+                      (_, j) => (
+                        <TableCell
+                          key={j}
+                          className="border-r border-zinc-800 last:border-r-0"
+                        >
+                          <Skeleton className="h-4 w-full" />
+                        </TableCell>
+                      ),
+                    )}
                   </TableRow>
                 ))
               ) : tableData?.rows.length === 0 ? (
@@ -284,7 +310,7 @@ export function TableViewer() {
                             <TableCell
                               className={cn(
                                 "max-w-xs truncate border-r border-zinc-800 font-mono text-xs last:border-r-0 cursor-default",
-                                isNull && "text-zinc-600 italic"
+                                isNull && "text-zinc-600 italic",
                               )}
                               title={formatValue(cell)}
                             >
@@ -292,7 +318,9 @@ export function TableViewer() {
                             </TableCell>
                           </ContextMenuTrigger>
                           <ContextMenuContent>
-                            <ContextMenuItem onClick={() => handleCopyCell(cell)}>
+                            <ContextMenuItem
+                              onClick={() => handleCopyCell(cell)}
+                            >
                               <Copy className="h-4 w-4" />
                               Copy cell content
                             </ContextMenuItem>
@@ -318,8 +346,7 @@ export function TableViewer() {
             </TableBody>
           </Table>
         </div>
-        <ScrollBar orientation="horizontal" />
-      </ScrollArea>
+      </div>
 
       {connectionId && columns && (
         <>
@@ -340,12 +367,16 @@ export function TableViewer() {
             columns={columns}
             rowData={editRowData ?? {}}
           />
-          <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialog
+            open={deleteDialogOpen}
+            onOpenChange={setDeleteDialogOpen}
+          >
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Delete Row</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Are you sure you want to delete this row? This action cannot be undone.
+                  Are you sure you want to delete this row? This action cannot
+                  be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>

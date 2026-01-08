@@ -1,7 +1,9 @@
+import { useEffect, useRef } from "react";
 import { Database, Plus, Server } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useSavedConnections } from "@/lib/hooks";
+import { getLastConnectionId } from "@/lib/store";
 import type { SavedConnection } from "@/lib/types";
 
 interface WelcomeScreenProps {
@@ -11,6 +13,21 @@ interface WelcomeScreenProps {
 
 export function WelcomeScreen({ onNewConnection, onSelectConnection }: WelcomeScreenProps) {
   const { data: savedConnections, isLoading } = useSavedConnections();
+  const autoConnectAttempted = useRef(false);
+
+  // Auto-connect to last connection
+  useEffect(() => {
+    if (isLoading || autoConnectAttempted.current) return;
+    autoConnectAttempted.current = true;
+    
+    const lastConnectionId = getLastConnectionId();
+    if (lastConnectionId && savedConnections) {
+      const lastConnection = savedConnections.find(c => c.id === lastConnectionId);
+      if (lastConnection) {
+        onSelectConnection(lastConnection);
+      }
+    }
+  }, [isLoading, savedConnections, onSelectConnection]);
 
   const getConnectionDescription = (connection: SavedConnection) => {
     if ("connection_string" in connection.config) {

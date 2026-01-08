@@ -23,6 +23,45 @@ export function useTableColumns(
   });
 }
 
+// Fetch columns for all tables (for autocomplete)
+export function useAllTableColumns(
+  connectionId: string | null,
+  tables: { schema: string; name: string }[]
+) {
+  return useQuery({
+    queryKey: ["allColumns", connectionId, tables.map(t => `${t.schema}.${t.name}`).join(",")],
+    queryFn: async () => {
+      const columnsMap: Record<string, { name: string; dataType: string; tableName: string; schema: string }[]> = {};
+      
+      // Fetch columns for all tables in parallel (batched)
+      const results = await Promise.all(
+        tables.map(async (table) => {
+          try {
+            const columns = await api.getTableColumns(connectionId!, table.schema, table.name);
+            return { table, columns };
+          } catch {
+            return { table, columns: [] };
+          }
+        })
+      );
+      
+      for (const { table, columns } of results) {
+        const key = `${table.schema}.${table.name}`;
+        columnsMap[key] = columns.map(col => ({
+          name: col.name,
+          dataType: col.data_type,
+          tableName: table.name,
+          schema: table.schema,
+        }));
+      }
+      
+      return columnsMap;
+    },
+    enabled: !!connectionId && tables.length > 0,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+}
+
 export function useTableData(
   connectionId: string | null,
   schema: string | null,
