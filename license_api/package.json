@@ -1,7 +1,13 @@
 {
-  "name": "license_api",
+  "name": "@querystudio/license_api",
+  "version": "0.0.1",
   "module": "src/index.ts",
   "type": "module",
+  "scripts": {
+    "dev": "bun --watch .",
+    "build": "bun build --compile --minify . --outfile app",
+    "start": "./app"
+  },
   "devDependencies": {
     "@types/bun": "latest"
   },

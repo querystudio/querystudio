@@ -5,6 +5,10 @@ import type {
   TableInfo,
   ColumnInfo,
   QueryResult,
+  StoredLicense,
+  ValidateLicenseResponse,
+  ActivateLicenseResponse,
+  DeactivateLicenseResponse,
 } from "./types";
 
 export const api = {
@@ -51,4 +55,20 @@ export const api = {
 
   deleteSavedConnection: (id: string) =>
     invoke<void>("delete_saved_connection", { id }),
+
+  // License API
+  getLicenseStatus: () =>
+    invoke<StoredLicense | null>("get_license_status"),
+
+  validateLicense: (licenseKey: string) =>
+    invoke<ValidateLicenseResponse>("validate_license", { licenseKey }),
+
+  activateLicense: (licenseKey: string) =>
+    invoke<ActivateLicenseResponse>("activate_license", { licenseKey }),
+
+  deactivateLicense: () =>
+    invoke<DeactivateLicenseResponse>("deactivate_license"),
+
+  revalidateLicense: () =>
+    invoke<boolean>("revalidate_license"),
 };

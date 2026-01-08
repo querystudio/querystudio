@@ -261,3 +261,59 @@ export function useTestConnection() {
     mutationFn: (config: ConnectionConfig) => api.testConnection(config),
   });
 }
+
+// ============================================================================
+// License Hooks
+// ============================================================================
+
+export function useLicenseStatus() {
+  return useQuery({
+    queryKey: ["licenseStatus"],
+    queryFn: () => api.getLicenseStatus(),
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    retry: false,
+  });
+}
+
+export function useValidateLicense() {
+  return useMutation({
+    mutationFn: (licenseKey: string) => api.validateLicense(licenseKey),
+  });
+}
+
+export function useActivateLicense() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (licenseKey: string) => api.activateLicense(licenseKey),
+    onSuccess: (result) => {
+      if (result.success) {
+        queryClient.invalidateQueries({ queryKey: ["licenseStatus"] });
+      }
+    },
+  });
+}
+
+export function useDeactivateLicense() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => api.deactivateLicense(),
+    onSuccess: (result) => {
+      if (result.success) {
+        queryClient.invalidateQueries({ queryKey: ["licenseStatus"] });
+      }
+    },
+  });
+}
+
+export function useRevalidateLicense() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => api.revalidateLicense(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["licenseStatus"] });
+    },
+  });
+}

@@ -8,10 +8,12 @@ import { TableViewer } from "@/components/table-viewer";
 import { QueryEditor } from "@/components/query-editor";
 import { AIChat } from "@/components/ai-chat";
 import { WelcomeScreen } from "@/components/welcome-screen";
+import { LicenseScreen } from "@/components/license-screen";
 import { CommandPalette } from "@/components/command-palette";
 import { PasswordPromptDialog } from "@/components/password-prompt-dialog";
 import { useConnectionStore, useAIQueryStore } from "@/lib/store";
 import { useGlobalShortcuts } from "@/lib/use-global-shortcuts";
+import { useLicenseStatus } from "@/lib/hooks";
 import type { SavedConnection } from "@/lib/types";
 
 export const Route = createFileRoute("/")({
@@ -23,6 +25,10 @@ function App() {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [passwordPromptConnection, setPasswordPromptConnection] = useState<SavedConnection | null>(null);
   const connection = useConnectionStore((s) => s.connection);
+  
+  // License status check
+  const { data: licenseStatus, isLoading: licenseLoading, refetch: refetchLicense } = useLicenseStatus();
+  const isLicensed = !!licenseStatus;
   
   // Active tab from store for cross-component navigation
   const activeTab = useAIQueryStore((s) => s.activeTab);
@@ -47,6 +53,23 @@ function App() {
       setPasswordPromptConnection(savedConnection);
     }
   };
+
+  // Show loading state while checking license
+  if (licenseLoading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show license screen if not licensed
+  if (!isLicensed) {
+    return <LicenseScreen onLicenseActivated={() => refetchLicense()} />;
+  }
 
   if (!connection) {
     return (

@@ -48,3 +48,51 @@ export interface QueryResult {
   rows: unknown[][];
   row_count: number;
 }
+
+// ============================================================================
+// License Types
+// ============================================================================
+
+export interface LicenseInfo {
+  id: string;
+  key: string;
+  displayKey: string;
+  status: string;
+  customerId: string;
+  email: string;
+  customerName?: string;
+  activationsCount: number;
+  maxActivations?: number;
+  usage: number;
+  maxUsage?: number;
+  validations: number;
+  expiresAt?: string;
+  createdAt: string;
+  benefitId: string;
+}
+
+export interface StoredLicense {
+  licenseKey: string;
+  activationId: string;
+  deviceId: string;
+  licenseInfo: LicenseInfo;
+  validatedAt: string;
+}
+
+export interface ValidateLicenseResponse {
+  valid: boolean;
+  license?: LicenseInfo;
+  error?: string;
+}
+
+export interface ActivateLicenseResponse {
+  success: boolean;
+  activationId?: string;
+  license?: LicenseInfo;
+  error?: string;
+}
+
+export interface DeactivateLicenseResponse {
+  success: boolean;
+  error?: string;
+}

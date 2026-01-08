@@ -1,8 +1,13 @@
 mod database;
+mod license;
 mod queries;
 mod storage;
 
 use database::{ColumnInfo, ConnectionConfig, ConnectionManager, QueryResult, TableInfo};
+use license::{
+    ActivateLicenseResponse, DeactivateLicenseResponse, LicenseManager, LicenseState,
+    StoredLicense, ValidateLicenseResponse,
+};
 use storage::{SavedConnection, SavedConnections};
 use std::sync::Arc;
 use tauri::{
@@ -105,13 +110,99 @@ async fn delete_saved_connection(app_handle: AppHandle, id: String) -> Result<()
     storage::remove_connection(&app_handle, &id)
 }
 
+// ============================================================================
+// License Commands
+// ============================================================================
+
+#[tauri::command]
+async fn get_license_status(
+    app_handle: AppHandle,
+    state: State<'_, LicenseState>,
+) -> Result<Option<StoredLicense>, String> {
+    // First check in-memory state
+    if let Some(license) = state.get_license() {
+        return Ok(Some(license));
+    }
+    
+    // Try to load from disk
+    if let Ok(Some(license)) = storage::load_license(&app_handle) {
+        state.set_license(license.clone());
+        return Ok(Some(license));
+    }
+    
+    Ok(None)
+}
+
+#[tauri::command]
+async fn validate_license(
+    state: State<'_, LicenseState>,
+    license_key: String,
+) -> Result<ValidateLicenseResponse, String> {
+    state.validate_license(&license_key).await
+}
+
+#[tauri::command]
+async fn activate_license(
+    app_handle: AppHandle,
+    state: State<'_, LicenseState>,
+    license_key: String,
+) -> Result<ActivateLicenseResponse, String> {
+    let result = state.activate_license(&license_key, None).await?;
+    
+    // Persist to disk if successful
+    if result.success {
+        if let Some(license) = state.get_license() {
+            storage::save_license(&app_handle, &license)?;
+        }
+    }
+    
+    Ok(result)
+}
+
+#[tauri::command]
+async fn deactivate_license(
+    app_handle: AppHandle,
+    state: State<'_, LicenseState>,
+) -> Result<DeactivateLicenseResponse, String> {
+    let result = state.deactivate_license().await?;
+    
+    // Remove from disk if successful
+    if result.success {
+        storage::remove_license(&app_handle)?;
+    }
+    
+    Ok(result)
+}
+
+#[tauri::command]
+async fn revalidate_license(
+    app_handle: AppHandle,
+    state: State<'_, LicenseState>,
+) -> Result<bool, String> {
+    let is_valid = state.revalidate_license().await?;
+    
+    if is_valid {
+        // Update stored license with new validation time
+        if let Some(license) = state.get_license() {
+            storage::save_license(&app_handle, &license)?;
+        }
+    } else {
+        // License is no longer valid, remove from disk
+        storage::remove_license(&app_handle)?;
+    }
+    
+    Ok(is_valid)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let db_state: DbState = Arc::new(ConnectionManager::new());
+    let license_state: LicenseState = Arc::new(LicenseManager::new());
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .manage(db_state)
+        .manage(license_state)
         .setup(|app| {
             // Create the menu
             let app_menu = Submenu::with_items(
@@ -250,6 +341,12 @@ pub fn run() {
             get_saved_connections,
             save_connection,
             delete_saved_connection,
+            // License commands
+            get_license_status,
+            validate_license,
+            activate_license,
+            deactivate_license,
+            revalidate_license,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
