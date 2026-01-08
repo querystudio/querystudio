@@ -1,5 +1,4 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
 import { api } from "./api";
 import { useConnectionStore } from "./store";
 import type { ConnectionConfig, SavedConnection } from "./types";
@@ -15,7 +14,7 @@ export function useTables(connectionId: string | null) {
 export function useTableColumns(
   connectionId: string | null,
   schema: string | null,
-  table: string | null
+  table: string | null,
 ) {
   return useQuery({
     queryKey: ["columns", connectionId, schema, table],
@@ -27,35 +26,46 @@ export function useTableColumns(
 // Fetch columns for all tables (for autocomplete)
 export function useAllTableColumns(
   connectionId: string | null,
-  tables: { schema: string; name: string }[]
+  tables: { schema: string; name: string }[],
 ) {
   return useQuery({
-    queryKey: ["allColumns", connectionId, tables.map(t => `${t.schema}.${t.name}`).join(",")],
+    queryKey: [
+      "allColumns",
+      connectionId,
+      tables.map((t) => `${t.schema}.${t.name}`).join(","),
+    ],
     queryFn: async () => {
-      const columnsMap: Record<string, { name: string; dataType: string; tableName: string; schema: string }[]> = {};
-      
+      const columnsMap: Record<
+        string,
+        { name: string; dataType: string; tableName: string; schema: string }[]
+      > = {};
+
       // Fetch columns for all tables in parallel (batched)
       const results = await Promise.all(
         tables.map(async (table) => {
           try {
-            const columns = await api.getTableColumns(connectionId!, table.schema, table.name);
+            const columns = await api.getTableColumns(
+              connectionId!,
+              table.schema,
+              table.name,
+            );
             return { table, columns };
           } catch {
             return { table, columns: [] };
           }
-        })
+        }),
       );
-      
+
       for (const { table, columns } of results) {
         const key = `${table.schema}.${table.name}`;
-        columnsMap[key] = columns.map(col => ({
+        columnsMap[key] = columns.map((col) => ({
           name: col.name,
           dataType: col.data_type,
           tableName: table.name,
           schema: table.schema,
         }));
       }
-      
+
       return columnsMap;
     },
     enabled: !!connectionId && tables.length > 0,
@@ -68,7 +78,7 @@ export function useTableData(
   schema: string | null,
   table: string | null,
   limit: number = 100,
-  offset: number = 0
+  offset: number = 0,
 ) {
   return useQuery({
     queryKey: ["tableData", connectionId, schema, table, limit, offset],
@@ -81,7 +91,7 @@ export function useTableData(
 export function useTableCount(
   connectionId: string | null,
   schema: string | null,
-  table: string | null
+  table: string | null,
 ) {
   return useQuery({
     queryKey: ["tableCount", connectionId, schema, table],
@@ -261,124 +271,4 @@ export function useTestConnection() {
   return useMutation({
     mutationFn: (config: ConnectionConfig) => api.testConnection(config),
   });
-}
-
-// ============================================================================
-// License Hooks
-// ============================================================================
-
-export function useLicenseStatus() {
-  return useQuery({
-    queryKey: ["licenseStatus"],
-    queryFn: () => api.getLicenseStatus(),
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-    retry: false,
-  });
-}
-
-export function useValidateLicense() {
-  return useMutation({
-    mutationFn: (licenseKey: string) => api.validateLicense(licenseKey),
-  });
-}
-
-export function useActivateLicense() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (licenseKey: string) => api.activateLicense(licenseKey),
-    onSuccess: (result) => {
-      if (result.success) {
-        queryClient.invalidateQueries({ queryKey: ["licenseStatus"] });
-      }
-    },
-  });
-}
-
-export function useDeactivateLicense() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: () => api.deactivateLicense(),
-    onSuccess: (result) => {
-      if (result.success) {
-        queryClient.invalidateQueries({ queryKey: ["licenseStatus"] });
-      }
-    },
-  });
-}
-
-export function useRevalidateLicense() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: () => api.revalidateLicense(),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["licenseStatus"] });
-    },
-  });
-}
-
-const REVALIDATION_INTERVAL = 5 * 60 * 1000; // 5 minutes
-
-/**
- * Hook that manages license validation:
- * - Checks license status on mount
- * - Revalidates on startup if license exists
- * - Periodically revalidates every 5 minutes
- * - Returns current license status and loading state
- */
-export function useLicenseValidation() {
-  const queryClient = useQueryClient();
-  const { data: licenseStatus, isLoading, refetch } = useLicenseStatus();
-  const revalidate = useRevalidateLicense();
-  const hasRevalidatedOnStartup = useRef(false);
-
-  // Revalidate on startup (once) if we have a stored license
-  useEffect(() => {
-    if (hasRevalidatedOnStartup.current) return;
-    if (isLoading) return;
-    
-    if (licenseStatus) {
-      hasRevalidatedOnStartup.current = true;
-      // Revalidate with the server
-      revalidate.mutate(undefined, {
-        onSuccess: (isValid) => {
-          if (!isValid) {
-            // License is no longer valid, refetch status to clear it
-            refetch();
-          }
-        },
-        onError: () => {
-          // If revalidation fails (network error), keep the cached license
-          // It will be checked again on the next interval
-          console.warn("License revalidation failed, will retry later");
-        },
-      });
-    }
-  }, [licenseStatus, isLoading, revalidate, refetch]);
-
-  // Periodic revalidation every 5 minutes
-  useEffect(() => {
-    if (!licenseStatus) return;
-
-    const interval = setInterval(() => {
-      revalidate.mutate(undefined, {
-        onSuccess: (isValid) => {
-          if (!isValid) {
-            queryClient.invalidateQueries({ queryKey: ["licenseStatus"] });
-          }
-        },
-      });
-    }, REVALIDATION_INTERVAL);
-
-    return () => clearInterval(interval);
-  }, [licenseStatus, revalidate, queryClient]);
-
-  return {
-    licenseStatus,
-    isLoading,
-    isRevalidating: revalidate.isPending,
-    refetch,
-  };
 }

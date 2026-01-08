@@ -14,6 +14,9 @@ import {
   Copy,
   Check,
   PlayCircle,
+  Paperclip,
+  X,
+  FileText,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
@@ -21,6 +24,7 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -42,74 +46,23 @@ import {
   useConnectionStore,
   useAIQueryStore,
   useLastChatStore,
-  useThemeStore,
 } from "@/lib/store";
 import {
   AIAgent,
   AI_MODELS,
   type Message,
+  type MessageAttachment,
   type ModelId,
   type ChatSession,
   loadChatHistory,
   saveChatHistory,
   createChatSession,
   generateSessionTitle,
-  getModelProvider,
 } from "@/lib/ai-agent";
 import { cn } from "@/lib/utils";
 
 const API_KEY_STORAGE_KEY = "querystudio_openai_api_key";
-const ANTHROPIC_KEY_STORAGE_KEY = "querystudio_anthropic_api_key";
-
-// Custom Tokyo Night theme for syntax highlighter
-const tokyoNightStyle: { [key: string]: React.CSSProperties } = {
-  'code[class*="language-"]': {
-    color: "#a9b1d6",
-    background: "#1a1b26",
-    fontFamily: 'JetBrains Mono, Menlo, Monaco, Consolas, "Courier New", monospace',
-    fontSize: "0.875rem",
-  },
-  'pre[class*="language-"]': {
-    color: "#a9b1d6",
-    background: "#1a1b26",
-    padding: "1rem",
-    margin: 0,
-    overflow: "auto",
-  },
-  comment: { color: "#565f89", fontStyle: "italic" },
-  prolog: { color: "#565f89" },
-  doctype: { color: "#565f89" },
-  cdata: { color: "#565f89" },
-  punctuation: { color: "#89ddff" },
-  property: { color: "#7dcfff" },
-  tag: { color: "#f7768e" },
-  boolean: { color: "#ff9e64" },
-  number: { color: "#ff9e64" },
-  constant: { color: "#ff9e64" },
-  symbol: { color: "#73daca" },
-  deleted: { color: "#f7768e" },
-  selector: { color: "#9ece6a" },
-  "attr-name": { color: "#bb9af7" },
-  string: { color: "#9ece6a" },
-  char: { color: "#9ece6a" },
-  builtin: { color: "#7dcfff" },
-  inserted: { color: "#9ece6a" },
-  operator: { color: "#89ddff" },
-  entity: { color: "#7aa2f7", cursor: "help" },
-  url: { color: "#7dcfff" },
-  ".language-css .token.string": { color: "#9ece6a" },
-  ".style .token.string": { color: "#9ece6a" },
-  atrule: { color: "#bb9af7" },
-  "attr-value": { color: "#9ece6a" },
-  keyword: { color: "#bb9af7" },
-  function: { color: "#7aa2f7" },
-  "class-name": { color: "#7dcfff" },
-  regex: { color: "#73daca" },
-  important: { color: "#ff9e64", fontWeight: "bold" },
-  variable: { color: "#c0caf5" },
-  bold: { fontWeight: "bold" },
-  italic: { fontStyle: "italic" },
-};
+const SELECTED_MODEL_KEY = "querystudio_selected_model";
 
 // Code block component with copy button and syntax highlighting
 function CodeBlock({
@@ -123,7 +76,6 @@ function CodeBlock({
   const language = className?.replace("language-", "") || "";
   const isSql =
     language === "sql" || language === "pgsql" || language === "postgresql";
-  const theme = useThemeStore((s) => s.theme);
 
   const code = String(children).replace(/\n$/, "");
 
@@ -140,8 +92,6 @@ function CodeBlock({
     appendSql(code);
     setActiveTab("query");
   }, [code, appendSql, setActiveTab]);
-
-  const syntaxStyle = theme === "tokyo-night" ? tokyoNightStyle : oneDark;
 
   return (
     <div className="relative group my-2">
@@ -179,7 +129,7 @@ function CodeBlock({
       </div>
       <SyntaxHighlighter
         language={language || "text"}
-        style={syntaxStyle}
+        style={oneDark}
         customStyle={{
           margin: 0,
           borderRadius: "0 0 6px 6px",
@@ -208,19 +158,23 @@ export function AIChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [openaiKey, setOpenaiKey] = useState(
+  const [apiKey, setApiKey] = useState(
     () => localStorage.getItem(API_KEY_STORAGE_KEY) || "",
   );
-  const [anthropicKey, setAnthropicKey] = useState(
-    () => localStorage.getItem(ANTHROPIC_KEY_STORAGE_KEY) || "",
-  );
   const [showSettings, setShowSettings] = useState(false);
-  const [tempOpenaiKey, setTempOpenaiKey] = useState("");
-  const [tempAnthropicKey, setTempAnthropicKey] = useState("");
-  const [selectedModel, setSelectedModel] = useState<ModelId>("gpt-5");
+  const [tempApiKey, setTempApiKey] = useState("");
+  const [selectedModel, setSelectedModel] = useState<ModelId>(() => {
+    const saved = localStorage.getItem(SELECTED_MODEL_KEY);
+    if (saved && AI_MODELS.some((m) => m.id === saved)) {
+      return saved as ModelId;
+    }
+    return "gpt-5";
+  });
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [attachments, setAttachments] = useState<MessageAttachment[]>([]);
   const agentRef = useRef<AIAgent | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Debug request from query editor
   const debugRequest = useAIQueryStore((s) => s.debugRequest);
@@ -229,11 +183,6 @@ export function AIChat() {
   // Last chat session persistence
   const setLastSession = useLastChatStore((s) => s.setLastSession);
   const getLastSession = useLastChatStore((s) => s.getLastSession);
-
-  // Get the appropriate API key based on model provider
-  const currentProvider = getModelProvider(selectedModel);
-  const currentApiKey =
-    currentProvider === "anthropic" ? anthropicKey : openaiKey;
 
   // Load chat history on mount and restore last session
   useEffect(() => {
@@ -263,16 +212,12 @@ export function AIChat() {
 
   // Initialize agent when connection, API key, or model changes
   useEffect(() => {
-    if (currentApiKey && connection?.id) {
-      agentRef.current = new AIAgent(
-        currentApiKey,
-        connection.id,
-        selectedModel,
-      );
+    if (apiKey && connection?.id) {
+      agentRef.current = new AIAgent(apiKey, connection.id, selectedModel);
     } else {
       agentRef.current = null;
     }
-  }, [currentApiKey, connection?.id, selectedModel]);
+  }, [apiKey, connection?.id, selectedModel]);
 
   // Auto-scroll to bottom
   const scrollToBottom = useCallback(() => {
@@ -287,24 +232,70 @@ export function AIChat() {
 
   // Handle debug request from query editor
   useEffect(() => {
-    if (debugRequest && currentApiKey && connection?.id) {
+    if (debugRequest && apiKey && connection?.id) {
       const debugMessage = `I got this SQL error. Please help me debug it:\n\n**Query:**\n\`\`\`sql\n${debugRequest.query}\n\`\`\`\n\n**Error:**\n\`\`\`\n${debugRequest.error}\n\`\`\``;
       setInput(debugMessage);
       clearDebugRequest();
     }
-  }, [debugRequest, currentApiKey, connection?.id, clearDebugRequest]);
+  }, [debugRequest, apiKey, connection?.id, clearDebugRequest]);
 
   // Filter sessions for current connection
   const connectionSessions = sessions.filter(
     (s) => s.connectionId === connection?.id,
   );
 
-  const handleSaveApiKeys = () => {
-    setOpenaiKey(tempOpenaiKey);
-    setAnthropicKey(tempAnthropicKey);
-    localStorage.setItem(API_KEY_STORAGE_KEY, tempOpenaiKey);
-    localStorage.setItem(ANTHROPIC_KEY_STORAGE_KEY, tempAnthropicKey);
+  const handleSaveApiKey = () => {
+    setApiKey(tempApiKey);
+    localStorage.setItem(API_KEY_STORAGE_KEY, tempApiKey);
     setShowSettings(false);
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log("handleFileSelect called", e.target.files);
+    const files = e.target.files;
+    if (!files || files.length === 0) {
+      console.log("No files selected");
+      return;
+    }
+
+    console.log("Processing", files.length, "files");
+    const newAttachments: MessageAttachment[] = [];
+
+    for (const file of Array.from(files)) {
+      try {
+        const content = await file.text();
+        // Limit file size to 100KB
+        if (content.length > 100000) {
+          console.warn(`File ${file.name} is too large, skipping`);
+          continue;
+        }
+        newAttachments.push({
+          id: crypto.randomUUID(),
+          name: file.name,
+          content,
+          type: file.type || "text/plain",
+        });
+      } catch (err) {
+        console.error(`Failed to read file ${file.name}:`, err);
+      }
+    }
+
+    console.log("Created", newAttachments.length, "attachments");
+    if (newAttachments.length > 0) {
+      setAttachments((prev) => {
+        console.log("Setting attachments:", [...prev, ...newAttachments]);
+        return [...prev, ...newAttachments];
+      });
+    }
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const removeAttachment = (id: string) => {
+    setAttachments((prev) => prev.filter((a) => a.id !== id));
   };
 
   const handleNewChat = () => {
@@ -362,6 +353,7 @@ export function AIChat() {
 
   const handleModelChange = (model: ModelId) => {
     setSelectedModel(model);
+    localStorage.setItem(SELECTED_MODEL_KEY, model);
     agentRef.current?.setModel(model);
 
     // Update current session model
@@ -406,13 +398,46 @@ export function AIChat() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading || !agentRef.current) return;
+    if (
+      (!input.trim() && attachments.length === 0) ||
+      isLoading ||
+      !agentRef.current
+    )
+      return;
 
+    // Build message content for AI (includes attachment content)
+    const userText = input.trim();
+    let aiMessageContent = userText;
+    if (attachments.length > 0) {
+      const attachmentText = attachments
+        .map((a) => {
+          const ext = a.name.split(".").pop()?.toLowerCase() || "txt";
+          const lang =
+            ext === "sql"
+              ? "sql"
+              : ext === "json"
+                ? "json"
+                : ext === "csv"
+                  ? "csv"
+                  : "";
+          return `**Attached file: ${a.name}**\n\`\`\`${lang}\n${a.content}\n\`\`\``;
+        })
+        .join("\n\n");
+      aiMessageContent = userText
+        ? `${userText}\n\n${attachmentText}`
+        : attachmentText;
+    }
+
+    // Store the display message (with attachments metadata, not content)
     const userMessage: Message = {
       id: crypto.randomUUID(),
       role: "user",
-      content: input.trim(),
+      content: userText,
+      attachments: attachments.length > 0 ? [...attachments] : undefined,
     };
+
+    // Clear attachments after sending
+    setAttachments([]);
 
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
@@ -427,9 +452,9 @@ export function AIChat() {
     ]);
 
     try {
-      // Use streaming API
+      // Use streaming API - send full content with attachments to AI
       const stream = agentRef.current.chatStream(
-        userMessage.content,
+        aiMessageContent,
         (toolName, args) => {
           // Update loading message to show tool being called
           setMessages((prev) =>
@@ -508,34 +533,33 @@ export function AIChat() {
     );
   }
 
-  if (!currentApiKey) {
+  if (!apiKey) {
     return (
       <div className="flex h-full items-center justify-center text-muted-foreground">
         <div className="text-center space-y-4">
           <Bot className="mx-auto h-12 w-12 mb-4 opacity-50" />
           <p className="text-lg">API Key Required</p>
           <p className="text-sm text-muted-foreground max-w-md">
-            To use the AI assistant, you need to provide an API key. Your keys
-            are stored locally and never sent to our servers.
+            To use the AI assistant, you need to provide an OpenAI API key. Your
+            key is stored locally and never sent to our servers.
           </p>
           <Button
             onClick={() => {
-              setTempOpenaiKey(openaiKey);
-              setTempAnthropicKey(anthropicKey);
+              setTempApiKey(apiKey);
               setShowSettings(true);
             }}
           >
             <Settings className="mr-2 h-4 w-4" />
-            Configure API Keys
+            Configure API Key
           </Button>
         </div>
 
         <Dialog open={showSettings} onOpenChange={setShowSettings}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>API Keys</DialogTitle>
+              <DialogTitle>API Key</DialogTitle>
               <DialogDescription>
-                Enter your API keys to enable the AI assistant.
+                Enter your OpenAI API key to enable the AI assistant.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
@@ -545,8 +569,8 @@ export function AIChat() {
                   id="openaiKey"
                   type="password"
                   placeholder="sk-..."
-                  value={tempOpenaiKey}
-                  onChange={(e) => setTempOpenaiKey(e.target.value)}
+                  value={tempApiKey}
+                  onChange={(e) => setTempApiKey(e.target.value)}
                 />
                 <p className="text-xs text-muted-foreground">
                   Get your key from{" "}
@@ -560,36 +584,12 @@ export function AIChat() {
                   </a>
                 </p>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="anthropicKey">Anthropic API Key</Label>
-                <Input
-                  id="anthropicKey"
-                  type="password"
-                  placeholder="sk-ant-..."
-                  value={tempAnthropicKey}
-                  onChange={(e) => setTempAnthropicKey(e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Get your key from{" "}
-                  <a
-                    href="https://console.anthropic.com/settings/keys"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-400 hover:underline"
-                  >
-                    console.anthropic.com
-                  </a>
-                </p>
-              </div>
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setShowSettings(false)}>
                 Cancel
               </Button>
-              <Button
-                onClick={handleSaveApiKeys}
-                disabled={!tempOpenaiKey.trim() && !tempAnthropicKey.trim()}
-              >
+              <Button onClick={handleSaveApiKey} disabled={!tempApiKey.trim()}>
                 Save
               </Button>
             </div>
@@ -609,7 +609,9 @@ export function AIChat() {
         )}
       >
         <div className="flex items-center justify-between border-b border-border p-3">
-          <span className="text-sm font-medium text-muted-foreground">History</span>
+          <span className="text-sm font-medium text-muted-foreground">
+            History
+          </span>
           <Button variant="ghost" size="sm" onClick={handleNewChat}>
             <Plus className="h-4 w-4" />
           </Button>
@@ -690,13 +692,11 @@ export function AIChat() {
             </Button>
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={() => {
-                setTempOpenaiKey(openaiKey);
-                setTempAnthropicKey(anthropicKey);
+                setTempApiKey(apiKey);
                 setShowSettings(true);
               }}
-              title="Settings"
             >
               <Settings className="h-4 w-4" />
             </Button>
@@ -741,12 +741,37 @@ export function AIChat() {
                         : "bg-secondary text-foreground",
                     )}
                   >
+                    {/* Show attachments for user messages */}
+                    {message.role === "user" &&
+                      message.attachments &&
+                      message.attachments.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mb-2">
+                          {message.attachments.map((attachment) => (
+                            <div
+                              key={attachment.id}
+                              className="flex items-center gap-1.5 rounded bg-background/50 px-2 py-1 text-xs"
+                            >
+                              <FileText className="h-3 w-3 text-muted-foreground" />
+                              <span className="max-w-32 truncate">
+                                {attachment.name}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     {message.isLoading && !message.content ? (
                       <div className="space-y-2">
                         {message.toolCalls?.length ? (
                           <div className="flex items-center gap-2 text-xs text-muted-foreground">
                             <Wrench className="h-3 w-3" />
-                            <span>Calling {message.toolCalls[message.toolCalls.length - 1].name}...</span>
+                            <span>
+                              Calling{" "}
+                              {
+                                message.toolCalls[message.toolCalls.length - 1]
+                                  .name
+                              }
+                              ...
+                            </span>
                           </div>
                         ) : null}
                         <Skeleton className="h-4 w-48 bg-muted" />
@@ -812,32 +837,46 @@ export function AIChat() {
                             ))}
                           </div>
                         )}
-                        <div className="prose prose-sm prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0">
-                          <ReactMarkdown
-                            components={{
-                              code({ className, children, ...props }) {
-                                const isBlock =
-                                  className?.includes("language-") ||
-                                  String(children).includes("\n");
-                                if (isBlock) {
+                        {message.content ? (
+                          <div className="prose prose-sm prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0">
+                            <ReactMarkdown
+                              components={{
+                                code({ className, children, ...props }) {
+                                  const isBlock =
+                                    className?.includes("language-") ||
+                                    String(children).includes("\n");
+                                  if (isBlock) {
+                                    return (
+                                      <CodeBlock className={className}>
+                                        {children}
+                                      </CodeBlock>
+                                    );
+                                  }
                                   return (
-                                    <CodeBlock className={className}>
+                                    <InlineCode {...props}>
                                       {children}
-                                    </CodeBlock>
+                                    </InlineCode>
                                   );
-                                }
-                                return (
-                                  <InlineCode {...props}>{children}</InlineCode>
-                                );
-                              },
-                              pre({ children }) {
-                                return <>{children}</>;
-                              },
-                            }}
-                          >
-                            {message.content}
-                          </ReactMarkdown>
-                        </div>
+                                },
+                                pre({ children }) {
+                                  return <>{children}</>;
+                                },
+                              }}
+                            >
+                              {message.content}
+                            </ReactMarkdown>
+                          </div>
+                        ) : (
+                          /* Attachment-only message with no text */
+                          message.role === "user" &&
+                          message.attachments &&
+                          message.attachments.length > 0 && (
+                            <span className="text-muted-foreground text-sm italic">
+                              Sent {message.attachments.length} file
+                              {message.attachments.length > 1 ? "s" : ""}
+                            </span>
+                          )
+                        )}
                       </>
                     )}
                   </div>
@@ -854,33 +893,104 @@ export function AIChat() {
 
         {/* Input - Sticky at bottom */}
         <div className="sticky bottom-0 border-t border-border bg-background p-4">
-          <form onSubmit={handleSubmit} className="flex gap-2">
-            <Select value={selectedModel} onValueChange={handleModelChange}>
-              <SelectTrigger className="h-9 w-36 text-xs shrink-0">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {AI_MODELS.map((model) => (
-                  <SelectItem key={model.id} value={model.id}>
-                    {model.name}
-                  </SelectItem>
+          <form onSubmit={handleSubmit} className="space-y-3">
+            {/* Attachments preview */}
+            {attachments.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {attachments.map((attachment) => (
+                  <div
+                    key={attachment.id}
+                    className="flex items-center gap-1.5 rounded-md bg-secondary px-2 py-1 text-xs"
+                  >
+                    <FileText className="h-3 w-3 text-muted-foreground" />
+                    <span className="max-w-32 truncate">{attachment.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeAttachment(attachment.id)}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
                 ))}
-              </SelectContent>
-            </Select>
-            <Input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask about your database..."
-              disabled={isLoading}
-              className="flex-1"
-            />
-            <Button type="submit" disabled={isLoading || !input.trim()}>
-              {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-            </Button>
+              </div>
+            )}
+            <div className="relative">
+              <Textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    if (
+                      (input.trim() || attachments.length > 0) &&
+                      !isLoading
+                    ) {
+                      handleSubmit(e);
+                    }
+                  }
+                }}
+                placeholder="Ask about your database..."
+                disabled={isLoading}
+                className="min-h-11 max-h-50 resize-none pr-20"
+                rows={1}
+              />
+              <div className="absolute right-2 bottom-2 flex items-center gap-1">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  onChange={handleFileSelect}
+                  className="sr-only"
+                  tabIndex={-1}
+                />
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => {
+                    console.log("Attach button clicked");
+                    fileInputRef.current?.click();
+                  }}
+                  disabled={isLoading}
+                  className="h-8 w-8"
+                  title="Attach files"
+                >
+                  <Paperclip className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="submit"
+                  size="icon"
+                  disabled={
+                    isLoading || (!input.trim() && attachments.length === 0)
+                  }
+                  className="h-8 w-8"
+                >
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <Select value={selectedModel} onValueChange={handleModelChange}>
+                <SelectTrigger className="h-8 w-32 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {AI_MODELS.map((model) => (
+                    <SelectItem key={model.id} value={model.id}>
+                      {model.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <span className="text-xs text-muted-foreground">
+                Enter to send, Shift+Enter for new line
+              </span>
+            </div>
           </form>
         </div>
       </div>
@@ -891,7 +1001,7 @@ export function AIChat() {
           <DialogHeader>
             <DialogTitle>AI Settings</DialogTitle>
             <DialogDescription>
-              Configure your API keys for the AI assistant.
+              Configure your OpenAI API key for the AI assistant.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -901,8 +1011,8 @@ export function AIChat() {
                 id="openaiKey2"
                 type="password"
                 placeholder="sk-..."
-                value={tempOpenaiKey}
-                onChange={(e) => setTempOpenaiKey(e.target.value)}
+                value={tempApiKey}
+                onChange={(e) => setTempApiKey(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
                 Get your key from{" "}
@@ -916,33 +1026,14 @@ export function AIChat() {
                 </a>
               </p>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="anthropicKey2">Anthropic API Key</Label>
-              <Input
-                id="anthropicKey2"
-                type="password"
-                placeholder="sk-ant-..."
-                value={tempAnthropicKey}
-                onChange={(e) => setTempAnthropicKey(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                Get your key from{" "}
-                <a
-                  href="https://console.anthropic.com/settings/keys"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-400 hover:underline"
-                >
-                  console.anthropic.com
-                </a>
-              </p>
-            </div>
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setShowSettings(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSaveApiKeys}>Save</Button>
+            <Button onClick={handleSaveApiKey} disabled={!tempApiKey.trim()}>
+              Save
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

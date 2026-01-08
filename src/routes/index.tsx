@@ -8,12 +8,10 @@ import { TableViewer } from "@/components/table-viewer";
 import { QueryEditor } from "@/components/query-editor";
 import { AIChat } from "@/components/ai-chat";
 import { WelcomeScreen } from "@/components/welcome-screen";
-import { LicenseScreen } from "@/components/license-screen";
 import { CommandPalette } from "@/components/command-palette";
 import { PasswordPromptDialog } from "@/components/password-prompt-dialog";
 import { useConnectionStore, useAIQueryStore } from "@/lib/store";
 import { useGlobalShortcuts } from "@/lib/use-global-shortcuts";
-import { useLicenseValidation } from "@/lib/hooks";
 import type { SavedConnection } from "@/lib/types";
 
 export const Route = createFileRoute("/")({
@@ -23,17 +21,14 @@ export const Route = createFileRoute("/")({
 function App() {
   const [connectionDialogOpen, setConnectionDialogOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
-  const [passwordPromptConnection, setPasswordPromptConnection] = useState<SavedConnection | null>(null);
+  const [passwordPromptConnection, setPasswordPromptConnection] =
+    useState<SavedConnection | null>(null);
   const connection = useConnectionStore((s) => s.connection);
-  
-  // License status check with startup and periodic revalidation
-  const { licenseStatus, isLoading: licenseLoading, refetch: refetchLicense } = useLicenseValidation();
-  const isLicensed = !!licenseStatus;
-  
+
   // Active tab from store for cross-component navigation
   const activeTab = useAIQueryStore((s) => s.activeTab);
   const setActiveTab = useAIQueryStore((s) => s.setActiveTab);
-  
+
   // Global keyboard shortcuts and menu event handling
   const { refreshAll } = useGlobalShortcuts({
     onNewConnection: () => setConnectionDialogOpen(true),
@@ -53,23 +48,6 @@ function App() {
       setPasswordPromptConnection(savedConnection);
     }
   };
-
-  // Show loading state while checking license
-  if (licenseLoading) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          <p className="text-sm text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Show license screen if not licensed
-  if (!isLicensed) {
-    return <LicenseScreen onLicenseActivated={() => refetchLicense()} />;
-  }
 
   if (!connection) {
     return (
@@ -101,17 +79,21 @@ function App() {
   return (
     <div className="flex h-screen flex-col bg-background text-foreground">
       {/* Titlebar drag region - empty div for window dragging */}
-      <div 
-        data-tauri-drag-region 
+      <div
+        data-tauri-drag-region
         className="h-7 w-full shrink-0 bg-background"
-        style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+        style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
       />
-      
+
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
 
         <main className="flex flex-1 flex-col overflow-hidden">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex h-full flex-col">
+          <Tabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="flex h-full flex-col"
+          >
             <div className="border-b border-border px-4">
               <TabsList className="h-12 bg-transparent">
                 <TabsTrigger

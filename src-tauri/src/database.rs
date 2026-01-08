@@ -1,9 +1,11 @@
 use crate::queries;
+use native_tls::TlsConnector;
 use parking_lot::RwLock;
+use postgres_native_tls::MakeTlsConnector;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio_postgres::{Client, NoTls};
+use tokio_postgres::Client;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
@@ -75,9 +77,39 @@ impl ConnectionManager {
     pub async fn connect(&self, id: String, config: ConnectionConfig) -> Result<(), String> {
         let conn_string = config.to_connection_string();
 
-        let (client, connection) = tokio_postgres::connect(&conn_string, NoTls)
+        // Try SSL first, then fall back to non-SSL
+        let client = match self.connect_with_ssl(&conn_string).await {
+            Ok(client) => client,
+            Err(_ssl_err) => {
+                // Fall back to non-SSL connection
+                self.connect_without_ssl(&conn_string).await?
+            }
+        };
+
+        self.connections.write().insert(id, Arc::new(client));
+        Ok(())
+    }
+
+    async fn connect_with_ssl(&self, conn_string: &str) -> Result<Client, String> {
+        // Create a TLS connector that accepts invalid certificates (for self-signed certs)
+        let tls_connector = TlsConnector::builder()
+            .danger_accept_invalid_certs(true)
+            .danger_accept_invalid_hostnames(true)
+            .build()
+            .map_err(|e| format!("Failed to create TLS connector: {}", e))?;
+
+        let connector = MakeTlsConnector::new(tls_connector);
+
+        // Append sslmode=require if not already present
+        let ssl_conn_string = if conn_string.contains("sslmode=") {
+            conn_string.to_string()
+        } else {
+            format!("{} sslmode=require", conn_string)
+        };
+
+        let (client, connection) = tokio_postgres::connect(&ssl_conn_string, connector)
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| format!("SSL connection failed: {}", e))?;
 
         tokio::spawn(async move {
             if let Err(e) = connection.await {
@@ -85,8 +117,21 @@ impl ConnectionManager {
             }
         });
 
-        self.connections.write().insert(id, Arc::new(client));
-        Ok(())
+        Ok(client)
+    }
+
+    async fn connect_without_ssl(&self, conn_string: &str) -> Result<Client, String> {
+        let (client, connection) = tokio_postgres::connect(conn_string, tokio_postgres::NoTls)
+            .await
+            .map_err(|e| format!("Connection failed: {}", e))?;
+
+        tokio::spawn(async move {
+            if let Err(e) = connection.await {
+                eprintln!("Connection error: {}", e);
+            }
+        });
+
+        Ok(client)
     }
 
     pub fn disconnect(&self, id: &str) -> Result<(), String> {

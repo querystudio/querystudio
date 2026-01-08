@@ -1,5 +1,14 @@
 import { useEffect, useState } from "react";
-import { Database, Plus, Trash2, RefreshCw, LayoutGrid, Terminal, Sparkles, LogOut, Moon, Sparkle, KeyRound } from "lucide-react";
+import {
+  Database,
+  Plus,
+  Trash2,
+  RefreshCw,
+  LayoutGrid,
+  Terminal,
+  Sparkles,
+  LogOut,
+} from "lucide-react";
 import {
   CommandDialog,
   CommandEmpty,
@@ -10,8 +19,12 @@ import {
   CommandSeparator,
   CommandShortcut,
 } from "@/components/ui/command";
-import { useSavedConnections, useDeleteSavedConnection, useDisconnect, useDeactivateLicense, useLicenseStatus } from "@/lib/hooks";
-import { useConnectionStore, useAIQueryStore, useThemeStore } from "@/lib/store";
+import {
+  useSavedConnections,
+  useDeleteSavedConnection,
+  useDisconnect,
+} from "@/lib/hooks";
+import { useConnectionStore, useAIQueryStore } from "@/lib/store";
 import type { SavedConnection } from "@/lib/types";
 
 interface CommandPaletteProps {
@@ -30,15 +43,11 @@ export function CommandPalette({
   onRefresh,
 }: CommandPaletteProps) {
   const { data: savedConnections } = useSavedConnections();
-  const { data: licenseStatus } = useLicenseStatus();
   const deleteConnection = useDeleteSavedConnection();
   const disconnect = useDisconnect();
-  const deactivateLicense = useDeactivateLicense();
   const connection = useConnectionStore((s) => s.connection);
   const setActiveTab = useAIQueryStore((s) => s.setActiveTab);
-  const { theme, setTheme } = useThemeStore();
   const [search, setSearch] = useState("");
-  const [confirmDeactivate, setConfirmDeactivate] = useState(false);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -51,13 +60,6 @@ export function CommandPalette({
     document.addEventListener("keydown", down);
     return () => document.removeEventListener("keydown", down);
   }, [open, onOpenChange]);
-
-  // Reset confirm state when dialog closes
-  useEffect(() => {
-    if (!open) {
-      setConfirmDeactivate(false);
-    }
-  }, [open]);
 
   const handleSelect = (connection: SavedConnection) => {
     onOpenChange(false);
@@ -97,27 +99,52 @@ export function CommandPalette({
         {connection && (
           <>
             <CommandGroup heading="Quick Actions">
-              <CommandItem onSelect={() => { onRefresh?.(); onOpenChange(false); }}>
+              <CommandItem
+                onSelect={() => {
+                  onRefresh?.();
+                  onOpenChange(false);
+                }}
+              >
                 <RefreshCw className="h-4 w-4" />
                 <span>Refresh Data</span>
                 <CommandShortcut>⌘R</CommandShortcut>
               </CommandItem>
-              <CommandItem onSelect={() => { setActiveTab("data"); onOpenChange(false); }}>
+              <CommandItem
+                onSelect={() => {
+                  setActiveTab("data");
+                  onOpenChange(false);
+                }}
+              >
                 <LayoutGrid className="h-4 w-4" />
                 <span>Go to Table Data</span>
                 <CommandShortcut>⌘1</CommandShortcut>
               </CommandItem>
-              <CommandItem onSelect={() => { setActiveTab("query"); onOpenChange(false); }}>
+              <CommandItem
+                onSelect={() => {
+                  setActiveTab("query");
+                  onOpenChange(false);
+                }}
+              >
                 <Terminal className="h-4 w-4" />
                 <span>Go to Query Editor</span>
                 <CommandShortcut>⌘2</CommandShortcut>
               </CommandItem>
-              <CommandItem onSelect={() => { setActiveTab("ai"); onOpenChange(false); }}>
+              <CommandItem
+                onSelect={() => {
+                  setActiveTab("ai");
+                  onOpenChange(false);
+                }}
+              >
                 <Sparkles className="h-4 w-4" />
                 <span>Go to AI Assistant</span>
                 <CommandShortcut>⌘3</CommandShortcut>
               </CommandItem>
-              <CommandItem onSelect={() => { disconnect.mutate(); onOpenChange(false); }}>
+              <CommandItem
+                onSelect={() => {
+                  disconnect.mutate();
+                  onOpenChange(false);
+                }}
+              >
                 <LogOut className="h-4 w-4" />
                 <span>Disconnect</span>
               </CommandItem>
@@ -162,66 +189,6 @@ export function CommandPalette({
             <CommandShortcut>⌘N</CommandShortcut>
           </CommandItem>
         </CommandGroup>
-
-        <CommandSeparator />
-
-        <CommandGroup heading="Theme">
-          <CommandItem 
-            onSelect={() => { setTheme("dark"); onOpenChange(false); }}
-            className={theme === "dark" ? "bg-accent" : ""}
-          >
-            <Moon className="h-4 w-4" />
-            <span>Dark</span>
-            {theme === "dark" && <span className="ml-auto text-xs text-muted-foreground">Active</span>}
-          </CommandItem>
-          <CommandItem 
-            onSelect={() => { setTheme("tokyo-night"); onOpenChange(false); }}
-            className={theme === "tokyo-night" ? "bg-accent" : ""}
-          >
-            <Sparkle className="h-4 w-4" />
-            <span>Tokyo Night</span>
-            {theme === "tokyo-night" && <span className="ml-auto text-xs text-muted-foreground">Active</span>}
-          </CommandItem>
-        </CommandGroup>
-
-        {licenseStatus && (
-          <>
-            <CommandSeparator />
-            <CommandGroup heading="License">
-              {!confirmDeactivate ? (
-                <CommandItem 
-                  onSelect={() => setConfirmDeactivate(true)}
-                  className="text-destructive"
-                >
-                  <KeyRound className="h-4 w-4" />
-                  <div className="flex flex-1 flex-col">
-                    <span>Deactivate License</span>
-                    <span className="text-xs text-muted-foreground">
-                      {licenseStatus.licenseInfo?.email ?? licenseStatus.licenseKey ?? "Active"}
-                    </span>
-                  </div>
-                </CommandItem>
-              ) : (
-                <CommandItem 
-                  onSelect={() => {
-                    deactivateLicense.mutate(undefined, {
-                      onSuccess: () => {
-                        setConfirmDeactivate(false);
-                        onOpenChange(false);
-                        // Force reload to show license screen
-                        window.location.reload();
-                      },
-                    });
-                  }}
-                  className="bg-destructive/10 text-destructive"
-                >
-                  <KeyRound className="h-4 w-4" />
-                  <span>Click again to confirm deactivation</span>
-                </CommandItem>
-              )}
-            </CommandGroup>
-          </>
-        )}
       </CommandList>
     </CommandDialog>
   );
