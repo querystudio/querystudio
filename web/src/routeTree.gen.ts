@@ -9,10 +9,39 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WaitlistRouteImport } from './routes/waitlist'
+import { Route as SignupRouteImport } from './routes/signup'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiTestRouteImport } from './routes/api/test'
 import { Route as ApiRealtimeRouteImport } from './routes/api/realtime'
+import { Route as AuthedDashboardRouteImport } from './routes/_authed/dashboard'
+import { Route as AuthedDashboardIndexRouteImport } from './routes/_authed/dashboard/index'
+import { Route as ApiAuthSplatRouteImport } from './routes/api.auth.$'
+import { Route as AuthedDashboardSecurityRouteImport } from './routes/_authed/dashboard/security'
+import { Route as AuthedDashboardBillingRouteImport } from './routes/_authed/dashboard/billing'
+import { Route as AuthedDashboardAccountRouteImport } from './routes/_authed/dashboard/account'
 
+const WaitlistRoute = WaitlistRouteImport.update({
+  id: '/waitlist',
+  path: '/waitlist',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthedRoute = AuthedRouteImport.update({
+  id: '/_authed',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -28,39 +57,166 @@ const ApiRealtimeRoute = ApiRealtimeRouteImport.update({
   path: '/api/realtime',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthedDashboardRoute = AuthedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedDashboardIndexRoute = AuthedDashboardIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthedDashboardRoute,
+} as any)
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthedDashboardSecurityRoute = AuthedDashboardSecurityRouteImport.update({
+  id: '/security',
+  path: '/security',
+  getParentRoute: () => AuthedDashboardRoute,
+} as any)
+const AuthedDashboardBillingRoute = AuthedDashboardBillingRouteImport.update({
+  id: '/billing',
+  path: '/billing',
+  getParentRoute: () => AuthedDashboardRoute,
+} as any)
+const AuthedDashboardAccountRoute = AuthedDashboardAccountRouteImport.update({
+  id: '/account',
+  path: '/account',
+  getParentRoute: () => AuthedDashboardRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/signup': typeof SignupRoute
+  '/waitlist': typeof WaitlistRoute
+  '/dashboard': typeof AuthedDashboardRouteWithChildren
   '/api/realtime': typeof ApiRealtimeRoute
   '/api/test': typeof ApiTestRoute
+  '/dashboard/account': typeof AuthedDashboardAccountRoute
+  '/dashboard/billing': typeof AuthedDashboardBillingRoute
+  '/dashboard/security': typeof AuthedDashboardSecurityRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
+  '/dashboard/': typeof AuthedDashboardIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/signup': typeof SignupRoute
+  '/waitlist': typeof WaitlistRoute
   '/api/realtime': typeof ApiRealtimeRoute
   '/api/test': typeof ApiTestRoute
+  '/dashboard/account': typeof AuthedDashboardAccountRoute
+  '/dashboard/billing': typeof AuthedDashboardBillingRoute
+  '/dashboard/security': typeof AuthedDashboardSecurityRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
+  '/dashboard': typeof AuthedDashboardIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authed': typeof AuthedRouteWithChildren
+  '/login': typeof LoginRoute
+  '/signup': typeof SignupRoute
+  '/waitlist': typeof WaitlistRoute
+  '/_authed/dashboard': typeof AuthedDashboardRouteWithChildren
   '/api/realtime': typeof ApiRealtimeRoute
   '/api/test': typeof ApiTestRoute
+  '/_authed/dashboard/account': typeof AuthedDashboardAccountRoute
+  '/_authed/dashboard/billing': typeof AuthedDashboardBillingRoute
+  '/_authed/dashboard/security': typeof AuthedDashboardSecurityRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
+  '/_authed/dashboard/': typeof AuthedDashboardIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/realtime' | '/api/test'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/signup'
+    | '/waitlist'
+    | '/dashboard'
+    | '/api/realtime'
+    | '/api/test'
+    | '/dashboard/account'
+    | '/dashboard/billing'
+    | '/dashboard/security'
+    | '/api/auth/$'
+    | '/dashboard/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/realtime' | '/api/test'
-  id: '__root__' | '/' | '/api/realtime' | '/api/test'
+  to:
+    | '/'
+    | '/login'
+    | '/signup'
+    | '/waitlist'
+    | '/api/realtime'
+    | '/api/test'
+    | '/dashboard/account'
+    | '/dashboard/billing'
+    | '/dashboard/security'
+    | '/api/auth/$'
+    | '/dashboard'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authed'
+    | '/login'
+    | '/signup'
+    | '/waitlist'
+    | '/_authed/dashboard'
+    | '/api/realtime'
+    | '/api/test'
+    | '/_authed/dashboard/account'
+    | '/_authed/dashboard/billing'
+    | '/_authed/dashboard/security'
+    | '/api/auth/$'
+    | '/_authed/dashboard/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthedRoute: typeof AuthedRouteWithChildren
+  LoginRoute: typeof LoginRoute
+  SignupRoute: typeof SignupRoute
+  WaitlistRoute: typeof WaitlistRoute
   ApiRealtimeRoute: typeof ApiRealtimeRoute
   ApiTestRoute: typeof ApiTestRoute
+  ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/waitlist': {
+      id: '/waitlist'
+      path: '/waitlist'
+      fullPath: '/waitlist'
+      preLoaderRoute: typeof WaitlistRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authed': {
+      id: '/_authed'
+      path: ''
+      fullPath: ''
+      preLoaderRoute: typeof AuthedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -82,13 +238,89 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiRealtimeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authed/dashboard': {
+      id: '/_authed/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthedDashboardRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/dashboard/': {
+      id: '/_authed/dashboard/'
+      path: '/'
+      fullPath: '/dashboard/'
+      preLoaderRoute: typeof AuthedDashboardIndexRouteImport
+      parentRoute: typeof AuthedDashboardRoute
+    }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authed/dashboard/security': {
+      id: '/_authed/dashboard/security'
+      path: '/security'
+      fullPath: '/dashboard/security'
+      preLoaderRoute: typeof AuthedDashboardSecurityRouteImport
+      parentRoute: typeof AuthedDashboardRoute
+    }
+    '/_authed/dashboard/billing': {
+      id: '/_authed/dashboard/billing'
+      path: '/billing'
+      fullPath: '/dashboard/billing'
+      preLoaderRoute: typeof AuthedDashboardBillingRouteImport
+      parentRoute: typeof AuthedDashboardRoute
+    }
+    '/_authed/dashboard/account': {
+      id: '/_authed/dashboard/account'
+      path: '/account'
+      fullPath: '/dashboard/account'
+      preLoaderRoute: typeof AuthedDashboardAccountRouteImport
+      parentRoute: typeof AuthedDashboardRoute
+    }
   }
 }
 
+interface AuthedDashboardRouteChildren {
+  AuthedDashboardAccountRoute: typeof AuthedDashboardAccountRoute
+  AuthedDashboardBillingRoute: typeof AuthedDashboardBillingRoute
+  AuthedDashboardSecurityRoute: typeof AuthedDashboardSecurityRoute
+  AuthedDashboardIndexRoute: typeof AuthedDashboardIndexRoute
+}
+
+const AuthedDashboardRouteChildren: AuthedDashboardRouteChildren = {
+  AuthedDashboardAccountRoute: AuthedDashboardAccountRoute,
+  AuthedDashboardBillingRoute: AuthedDashboardBillingRoute,
+  AuthedDashboardSecurityRoute: AuthedDashboardSecurityRoute,
+  AuthedDashboardIndexRoute: AuthedDashboardIndexRoute,
+}
+
+const AuthedDashboardRouteWithChildren = AuthedDashboardRoute._addFileChildren(
+  AuthedDashboardRouteChildren,
+)
+
+interface AuthedRouteChildren {
+  AuthedDashboardRoute: typeof AuthedDashboardRouteWithChildren
+}
+
+const AuthedRouteChildren: AuthedRouteChildren = {
+  AuthedDashboardRoute: AuthedDashboardRouteWithChildren,
+}
+
+const AuthedRouteWithChildren =
+  AuthedRoute._addFileChildren(AuthedRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthedRoute: AuthedRouteWithChildren,
+  LoginRoute: LoginRoute,
+  SignupRoute: SignupRoute,
+  WaitlistRoute: WaitlistRoute,
   ApiRealtimeRoute: ApiRealtimeRoute,
   ApiTestRoute: ApiTestRoute,
+  ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

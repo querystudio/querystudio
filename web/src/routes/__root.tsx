@@ -1,5 +1,6 @@
 import { RealtimeProvider } from '@upstash/realtime/client'
 import { HeadContent, Outlet, Scripts, createRootRoute } from '@tanstack/react-router'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import appCss from '../styles.css?url'
 import { Toaster } from '@/components/ui/sonner'
@@ -95,14 +96,18 @@ function RootComponent() {
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  const queryClient = new QueryClient()
+
   return (
     <html lang='en'>
       <head>
         <HeadContent />
       </head>
       <body className='antialiased'>
-        <Toaster theme='dark' />
-        {children}
+        <QueryClientProvider client={queryClient}>
+          <Toaster theme='dark' />
+          {children}
+        </QueryClientProvider>
         <Scripts />
       </body>
     </html>

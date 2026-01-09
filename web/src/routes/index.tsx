@@ -1,5 +1,5 @@
 import { useRef, useEffect } from 'react'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Database, Table, Terminal, Shield, Download, Command, MousePointer, MessageSquare } from 'lucide-react'
@@ -39,9 +39,7 @@ function LandingPage() {
               Coming Soon
             </Button>
             <Button size='lg' variant='outline' className='text-base' asChild>
-              <a href='https://github.com' target='_blank' rel='noopener noreferrer'>
-                Waitlist
-              </a>
+              <Link to='/waitlist'>Waitlist</Link>
             </Button>
           </div>
         </div>
