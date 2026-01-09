@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { authClient } from '@/lib/auth-client'
 import { toast } from 'sonner'
-import { Loader2, Check, X, RefreshCw, Users, Clock, CheckCircle, XCircle } from 'lucide-react'
+import { Check, X, RefreshCw, Users, Clock, CheckCircle, XCircle } from 'lucide-react'
+import Spinner from '@/components/ui/spinner'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
 export const Route = createFileRoute('/_authed/dashboard/admin')({
@@ -185,7 +186,7 @@ function AdminPage() {
         <CardContent>
           {isLoading ? (
             <div className='flex items-center justify-center py-8'>
-              <Loader2 className='h-6 w-6 animate-spin text-muted-foreground' />
+              <Spinner size={24} color='currentColor' className='text-muted-foreground' />
             </div>
           ) : pendingEntries.length === 0 ? (
             <div className='text-center py-8 text-muted-foreground'>
@@ -201,11 +202,11 @@ function AdminPage() {
                   </div>
                   <div className='flex items-center gap-2'>
                     <Button size='sm' variant='outline' onClick={() => rejectMutation.mutate(entry.id)} disabled={processingId === entry.id}>
-                      {processingId === entry.id && rejectMutation.isPending ? <Loader2 className='h-4 w-4 animate-spin' /> : <X className='h-4 w-4' />}
+                      {processingId === entry.id && rejectMutation.isPending ? <Spinner size={16} color='currentColor' /> : <X className='h-4 w-4' />}
                       Reject
                     </Button>
                     <Button size='sm' onClick={() => approveMutation.mutate(entry.id)} disabled={processingId === entry.id}>
-                      {processingId === entry.id && approveMutation.isPending ? <Loader2 className='h-4 w-4 animate-spin' /> : <Check className='h-4 w-4' />}
+                      {processingId === entry.id && approveMutation.isPending ? <Spinner size={16} color='currentColor' /> : <Check className='h-4 w-4' />}
                       Approve
                     </Button>
                   </div>
@@ -225,7 +226,7 @@ function AdminPage() {
         <CardContent>
           {isLoading ? (
             <div className='flex items-center justify-center py-8'>
-              <Loader2 className='h-6 w-6 animate-spin text-muted-foreground' />
+              <Spinner size={24} color='currentColor' className='text-muted-foreground' />
             </div>
           ) : entries.length === 0 ? (
             <div className='text-center py-8 text-muted-foreground'>

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
-import { Loader2 } from 'lucide-react'
+import Spinner from '@/components/ui/spinner'
 
 export const Route = createFileRoute('/_authed/dashboard/security')({
   component: SecurityPage,
@@ -62,28 +62,11 @@ function SecurityPage() {
           <form onSubmit={handleChangePassword} className='space-y-4'>
             <div className='space-y-2'>
               <Label htmlFor='current-password'>Current Password</Label>
-              <Input
-                id='current-password'
-                type='password'
-                placeholder='••••••••'
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                required
-                disabled={isLoading}
-              />
+              <Input id='current-password' type='password' placeholder='••••••••' value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required disabled={isLoading} />
             </div>
             <div className='space-y-2'>
               <Label htmlFor='new-password'>New Password</Label>
-              <Input
-                id='new-password'
-                type='password'
-                placeholder='••••••••'
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                required
-                minLength={8}
-                disabled={isLoading}
-              />
+              <Input id='new-password' type='password' placeholder='••••••••' value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength={8} disabled={isLoading} />
             </div>
             <div className='space-y-2'>
               <Label htmlFor='confirm-password'>Confirm New Password</Label>
@@ -99,7 +82,7 @@ function SecurityPage() {
               />
             </div>
             <Button type='submit' disabled={isLoading}>
-              {isLoading && <Loader2 className='animate-spin' />}
+              {isLoading && <Spinner size={16} />}
               Update password
             </Button>
           </form>
@@ -117,9 +100,7 @@ function SecurityPage() {
               <p className='font-medium'>Current Session</p>
               <p className='text-sm text-muted-foreground'>This device</p>
             </div>
-            <span className='text-xs bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 px-2 py-1 rounded-full'>
-              Active
-            </span>
+            <span className='text-xs bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 px-2 py-1 rounded-full'>Active</span>
           </div>
           <Button variant='outline' className='w-full'>
             Sign out of all other sessions

@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { authClient } from '@/lib/auth-client'
 import { toast } from 'sonner'
-import { Loader2 } from 'lucide-react'
+import Spinner from '@/components/ui/spinner'
 
 export const Route = createFileRoute('/signup')({
   component: SignupPage,
@@ -76,7 +76,7 @@ function SignupPage() {
             </CardContent>
             <CardFooter className='flex flex-col gap-4 pt-2'>
               <Button type='submit' className='w-full' disabled={isLoading}>
-                {isLoading && <Loader2 className='animate-spin' />}
+                {isLoading && <Spinner size={16} />}
                 Create account
               </Button>
               <p className='text-sm text-muted-foreground text-center'>
