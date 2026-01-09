@@ -1,6 +1,8 @@
+import { RealtimeProvider } from '@upstash/realtime/client'
 import { HeadContent, Outlet, Scripts, createRootRoute } from '@tanstack/react-router'
 
 import appCss from '../styles.css?url'
+import { Toaster } from '@/components/ui/sonner'
 
 export const Route = createRootRoute({
   head: () => ({
@@ -85,7 +87,9 @@ export const Route = createRootRoute({
 function RootComponent() {
   return (
     <RootDocument>
-      <Outlet />
+      <RealtimeProvider>
+        <Outlet />
+      </RealtimeProvider>
     </RootDocument>
   )
 }
@@ -97,6 +101,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body className='antialiased'>
+        <Toaster theme='dark' />
         {children}
         <Scripts />
       </body>

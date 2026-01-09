@@ -10,33 +10,53 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiTestRouteImport } from './routes/api/test'
+import { Route as ApiRealtimeRouteImport } from './routes/api/realtime'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiTestRoute = ApiTestRouteImport.update({
+  id: '/api/test',
+  path: '/api/test',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiRealtimeRoute = ApiRealtimeRouteImport.update({
+  id: '/api/realtime',
+  path: '/api/realtime',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/api/realtime': typeof ApiRealtimeRoute
+  '/api/test': typeof ApiTestRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/api/realtime': typeof ApiRealtimeRoute
+  '/api/test': typeof ApiTestRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/api/realtime': typeof ApiRealtimeRoute
+  '/api/test': typeof ApiTestRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/api/realtime' | '/api/test'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/api/realtime' | '/api/test'
+  id: '__root__' | '/' | '/api/realtime' | '/api/test'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ApiRealtimeRoute: typeof ApiRealtimeRoute
+  ApiTestRoute: typeof ApiTestRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +68,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/test': {
+      id: '/api/test'
+      path: '/api/test'
+      fullPath: '/api/test'
+      preLoaderRoute: typeof ApiTestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/realtime': {
+      id: '/api/realtime'
+      path: '/api/realtime'
+      fullPath: '/api/realtime'
+      preLoaderRoute: typeof ApiRealtimeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ApiRealtimeRoute: ApiRealtimeRoute,
+  ApiTestRoute: ApiTestRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

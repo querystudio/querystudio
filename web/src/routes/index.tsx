@@ -3,12 +3,27 @@ import { createFileRoute } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Database, Table, Terminal, Shield, Download, Command, MousePointer, MessageSquare } from 'lucide-react'
+import { createRealtime } from '@upstash/realtime/client'
+import type { RealtimeEvents } from '@/lib/realtime'
+import { toast } from 'sonner'
+
+const { useRealtime } = createRealtime<RealtimeEvents>()
 
 export const Route = createFileRoute('/')({
   component: LandingPage,
 })
 
 function LandingPage() {
+  useRealtime({
+    events: ['messages.content'],
+    onData({ event, data, channel }) {
+      toast.success('We got data!', {
+        description: `From channel ${channel} with message: ${data}`,
+      })
+      console.log(`Received ${event}:`, data)
+    },
+  })
+
   return (
     <div className='min-h-screen bg-background'>
       <section className='container mx-auto px-4 py-24 md:py-32'>
