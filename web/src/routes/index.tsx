@@ -168,7 +168,7 @@ function DemoVideo() {
 function ShortcutItem({ shortcut, description }: { shortcut: string; description: string }) {
   return (
     <div className='flex items-center gap-4'>
-      <kbd className='px-3 py-1.5 bg-muted rounded-md font-mono text-sm min-w-[60px] text-center'>{shortcut}</kbd>
+      <kbd className='px-3 py-1.5 bg-muted rounded-md font-mono text-sm min-w-15 text-center'>{shortcut}</kbd>
       <span className='text-muted-foreground'>{description}</span>
     </div>
   )

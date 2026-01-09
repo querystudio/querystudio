@@ -1,5 +1,5 @@
 import { createFileRoute, Link, Outlet, useLocation } from '@tanstack/react-router'
-import { User, Shield, CreditCard } from 'lucide-react'
+import { User, Shield, CreditCard, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export const Route = createFileRoute('/_authed/dashboard')({
@@ -22,6 +22,11 @@ const sidebarItems = [
     href: '/dashboard/billing',
     icon: CreditCard,
   },
+  {
+    label: 'Admin',
+    href: '/dashboard/admin',
+    icon: Users,
+  },
 ]
 
 function DashboardLayout() {
@@ -33,11 +38,7 @@ function DashboardLayout() {
         {/* Sidebar */}
         <aside className='w-64 border-r min-h-screen p-4'>
           <div className='flex items-center gap-2 mb-8 px-2'>
-            <img
-              src='https://assets-cdn.querystudio.dev/QueryStudioIconNoBG.png'
-              alt='QueryStudio'
-              className='h-8 w-8'
-            />
+            <img src='https://assets-cdn.querystudio.dev/QueryStudioIconNoBG.png' alt='QueryStudio' className='h-8 w-8' />
             <span className='font-semibold text-lg'>QueryStudio</span>
           </div>
 
@@ -50,9 +51,7 @@ function DashboardLayout() {
                   to={item.href}
                   className={cn(
                     'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors',
-                    isActive
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                    isActive ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
                   )}
                 >
                   <item.icon className='h-4 w-4' />

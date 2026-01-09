@@ -21,6 +21,7 @@ import { Route as AuthedDashboardIndexRouteImport } from './routes/_authed/dashb
 import { Route as ApiAuthSplatRouteImport } from './routes/api.auth.$'
 import { Route as AuthedDashboardSecurityRouteImport } from './routes/_authed/dashboard/security'
 import { Route as AuthedDashboardBillingRouteImport } from './routes/_authed/dashboard/billing'
+import { Route as AuthedDashboardAdminRouteImport } from './routes/_authed/dashboard/admin'
 import { Route as AuthedDashboardAccountRouteImport } from './routes/_authed/dashboard/account'
 
 const WaitlistRoute = WaitlistRouteImport.update({
@@ -82,6 +83,11 @@ const AuthedDashboardBillingRoute = AuthedDashboardBillingRouteImport.update({
   path: '/billing',
   getParentRoute: () => AuthedDashboardRoute,
 } as any)
+const AuthedDashboardAdminRoute = AuthedDashboardAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthedDashboardRoute,
+} as any)
 const AuthedDashboardAccountRoute = AuthedDashboardAccountRouteImport.update({
   id: '/account',
   path: '/account',
@@ -97,6 +103,7 @@ export interface FileRoutesByFullPath {
   '/api/realtime': typeof ApiRealtimeRoute
   '/api/test': typeof ApiTestRoute
   '/dashboard/account': typeof AuthedDashboardAccountRoute
+  '/dashboard/admin': typeof AuthedDashboardAdminRoute
   '/dashboard/billing': typeof AuthedDashboardBillingRoute
   '/dashboard/security': typeof AuthedDashboardSecurityRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -110,6 +117,7 @@ export interface FileRoutesByTo {
   '/api/realtime': typeof ApiRealtimeRoute
   '/api/test': typeof ApiTestRoute
   '/dashboard/account': typeof AuthedDashboardAccountRoute
+  '/dashboard/admin': typeof AuthedDashboardAdminRoute
   '/dashboard/billing': typeof AuthedDashboardBillingRoute
   '/dashboard/security': typeof AuthedDashboardSecurityRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -126,6 +134,7 @@ export interface FileRoutesById {
   '/api/realtime': typeof ApiRealtimeRoute
   '/api/test': typeof ApiTestRoute
   '/_authed/dashboard/account': typeof AuthedDashboardAccountRoute
+  '/_authed/dashboard/admin': typeof AuthedDashboardAdminRoute
   '/_authed/dashboard/billing': typeof AuthedDashboardBillingRoute
   '/_authed/dashboard/security': typeof AuthedDashboardSecurityRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -142,6 +151,7 @@ export interface FileRouteTypes {
     | '/api/realtime'
     | '/api/test'
     | '/dashboard/account'
+    | '/dashboard/admin'
     | '/dashboard/billing'
     | '/dashboard/security'
     | '/api/auth/$'
@@ -155,6 +165,7 @@ export interface FileRouteTypes {
     | '/api/realtime'
     | '/api/test'
     | '/dashboard/account'
+    | '/dashboard/admin'
     | '/dashboard/billing'
     | '/dashboard/security'
     | '/api/auth/$'
@@ -170,6 +181,7 @@ export interface FileRouteTypes {
     | '/api/realtime'
     | '/api/test'
     | '/_authed/dashboard/account'
+    | '/_authed/dashboard/admin'
     | '/_authed/dashboard/billing'
     | '/_authed/dashboard/security'
     | '/api/auth/$'
@@ -273,6 +285,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedDashboardBillingRouteImport
       parentRoute: typeof AuthedDashboardRoute
     }
+    '/_authed/dashboard/admin': {
+      id: '/_authed/dashboard/admin'
+      path: '/admin'
+      fullPath: '/dashboard/admin'
+      preLoaderRoute: typeof AuthedDashboardAdminRouteImport
+      parentRoute: typeof AuthedDashboardRoute
+    }
     '/_authed/dashboard/account': {
       id: '/_authed/dashboard/account'
       path: '/account'
@@ -285,6 +304,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthedDashboardRouteChildren {
   AuthedDashboardAccountRoute: typeof AuthedDashboardAccountRoute
+  AuthedDashboardAdminRoute: typeof AuthedDashboardAdminRoute
   AuthedDashboardBillingRoute: typeof AuthedDashboardBillingRoute
   AuthedDashboardSecurityRoute: typeof AuthedDashboardSecurityRoute
   AuthedDashboardIndexRoute: typeof AuthedDashboardIndexRoute
@@ -292,6 +312,7 @@ interface AuthedDashboardRouteChildren {
 
 const AuthedDashboardRouteChildren: AuthedDashboardRouteChildren = {
   AuthedDashboardAccountRoute: AuthedDashboardAccountRoute,
+  AuthedDashboardAdminRoute: AuthedDashboardAdminRoute,
   AuthedDashboardBillingRoute: AuthedDashboardBillingRoute,
   AuthedDashboardSecurityRoute: AuthedDashboardSecurityRoute,
   AuthedDashboardIndexRoute: AuthedDashboardIndexRoute,

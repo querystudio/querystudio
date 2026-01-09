@@ -8,6 +8,9 @@ import { env } from './env'
 import { render } from '@react-email/render'
 import VerifyEmail from '@/emails/verify-email'
 import WaitlistJoined from '@/emails/waitlist-joined'
+import WaitlistStatus from '@/emails/waitlist-status'
+
+const ADMIN_EMAILS = ['vestergaardlasse2@gmail.com']
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -56,6 +59,19 @@ export const auth = betterAuth({
           subject: "You're on the QueryStudio waitlist!",
           html: await render(<WaitlistJoined />),
         })
+      },
+      onStatusChange: async (entry) => {
+        if (entry.status === 'accepted' || entry.status === 'rejected') {
+          await emailer.emails.send({
+            from: env.USESEND_FROM,
+            to: entry.email,
+            subject: entry.status === 'accepted' ? "You've been approved for QueryStudio!" : 'Update on your QueryStudio waitlist request',
+            html: await render(<WaitlistStatus status={entry.status === 'accepted' ? 'approved' : 'rejected'} />),
+          })
+        }
+      },
+      canManageWaitlist: async (user) => {
+        return ADMIN_EMAILS.includes(user.email)
       },
     }),
   ],
