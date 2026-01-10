@@ -12,7 +12,8 @@ export const user = pgTable('user', {
     .$onUpdate(() => new Date())
     .notNull(),
   polarCustomerId: text('polar_customer_id'),
-  polarSubscriptionId: text('polar_subscription_id'),
+  isPro: boolean('is_pro'),
+  licenseKey: text('license_key'),
   cancelAtPeriodEnd: boolean('cancel_at_period_end'),
 })
 

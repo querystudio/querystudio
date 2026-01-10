@@ -2,6 +2,7 @@ import { useRef, useEffect } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Header } from '@/components/header'
 import { Database, Table, Terminal, Shield, Download, Command, MousePointer, MessageSquare } from 'lucide-react'
 import { createRealtime } from '@upstash/realtime/client'
 import type { RealtimeEvents } from '@/lib/realtime'
@@ -26,9 +27,9 @@ function LandingPage() {
 
   return (
     <div className='min-h-screen bg-background'>
+      <Header />
       <section className='container mx-auto px-4 py-24 md:py-32'>
         <div className='flex flex-col items-center text-center gap-8'>
-          <img src='https://assets-cdn.querystudio.dev/QueryStudioIconNoBG.png' alt='QueryStudio' className='h-24 w-24' />
           <h1 className='text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight max-w-4xl'>The modern database studio you deserve</h1>
 
           <p className='text-xl text-muted-foreground max-w-2xl'>A beautiful & lightweight sql studio, built with Tauri, React, and Rust. Query your data with SQL or let AI do it for you.</p>
@@ -47,15 +48,7 @@ function LandingPage() {
 
       {/* Video Demo Section */}
       <section className='container mx-auto px-4 pb-24'>
-        <div className='relative rounded-xl border bg-muted/50 overflow-hidden shadow-2xl'>
-          <div className='flex items-center gap-2 px-4 py-3 border-b bg-background'>
-            <div className='flex gap-2'>
-              <div className='w-3 h-3 rounded-full bg-red-500' />
-              <div className='w-3 h-3 rounded-full bg-yellow-500' />
-              <div className='w-3 h-3 rounded-full bg-green-500' />
-            </div>
-            <span className='text-sm text-muted-foreground ml-2'>QueryStudio</span>
-          </div>
+        <div className='relative rounded-xl overflow-hidden shadow-2xl'>
           <DemoVideo />
         </div>
       </section>

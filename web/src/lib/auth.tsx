@@ -22,7 +22,11 @@ export const auth = betterAuth({
         type: 'string',
         required: false,
       },
-      polarSubscriptionId: {
+      isPro: {
+        type: 'boolean',
+        required: false,
+      },
+      licenseKey: {
         type: 'string',
         required: false,
       },

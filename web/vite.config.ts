@@ -22,7 +22,7 @@ const config = defineConfig({
       },
     }),
   ],
-  server: { port: 3000 },
+  server: { allowedHosts: ['6887b4cb30dd.ngrok-free.app'] },
 })
 
 export default config

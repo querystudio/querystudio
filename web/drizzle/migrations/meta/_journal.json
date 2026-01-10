@@ -8,6 +8,20 @@
       "when": 1767996087160,
       "tag": "0000_illegal_gwen_stacy",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1768008440955,
+      "tag": "0001_colorful_skin",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1768008521300,
+      "tag": "0002_loving_wendell_vaughn",
+      "breakpoints": true
     }
   ]
 }
