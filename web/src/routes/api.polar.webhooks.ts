@@ -33,6 +33,8 @@ export const Route = createFileRoute('/api/polar/webhooks')({
             case 'benefit_grant.created': {
               const { customerId, benefit, properties } = event.data
 
+              console.log(event.data.properties)
+
               if (benefit.type === 'license_keys' && customerId) {
                 const licenseKey = (properties as { licenseKey?: string })?.licenseKey
 

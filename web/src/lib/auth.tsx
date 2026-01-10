@@ -38,7 +38,7 @@ export const auth = betterAuth({
   },
   advanced: {
     database: {
-      generateId: () => zeroId({ randomLength: 32, prefix: 'user_' }),
+      generateId: () => zeroId({ randomLength: 32 }),
     },
   },
   emailAndPassword: { enabled: true, requireEmailVerification: true },

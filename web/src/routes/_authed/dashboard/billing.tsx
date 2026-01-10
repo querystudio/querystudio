@@ -1,22 +1,39 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Check, Infinity as InfinityIcon } from 'lucide-react'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
+import { Check, Infinity as InfinityIcon, FileText, RotateCcw } from 'lucide-react'
 import { getPricing } from '@/server/pricing'
 import { useMutation } from '@tanstack/react-query'
-import { createCheckout } from '@/server/billing'
+import { createCheckout, getOrders, generateInvoice, requestRefund } from '@/server/billing'
 import { toast } from 'sonner'
 import Spinner from '@/components/ui/spinner'
 
 export const Route = createFileRoute('/_authed/dashboard/billing')({
   component: BillingPage,
-  loader: () => getPricing(),
+  loader: async () => {
+    const pricing = await getPricing()
+    const orders = await getOrders()
+
+    return { pricing, orders }
+  },
 })
 
 function BillingPage() {
   const { user } = Route.useRouteContext()
-  const pricing = Route.useLoaderData()
+  const { pricing, orders } = Route.useLoaderData()
 
   const createCheckoutMutation = useMutation({
     mutationFn: async () => {
@@ -38,12 +55,12 @@ function BillingPage() {
       </div>
 
       <div className='grid md:grid-cols-2 gap-6'>
-        {/* Free Tier - Current Plan */}
-        <Card>
+        {/* Free Tier */}
+        <Card className={!user.isPro ? 'border-primary' : ''}>
           <CardHeader>
             <div className='flex items-center justify-between'>
               <CardTitle className='text-xl'>{pricing.tiers.free.name}</CardTitle>
-              <Badge variant='secondary'>Current Plan</Badge>
+              {!user.isPro && <Badge variant='secondary'>Current Plan</Badge>}
             </div>
             <CardDescription>Perfect for getting started</CardDescription>
             <div className='mt-4'>
@@ -61,12 +78,17 @@ function BillingPage() {
         </Card>
 
         {/* Pro Tier */}
-        <Card className='relative border-primary'>
-          <div className='absolute -top-3 left-1/2 -translate-x-1/2'>
-            <span className='bg-primary text-primary-foreground text-xs font-medium px-3 py-1 rounded-full'>Early Bird</span>
-          </div>
+        <Card className={`relative ${user.isPro ? 'border-primary' : 'border-primary'}`}>
+          {!user.isPro && (
+            <div className='absolute -top-3 left-1/2 -translate-x-1/2'>
+              <span className='bg-primary text-primary-foreground text-xs font-medium px-3 py-1 rounded-full'>Early Bird</span>
+            </div>
+          )}
           <CardHeader>
-            <CardTitle className='text-xl'>{pricing.tiers.pro.name}</CardTitle>
+            <div className='flex items-center justify-between'>
+              <CardTitle className='text-xl'>{pricing.tiers.pro.name}</CardTitle>
+              {user.isPro && <Badge variant='default'>Current Plan</Badge>}
+            </div>
             <CardDescription>For power users and teams</CardDescription>
             <div className='mt-4'>
               <span className='text-3xl font-bold'>${pricing.tiers.pro.earlyBirdPrice}</span>
@@ -87,11 +109,13 @@ function BillingPage() {
             <FeatureItem>Priority support</FeatureItem>
             <FeatureItem>Lifetime updates</FeatureItem>
           </CardContent>
-          <CardFooter>
-            <Button className='w-full' onClick={() => createCheckoutMutation.mutate()} disabled={createCheckoutMutation.isPending || user.isPro!}>
-              {createCheckoutMutation.isPending ? <Spinner /> : 'Upgrade to Pro'}
-            </Button>
-          </CardFooter>
+          {!user.isPro && (
+            <CardFooter>
+              <Button className='w-full' onClick={() => createCheckoutMutation.mutate()} disabled={createCheckoutMutation.isPending}>
+                {createCheckoutMutation.isPending ? <Spinner /> : 'Upgrade to Pro'}
+              </Button>
+            </CardFooter>
+          )}
         </Card>
       </div>
 
@@ -106,17 +130,49 @@ function BillingPage() {
         </CardContent>
       </Card>
 
-      {/* Billing History */}
+      {/* Order History */}
       <Card>
         <CardHeader>
-          <CardTitle>Billing History</CardTitle>
-          <CardDescription>View your past invoices and payments</CardDescription>
+          <CardTitle>Order History</CardTitle>
+          <CardDescription>View your entire order history</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className='text-center py-8 text-muted-foreground'>
-            <p>No billing history yet</p>
-            <p className='text-sm'>Your invoices will appear here once you upgrade</p>
-          </div>
+          {orders.items.length === 0 ? (
+            <div className='text-center py-8 text-muted-foreground'>
+              <p>No orders yet</p>
+              <p className='text-sm'>Your orders will appear here once you upgrade</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Product</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className='text-right'>Amount</TableHead>
+                  <TableHead className='text-right'>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {orders.items.map((order) => (
+                  <TableRow key={order.id}>
+                    <TableCell>{new Date(order.createdAt).toLocaleDateString()}</TableCell>
+                    <TableCell>{order.product?.name ?? 'Unknown'}</TableCell>
+                    <TableCell>
+                      <OrderStatusBadge status={order.status} />
+                    </TableCell>
+                    <TableCell className='text-right'>{formatAmount(order.totalAmount, order.currency)}</TableCell>
+                    <TableCell className='text-right'>
+                      <div className='flex items-center justify-end gap-1'>
+                        <InvoiceButton orderId={order.id} status={order.status} />
+                        <RefundButton orderId={order.id} status={order.status} refundableAmount={order.totalAmount - order.refundedAmount} currency={order.currency} />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -134,4 +190,94 @@ function FeatureItem({ children }: { children: React.ReactNode }) {
 
 function capitalize(str: string) {
   return str.charAt(0).toUpperCase() + str.slice(1)
+}
+
+function InvoiceButton({ orderId, status }: { orderId: string; status: string }) {
+  const invoiceMutation = useMutation({
+    mutationFn: async () => {
+      return await generateInvoice({ data: { orderId } })
+    },
+    onSuccess: (data) => {
+      window.open(data.url, '_blank')
+    },
+    onError: (err) => {
+      toast.error('Failed to generate invoice', { description: err.message })
+    },
+  })
+
+  if (status !== 'paid' && status !== 'refunded' && status !== 'partially_refunded') {
+    return null
+  }
+
+  return (
+    <Button variant='ghost' size='sm' onClick={() => invoiceMutation.mutate()} disabled={invoiceMutation.isPending} title='Download Invoice'>
+      {invoiceMutation.isPending ? <Spinner className='h-4 w-4' /> : <FileText className='h-4 w-4' />}
+    </Button>
+  )
+}
+
+function RefundButton({ orderId, status, refundableAmount, currency }: { orderId: string; status: string; refundableAmount: number; currency: string }) {
+  const router = useRouter()
+  const refundMutation = useMutation({
+    mutationFn: async () => {
+      return await requestRefund({ data: { orderId } })
+    },
+    onSuccess: () => {
+      toast.success('Refund processed', { description: 'Your refund has been processed successfully.' })
+      router.invalidate()
+    },
+    onError: (err) => {
+      toast.error('Failed to process refund', { description: err.message })
+    },
+  })
+
+  // Can only refund paid or partially refunded orders with remaining amount
+  const canRefund = (status === 'paid' || status === 'partially_refunded') && refundableAmount > 0
+
+  if (!canRefund) {
+    return null
+  }
+
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button variant='ghost' size='sm' title='Request Refund'>
+          <RotateCcw className='h-4 w-4' />
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Request Refund</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to request a refund of {formatAmount(refundableAmount, currency)}? This action cannot be undone and your Pro access will be revoked.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={() => refundMutation.mutate()} disabled={refundMutation.isPending} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
+            {refundMutation.isPending ? <Spinner className='h-4 w-4 mr-2' /> : null}
+            Request Refund
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
+}
+
+function OrderStatusBadge({ status }: { status: string }) {
+  const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+    paid: 'default',
+    pending: 'secondary',
+    refunded: 'destructive',
+    partially_refunded: 'outline',
+  }
+
+  return <Badge variant={variants[status] ?? 'secondary'}>{status.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase())}</Badge>
+}
+
+function formatAmount(amount: number, currency: string) {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currency.toUpperCase(),
+  }).format(amount / 100)
 }
