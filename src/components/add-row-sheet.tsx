@@ -13,7 +13,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { useInsertRow } from "@/lib/hooks";
 import { toast } from "sonner";
@@ -159,7 +158,14 @@ export function AddRowSheet({
 
   const getInputType = (dataType: string): string => {
     const lower = dataType.toLowerCase();
-    if (lower.includes("int") || lower.includes("numeric") || lower.includes("decimal") || lower.includes("float") || lower.includes("double") || lower.includes("real")) {
+    if (
+      lower.includes("int") ||
+      lower.includes("numeric") ||
+      lower.includes("decimal") ||
+      lower.includes("float") ||
+      lower.includes("double") ||
+      lower.includes("real")
+    ) {
       return "number";
     }
     if (lower.includes("date") && !lower.includes("time")) {
@@ -173,12 +179,17 @@ export function AddRowSheet({
 
   const shouldUseTextarea = (dataType: string): boolean => {
     const lower = dataType.toLowerCase();
-    return lower === "text" || lower === "json" || lower === "jsonb" || lower.includes("character varying");
+    return (
+      lower === "text" ||
+      lower === "json" ||
+      lower === "jsonb" ||
+      lower.includes("character varying")
+    );
   };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-lg flex flex-col overflow-hidden">
+      <SheetContent className="sm:max-w-lg flex flex-col">
         <SheetHeader>
           <SheetTitle>Add New Row</SheetTitle>
           <SheetDescription>
@@ -186,9 +197,12 @@ export function AddRowSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <form onSubmit={handleSubmit} className="flex flex-1 flex-col min-h-0">
-          <ScrollArea className="flex-1 pr-4">
-            <div className="space-y-4 py-4 pl-4">
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-1 flex-col overflow-hidden min-h-0"
+        >
+          <div className="flex-1 overflow-y-auto min-h-0">
+            <div className="space-y-4 py-4 px-1">
               {columns.map((col) => {
                 const useDefault = nullFields.has(col.name);
                 const inputType = getInputType(col.data_type);
@@ -198,9 +212,15 @@ export function AddRowSheet({
                 return (
                   <div key={col.name} className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor={col.name} className="flex items-center gap-2">
+                      <Label
+                        htmlFor={col.name}
+                        className="flex items-center gap-2"
+                      >
                         {col.name}
-                        <Badge variant="outline" className="text-[10px] font-normal">
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] font-normal"
+                        >
                           {col.data_type}
                         </Badge>
                         {col.is_primary_key && (
@@ -209,7 +229,10 @@ export function AddRowSheet({
                           </Badge>
                         )}
                         {col.has_default && (
-                          <Badge variant="outline" className="text-[10px] text-blue-400 border-blue-400/50">
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] text-blue-400 border-blue-400/50"
+                          >
                             auto
                           </Badge>
                         )}
@@ -221,7 +244,9 @@ export function AddRowSheet({
                           </span>
                           <Switch
                             checked={useDefault}
-                            onCheckedChange={(checked) => toggleNull(col.name, checked)}
+                            onCheckedChange={(checked) =>
+                              toggleNull(col.name, checked)
+                            }
                           />
                         </div>
                       )}
@@ -232,7 +257,13 @@ export function AddRowSheet({
                         value={useDefault ? "" : formData[col.name] || ""}
                         onChange={(e) => updateField(col.name, e.target.value)}
                         disabled={useDefault}
-                        placeholder={useDefault ? (col.has_default ? "DEFAULT" : "NULL") : `Enter ${col.data_type}`}
+                        placeholder={
+                          useDefault
+                            ? col.has_default
+                              ? "DEFAULT"
+                              : "NULL"
+                            : `Enter ${col.data_type}`
+                        }
                         className="min-h-[80px] font-mono text-sm"
                       />
                     ) : (
@@ -242,7 +273,13 @@ export function AddRowSheet({
                         value={useDefault ? "" : formData[col.name] || ""}
                         onChange={(e) => updateField(col.name, e.target.value)}
                         disabled={useDefault}
-                        placeholder={useDefault ? (col.has_default ? "DEFAULT" : "NULL") : `Enter ${col.data_type}`}
+                        placeholder={
+                          useDefault
+                            ? col.has_default
+                              ? "DEFAULT"
+                              : "NULL"
+                            : `Enter ${col.data_type}`
+                        }
                         step={inputType === "number" ? "any" : undefined}
                       />
                     )}
@@ -250,9 +287,9 @@ export function AddRowSheet({
                 );
               })}
             </div>
-          </ScrollArea>
+          </div>
 
-          <SheetFooter>
+          <SheetFooter className="flex-shrink-0">
             <Button
               type="button"
               variant="outline"

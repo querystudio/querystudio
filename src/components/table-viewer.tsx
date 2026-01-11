@@ -307,7 +307,8 @@ export function TableViewer() {
                 tableData?.rows.map((row, i) => (
                   <TableRow
                     key={i}
-                    className="border-border hover:bg-card/50"
+                    className="border-border hover:bg-card/50 cursor-pointer"
+                    onClick={() => handleEditRow(row)}
                   >
                     {row.map((cell, j) => {
                       const isNull = cell === null;
@@ -326,19 +327,30 @@ export function TableViewer() {
                           </ContextMenuTrigger>
                           <ContextMenuContent>
                             <ContextMenuItem
-                              onClick={() => handleCopyCell(cell)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCopyCell(cell);
+                              }}
                             >
                               <Copy className="h-4 w-4" />
                               Copy cell content
                             </ContextMenuItem>
                             <ContextMenuSeparator />
-                            <ContextMenuItem onClick={() => handleEditRow(row)}>
+                            <ContextMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditRow(row);
+                              }}
+                            >
                               <Pencil className="h-4 w-4" />
                               Edit row
                             </ContextMenuItem>
                             <ContextMenuItem
                               variant="destructive"
-                              onClick={() => handleDeleteRowClick(row)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteRowClick(row);
+                              }}
                             >
                               <Trash2 className="h-4 w-4" />
                               Delete row

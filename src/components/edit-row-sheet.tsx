@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Copy } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -13,10 +13,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { Badge } from "@/components/ui/badge";
 import { useUpdateRow } from "@/lib/hooks";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import type { ColumnInfo } from "@/lib/types";
 
 interface EditRowSheetProps {
@@ -89,18 +90,21 @@ export function EditRowSheet({
       const oldValue = originalData[col.name];
 
       // Check if value changed
-      const oldStr = oldValue === null || oldValue === undefined 
-        ? null 
-        : typeof oldValue === "object" 
-          ? JSON.stringify(oldValue) 
-          : String(oldValue);
+      const oldStr =
+        oldValue === null || oldValue === undefined
+          ? null
+          : typeof oldValue === "object"
+            ? JSON.stringify(oldValue)
+            : String(oldValue);
       const newStr = isNull ? null : newValue;
 
       if (oldStr !== newStr) {
         if (isNull) {
           setClauses.push(`"${col.name}" = NULL`);
         } else {
-          setClauses.push(`"${col.name}" = ${formatValueForSQL(newValue, col.data_type)}`);
+          setClauses.push(
+            `"${col.name}" = ${formatValueForSQL(newValue, col.data_type)}`,
+          );
         }
       }
     });
@@ -187,7 +191,14 @@ export function EditRowSheet({
 
   const getInputType = (dataType: string): string => {
     const lower = dataType.toLowerCase();
-    if (lower.includes("int") || lower.includes("numeric") || lower.includes("decimal") || lower.includes("float") || lower.includes("double") || lower.includes("real")) {
+    if (
+      lower.includes("int") ||
+      lower.includes("numeric") ||
+      lower.includes("decimal") ||
+      lower.includes("float") ||
+      lower.includes("double") ||
+      lower.includes("real")
+    ) {
       return "number";
     }
     if (lower.includes("date") && !lower.includes("time")) {
@@ -201,12 +212,26 @@ export function EditRowSheet({
 
   const shouldUseTextarea = (dataType: string): boolean => {
     const lower = dataType.toLowerCase();
-    return lower === "text" || lower === "json" || lower === "jsonb" || lower.includes("character varying");
+    return (
+      lower === "text" ||
+      lower === "json" ||
+      lower === "jsonb" ||
+      lower.includes("character varying")
+    );
+  };
+
+  const handleCopy = async (value: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success("Copied to clipboard");
+    } catch {
+      toast.error("Failed to copy");
+    }
   };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-lg flex flex-col overflow-hidden">
+      <SheetContent className="sm:max-w-lg flex flex-col">
         <SheetHeader>
           <SheetTitle>Edit Row</SheetTitle>
           <SheetDescription>
@@ -214,9 +239,12 @@ export function EditRowSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <form onSubmit={handleSubmit} className="flex flex-1 flex-col min-h-0">
-          <ScrollArea className="flex-1 pr-4">
-            <div className="space-y-4 py-4 pl-4">
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-1 flex-col overflow-hidden min-h-0"
+        >
+          <div className="flex-1 overflow-y-auto min-h-0">
+            <div className="space-y-4 py-4 px-1">
               {columns.map((col) => {
                 const isNull = nullFields.has(col.name);
                 const inputType = getInputType(col.data_type);
@@ -225,9 +253,15 @@ export function EditRowSheet({
                 return (
                   <div key={col.name} className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor={col.name} className="flex items-center gap-2">
+                      <Label
+                        htmlFor={col.name}
+                        className="flex items-center gap-2"
+                      >
                         {col.name}
-                        <Badge variant="outline" className="text-[10px] font-normal">
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] font-normal"
+                        >
                           {col.data_type}
                         </Badge>
                         {col.is_primary_key && (
@@ -238,41 +272,80 @@ export function EditRowSheet({
                       </Label>
                       {col.is_nullable && (
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground">NULL</span>
+                          <span className="text-xs text-muted-foreground">
+                            NULL
+                          </span>
                           <Switch
                             checked={isNull}
-                            onCheckedChange={(checked) => toggleNull(col.name, checked)}
+                            onCheckedChange={(checked) =>
+                              toggleNull(col.name, checked)
+                            }
                           />
                         </div>
                       )}
                     </div>
                     {useTextarea ? (
-                      <Textarea
-                        id={col.name}
-                        value={isNull ? "" : formData[col.name] || ""}
-                        onChange={(e) => updateField(col.name, e.target.value)}
-                        disabled={isNull}
-                        placeholder={isNull ? "NULL" : `Enter ${col.data_type}`}
-                        className="min-h-[80px] font-mono text-sm"
-                      />
+                      <div className="group/input relative">
+                        <Textarea
+                          id={col.name}
+                          value={isNull ? "" : formData[col.name] || ""}
+                          onChange={(e) =>
+                            updateField(col.name, e.target.value)
+                          }
+                          disabled={isNull}
+                          placeholder={
+                            isNull ? "NULL" : `Enter ${col.data_type}`
+                          }
+                          className="min-h-[80px] font-mono text-sm pr-8"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(formData[col.name] || "")}
+                          className={cn(
+                            "absolute right-2 top-2 p-1 rounded text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors opacity-0 group-hover/input:opacity-100",
+                            isNull && "hidden",
+                          )}
+                          title="Copy to clipboard"
+                        >
+                          <Copy className="h-3 w-3" />
+                        </button>
+                      </div>
                     ) : (
-                      <Input
-                        id={col.name}
-                        type={inputType}
-                        value={isNull ? "" : formData[col.name] || ""}
-                        onChange={(e) => updateField(col.name, e.target.value)}
-                        disabled={isNull}
-                        placeholder={isNull ? "NULL" : `Enter ${col.data_type}`}
-                        step={inputType === "number" ? "any" : undefined}
-                      />
+                      <div className="group/input relative">
+                        <Input
+                          id={col.name}
+                          type={inputType}
+                          value={isNull ? "" : formData[col.name] || ""}
+                          onChange={(e) =>
+                            updateField(col.name, e.target.value)
+                          }
+                          disabled={isNull}
+                          placeholder={
+                            isNull ? "NULL" : `Enter ${col.data_type}`
+                          }
+                          step={inputType === "number" ? "any" : undefined}
+                          className="pr-8"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(formData[col.name] || "")}
+                          className={cn(
+                            "absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors opacity-0 group-hover/input:opacity-100",
+                            isNull && "hidden",
+                          )}
+                          title="Copy to clipboard"
+                        >
+                          <Copy className="h-3 w-3" />
+                        </button>
+                      </div>
                     )}
                   </div>
                 );
               })}
             </div>
-          </ScrollArea>
+          </div>
 
-          <SheetFooter>
+          <SheetFooter className="flex-shrink-0">
             <Button
               type="button"
               variant="outline"

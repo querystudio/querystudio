@@ -7,6 +7,64 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio_postgres::Client;
 
+fn format_db_error(e: tokio_postgres::Error) -> String {
+    // Try to get detailed database error info
+    if let Some(db_err) = e.as_db_error() {
+        let mut msg = String::new();
+
+        // Main error message
+        msg.push_str(db_err.message());
+
+        // Add detail if available
+        if let Some(detail) = db_err.detail() {
+            msg.push_str(&format!("\nDetail: {}", detail));
+        }
+
+        // Add hint if available
+        if let Some(hint) = db_err.hint() {
+            msg.push_str(&format!("\nHint: {}", hint));
+        }
+
+        // Add position info if available
+        if let Some(position) = db_err.position() {
+            match position {
+                tokio_postgres::error::ErrorPosition::Original(pos) => {
+                    msg.push_str(&format!("\nPosition: {}", pos));
+                }
+                tokio_postgres::error::ErrorPosition::Internal { position, query } => {
+                    msg.push_str(&format!(
+                        "\nInternal position: {} in query: {}",
+                        position, query
+                    ));
+                }
+            }
+        }
+
+        // Add where clause if available
+        if let Some(where_) = db_err.where_() {
+            msg.push_str(&format!("\nWhere: {}", where_));
+        }
+
+        // Add schema/table/column/constraint info if available
+        if let Some(schema) = db_err.schema() {
+            msg.push_str(&format!("\nSchema: {}", schema));
+        }
+        if let Some(table) = db_err.table() {
+            msg.push_str(&format!("\nTable: {}", table));
+        }
+        if let Some(column) = db_err.column() {
+            msg.push_str(&format!("\nColumn: {}", column));
+        }
+        if let Some(constraint) = db_err.constraint() {
+            msg.push_str(&format!("\nConstraint: {}", constraint));
+        }
+
+        return msg;
+    }
+
+    e.to_string()
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum ConnectionConfig {
@@ -156,7 +214,7 @@ impl ConnectionManager {
         let rows = client
             .query(queries::LIST_TABLES, &[])
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(format_db_error)?;
 
         let tables = rows
             .iter()
@@ -181,7 +239,7 @@ impl ConnectionManager {
         let rows = client
             .query(queries::GET_TABLE_COLUMNS, &[&schema, &table])
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(format_db_error)?;
 
         let columns = rows
             .iter()
@@ -224,7 +282,7 @@ impl ConnectionManager {
         client: &Client,
         query: &str,
     ) -> Result<QueryResult, String> {
-        let rows = client.query(query, &[]).await.map_err(|e| e.to_string())?;
+        let rows = client.query(query, &[]).await.map_err(format_db_error)?;
 
         if rows.is_empty() {
             return Ok(QueryResult {
@@ -269,7 +327,7 @@ impl ConnectionManager {
         let row = client
             .query_one(&query, &[])
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(format_db_error)?;
 
         Ok(row.get::<_, i64>("count"))
     }

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Plus, Server } from "lucide-react";
+import { Plus, Server, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSavedConnections } from "@/lib/hooks";
 import { getLastConnectionId } from "@/lib/store";
@@ -8,11 +8,13 @@ import type { SavedConnection } from "@/lib/types";
 interface WelcomeScreenProps {
   onNewConnection: () => void;
   onSelectConnection: (connection: SavedConnection) => void;
+  onEditConnection: (connection: SavedConnection) => void;
 }
 
 export function WelcomeScreen({
   onNewConnection,
   onSelectConnection,
+  onEditConnection,
 }: WelcomeScreenProps) {
   const { data: savedConnections, isLoading } = useSavedConnections();
   const autoConnectAttempted = useRef(false);
@@ -62,21 +64,35 @@ export function WelcomeScreen({
               </p>
               <div className="space-y-1">
                 {savedConnections.map((connection) => (
-                  <button
+                  <div
                     key={connection.id}
-                    onClick={() => onSelectConnection(connection)}
-                    className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left hover:bg-secondary transition-colors"
+                    className="group flex w-full items-center gap-3 rounded-md px-3 py-2 text-left hover:bg-secondary transition-colors"
                   >
-                    <Server className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm text-foreground truncate">
-                        {connection.name}
-                      </p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {getConnectionDescription(connection)}
-                      </p>
-                    </div>
-                  </button>
+                    <button
+                      onClick={() => onSelectConnection(connection)}
+                      className="flex flex-1 items-start gap-3 min-w-0 text-left"
+                    >
+                      <Server className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm text-foreground truncate">
+                          {connection.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {getConnectionDescription(connection)}
+                        </p>
+                      </div>
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEditConnection(connection);
+                      }}
+                      className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-background transition-opacity"
+                      title="Edit connection"
+                    >
+                      <Pencil className="h-3 w-3 text-muted-foreground" />
+                    </button>
+                  </div>
                 ))}
               </div>
             </div>

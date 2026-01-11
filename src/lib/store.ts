@@ -68,6 +68,11 @@ interface AIQueryState {
   // Active tab control (persisted)
   activeTab: string;
   setActiveTab: (tab: string) => void;
+
+  // AI Panel visibility (persisted)
+  aiPanelOpen: boolean;
+  setAiPanelOpen: (open: boolean) => void;
+  toggleAiPanel: () => void;
 }
 
 export const useAIQueryStore = create<AIQueryState>()(
@@ -84,10 +89,18 @@ export const useAIQueryStore = create<AIQueryState>()(
 
       activeTab: "data",
       setActiveTab: (tab: string) => set({ activeTab: tab }),
+
+      aiPanelOpen: false,
+      setAiPanelOpen: (open: boolean) => set({ aiPanelOpen: open }),
+      toggleAiPanel: () =>
+        set((state) => ({ aiPanelOpen: !state.aiPanelOpen })),
     }),
     {
       name: "querystudio_ui_state",
-      partialize: (state) => ({ activeTab: state.activeTab }),
+      partialize: (state) => ({
+        activeTab: state.activeTab,
+        aiPanelOpen: state.aiPanelOpen,
+      }),
     },
   ),
 );

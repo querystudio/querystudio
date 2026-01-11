@@ -3,6 +3,7 @@ import {
   Database,
   Plus,
   Trash2,
+  Pencil,
   RefreshCw,
   LayoutGrid,
   Terminal,
@@ -31,6 +32,7 @@ interface CommandPaletteProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSelectConnection: (connection: SavedConnection) => void;
+  onEditConnection: (connection: SavedConnection) => void;
   onNewConnection: () => void;
   onRefresh?: () => void;
 }
@@ -39,6 +41,7 @@ export function CommandPalette({
   open,
   onOpenChange,
   onSelectConnection,
+  onEditConnection,
   onNewConnection,
   onRefresh,
 }: CommandPaletteProps) {
@@ -76,6 +79,13 @@ export function CommandPalette({
   const handleDelete = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     deleteConnection.mutate(id);
+  };
+
+  const handleEdit = (e: React.MouseEvent, conn: SavedConnection) => {
+    e.stopPropagation();
+    onOpenChange(false);
+    setSearch("");
+    onEditConnection(conn);
   };
 
   const getConnectionDescription = (connection: SavedConnection) => {
@@ -170,8 +180,16 @@ export function CommandPalette({
                   </span>
                 </div>
                 <button
+                  onClick={(e) => handleEdit(e, conn)}
+                  className="opacity-0 group-hover:opacity-100 p-1 hover:bg-secondary rounded"
+                  title="Edit connection"
+                >
+                  <Pencil className="h-3 w-3 text-muted-foreground" />
+                </button>
+                <button
                   onClick={(e) => handleDelete(e, conn.id)}
                   className="opacity-0 group-hover:opacity-100 p-1 hover:bg-secondary rounded"
+                  title="Delete connection"
                 >
                   <Trash2 className="h-3 w-3 text-muted-foreground" />
                 </button>

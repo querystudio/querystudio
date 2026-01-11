@@ -1,30 +1,27 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, memo } from "react";
 import {
   Send,
   Bot,
-  User,
   Loader2,
   Settings,
   Trash2,
   Wrench,
   Plus,
   MessageSquare,
-  ChevronLeft,
-  ChevronRight,
   Copy,
   Check,
   PlayCircle,
-  Paperclip,
-  X,
-  FileText,
+  History,
+  RotateCcw,
+  Square,
 } from "lucide-react";
-import { motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -41,6 +38,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import {
   useConnectionStore,
@@ -51,7 +55,6 @@ import {
   AIAgent,
   AI_MODELS,
   type Message,
-  type MessageAttachment,
   type ModelId,
   type ChatSession,
   loadChatHistory,
@@ -64,8 +67,11 @@ import { cn } from "@/lib/utils";
 const API_KEY_STORAGE_KEY = "querystudio_openai_api_key";
 const SELECTED_MODEL_KEY = "querystudio_selected_model";
 
-// Code block component with copy button and syntax highlighting
-function CodeBlock({
+// ============================================================================
+// Memoized Code Block Component
+// ============================================================================
+
+const CodeBlock = memo(function CodeBlock({
   children,
   className,
 }: {
@@ -76,7 +82,6 @@ function CodeBlock({
   const language = className?.replace("language-", "") || "";
   const isSql =
     language === "sql" || language === "pgsql" || language === "postgresql";
-
   const code = String(children).replace(/\n$/, "");
 
   const appendSql = useAIQueryStore((s) => s.appendSql);
@@ -94,29 +99,29 @@ function CodeBlock({
   }, [code, appendSql, setActiveTab]);
 
   return (
-    <div className="relative group my-2">
-      <div className="flex items-center justify-between bg-card px-3 py-1.5 rounded-t-md border-b border-border">
-        <span className="text-xs text-muted-foreground uppercase">
+    <div className="relative group my-1.5 rounded-md overflow-hidden border border-border/40">
+      <div className="flex items-center justify-between bg-muted/40 px-2 py-1">
+        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
           {language || "code"}
         </span>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           {isSql && (
             <button
               onClick={handleAppendToRunner}
-              className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+              className="flex items-center gap-1 text-[10px] text-primary hover:text-primary/80 transition-colors font-medium"
             >
               <PlayCircle className="h-3 w-3" />
-              Add to Query
+              Run
             </button>
           )}
           <button
             onClick={handleCopy}
-            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
           >
             {copied ? (
               <>
-                <Check className="h-3 w-3" />
-                Copied
+                <Check className="h-3 w-3 text-green-500" />
+                <span className="text-green-500">Copied</span>
               </>
             ) : (
               <>
@@ -132,24 +137,212 @@ function CodeBlock({
         style={oneDark}
         customStyle={{
           margin: 0,
-          borderRadius: "0 0 6px 6px",
-          fontSize: "0.875rem",
+          borderRadius: 0,
+          fontSize: "0.75rem",
+          lineHeight: "1.4",
+          padding: "0.5rem",
         }}
       >
         {code}
       </SyntaxHighlighter>
     </div>
   );
-}
+});
 
-// Inline code component
-function InlineCode({ children }: { children: React.ReactNode }) {
+// ============================================================================
+// Memoized Inline Code Component
+// ============================================================================
+
+const InlineCode = memo(function InlineCode({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <code className="bg-secondary px-1.5 py-0.5 rounded text-blue-400 text-sm">
+    <code className="bg-muted px-1.5 py-0.5 rounded text-primary text-sm font-mono">
       {children}
     </code>
   );
+});
+
+// ============================================================================
+// Memoized Message Component
+// ============================================================================
+
+interface MessageBubbleProps {
+  message: Message;
 }
+
+const MessageBubble = memo(function MessageBubble({
+  message,
+}: MessageBubbleProps) {
+  const isUser = message.role === "user";
+
+  return (
+    <div className={cn("flex gap-2", isUser && "justify-end")}>
+      <div
+        className={cn(
+          "max-w-[90%] rounded-xl px-3 py-2 text-sm",
+          isUser
+            ? "bg-primary text-primary-foreground"
+            : "bg-transparent text-foreground",
+        )}
+      >
+        {/* Loading state */}
+        {message.isLoading && !message.content ? (
+          <div className="space-y-1.5">
+            {message.toolCalls?.length ? (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Wrench className="h-3 w-3 animate-pulse" />
+                <span>
+                  {message.toolCalls[message.toolCalls.length - 1].name}...
+                </span>
+              </div>
+            ) : null}
+            <div className="space-y-1">
+              <Skeleton className="h-3 w-40" />
+              <Skeleton className="h-3 w-28" />
+              <Skeleton className="h-3 w-20" />
+            </div>
+          </div>
+        ) : message.isLoading && message.content ? (
+          // Streaming state
+          <>
+            {message.toolCalls && message.toolCalls.length > 0 && (
+              <div className="mb-1.5 flex flex-wrap gap-1">
+                {message.toolCalls.map((tc) => (
+                  <div
+                    key={tc.id}
+                    className="flex items-center gap-1 text-[11px] text-muted-foreground bg-muted/50 rounded px-1.5 py-0.5"
+                  >
+                    <Wrench className="h-2.5 w-2.5" />
+                    <span>{tc.name}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="prose prose-sm prose-invert max-w-none prose-p:my-0.5 prose-ul:my-0.5 prose-ol:my-0.5 prose-li:my-0 prose-table:my-1.5 prose-headings:my-1">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  code({ className, children, ...props }) {
+                    const isBlock =
+                      className?.includes("language-") ||
+                      String(children).includes("\n");
+                    if (isBlock) {
+                      return (
+                        <CodeBlock className={className}>{children}</CodeBlock>
+                      );
+                    }
+                    return <InlineCode {...props}>{children}</InlineCode>;
+                  },
+                  pre({ children }) {
+                    return <>{children}</>;
+                  },
+                  table({ children }) {
+                    return (
+                      <div className="overflow-x-auto my-1.5 rounded-md border border-border/50">
+                        <table className="min-w-full text-xs">{children}</table>
+                      </div>
+                    );
+                  },
+                  th({ children }) {
+                    return (
+                      <th className="bg-muted/40 px-2 py-1 text-left font-medium text-foreground border-b border-border/50 text-xs">
+                        {children}
+                      </th>
+                    );
+                  },
+                  td({ children }) {
+                    return (
+                      <td className="px-2 py-1 border-b border-border/30 text-xs">
+                        {children}
+                      </td>
+                    );
+                  },
+                }}
+              >
+                {message.content}
+              </ReactMarkdown>
+              <span className="inline-block w-1.5 h-4 bg-primary animate-pulse ml-0.5 rounded-sm" />
+            </div>
+          </>
+        ) : (
+          // Complete state
+          <>
+            {message.toolCalls && message.toolCalls.length > 0 && (
+              <div className="mb-1.5 flex flex-wrap gap-1">
+                {message.toolCalls.map((tc) => (
+                  <div
+                    key={tc.id}
+                    className="flex items-center gap-1 text-[11px] text-muted-foreground bg-muted/50 rounded px-1.5 py-0.5"
+                  >
+                    <Wrench className="h-2.5 w-2.5" />
+                    <span>{tc.name}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {message.content ? (
+              <div className="prose prose-sm prose-invert max-w-none prose-p:my-0.5 prose-ul:my-0.5 prose-ol:my-0.5 prose-li:my-0 prose-table:my-1.5 prose-headings:my-1">
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    code({ className, children, ...props }) {
+                      const isBlock =
+                        className?.includes("language-") ||
+                        String(children).includes("\n");
+                      if (isBlock) {
+                        return (
+                          <CodeBlock className={className}>
+                            {children}
+                          </CodeBlock>
+                        );
+                      }
+                      return <InlineCode {...props}>{children}</InlineCode>;
+                    },
+                    pre({ children }) {
+                      return <>{children}</>;
+                    },
+                    table({ children }) {
+                      return (
+                        <div className="overflow-x-auto my-1.5 rounded-md border border-border/50">
+                          <table className="min-w-full text-xs">
+                            {children}
+                          </table>
+                        </div>
+                      );
+                    },
+                    th({ children }) {
+                      return (
+                        <th className="bg-muted/40 px-2 py-1 text-left font-medium text-foreground border-b border-border/50 text-xs">
+                          {children}
+                        </th>
+                      );
+                    },
+                    td({ children }) {
+                      return (
+                        <td className="px-2 py-1 border-b border-border/30 text-xs">
+                          {children}
+                        </td>
+                      );
+                    },
+                  }}
+                >
+                  {message.content}
+                </ReactMarkdown>
+              </div>
+            ) : null}
+          </>
+        )}
+      </div>
+    </div>
+  );
+});
+
+// ============================================================================
+// Main AI Chat Component
+// ============================================================================
 
 export function AIChat() {
   const connection = useConnectionStore((s) => s.connection);
@@ -170,11 +363,11 @@ export function AIChat() {
     }
     return "gpt-5";
   });
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [attachments, setAttachments] = useState<MessageAttachment[]>([]);
+
   const agentRef = useRef<AIAgent | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const [lastUserMessage, setLastUserMessage] = useState<string | null>(null);
 
   // Debug request from query editor
   const debugRequest = useAIQueryStore((s) => s.debugRequest);
@@ -184,12 +377,11 @@ export function AIChat() {
   const setLastSession = useLastChatStore((s) => s.setLastSession);
   const getLastSession = useLastChatStore((s) => s.getLastSession);
 
-  // Load chat history on mount and restore last session
+  // Load chat history on mount
   useEffect(() => {
     const history = loadChatHistory();
     setSessions(history);
 
-    // Restore last session for this connection
     if (connection?.id) {
       const lastSessionId = getLastSession(connection.id);
       if (lastSessionId) {
@@ -210,7 +402,7 @@ export function AIChat() {
     }
   }, [connection?.id, currentSessionId, setLastSession]);
 
-  // Initialize agent when connection, API key, or model changes
+  // Initialize agent
   useEffect(() => {
     if (apiKey && connection?.id) {
       agentRef.current = new AIAgent(apiKey, connection.id, selectedModel);
@@ -219,7 +411,7 @@ export function AIChat() {
     }
   }, [apiKey, connection?.id, selectedModel]);
 
-  // Auto-scroll to bottom
+  // Scroll to bottom
   const scrollToBottom = useCallback(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -250,54 +442,6 @@ export function AIChat() {
     setShowSettings(false);
   };
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log("handleFileSelect called", e.target.files);
-    const files = e.target.files;
-    if (!files || files.length === 0) {
-      console.log("No files selected");
-      return;
-    }
-
-    console.log("Processing", files.length, "files");
-    const newAttachments: MessageAttachment[] = [];
-
-    for (const file of Array.from(files)) {
-      try {
-        const content = await file.text();
-        // Limit file size to 100KB
-        if (content.length > 100000) {
-          console.warn(`File ${file.name} is too large, skipping`);
-          continue;
-        }
-        newAttachments.push({
-          id: crypto.randomUUID(),
-          name: file.name,
-          content,
-          type: file.type || "text/plain",
-        });
-      } catch (err) {
-        console.error(`Failed to read file ${file.name}:`, err);
-      }
-    }
-
-    console.log("Created", newAttachments.length, "attachments");
-    if (newAttachments.length > 0) {
-      setAttachments((prev) => {
-        console.log("Setting attachments:", [...prev, ...newAttachments]);
-        return [...prev, ...newAttachments];
-      });
-    }
-
-    // Reset file input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  };
-
-  const removeAttachment = (id: string) => {
-    setAttachments((prev) => prev.filter((a) => a.id !== id));
-  };
-
   const handleNewChat = () => {
     if (!connection?.id) return;
     const session = createChatSession(connection.id, selectedModel);
@@ -317,7 +461,6 @@ export function AIChat() {
     setMessages(session.messages);
     setSelectedModel(session.model as ModelId);
 
-    // Reload agent with session history
     if (agentRef.current) {
       agentRef.current.loadFromSession(session);
     }
@@ -338,7 +481,6 @@ export function AIChat() {
 
   const handleClearChat = () => {
     if (currentSessionId) {
-      // Update session with empty messages
       const newSessions = sessions.map((s) =>
         s.id === currentSessionId
           ? { ...s, messages: [], title: "New Chat", updatedAt: Date.now() }
@@ -356,7 +498,6 @@ export function AIChat() {
     localStorage.setItem(SELECTED_MODEL_KEY, model);
     agentRef.current?.setModel(model);
 
-    // Update current session model
     if (currentSessionId) {
       const newSessions = sessions.map((s) =>
         s.id === currentSessionId ? { ...s, model, updatedAt: Date.now() } : s,
@@ -372,7 +513,6 @@ export function AIChat() {
     let newSessions: ChatSession[];
 
     if (currentSessionId) {
-      // Update existing session
       newSessions = sessions.map((s) =>
         s.id === currentSessionId
           ? {
@@ -384,7 +524,6 @@ export function AIChat() {
           : s,
       );
     } else {
-      // Create new session
       const session = createChatSession(connection.id, selectedModel);
       session.messages = updatedMessages;
       session.title = generateSessionTitle(updatedMessages);
@@ -396,135 +535,152 @@ export function AIChat() {
     saveChatHistory(newSessions);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (
-      (!input.trim() && attachments.length === 0) ||
-      isLoading ||
-      !agentRef.current
-    )
-      return;
-
-    // Build message content for AI (includes attachment content)
-    const userText = input.trim();
-    let aiMessageContent = userText;
-    if (attachments.length > 0) {
-      const attachmentText = attachments
-        .map((a) => {
-          const ext = a.name.split(".").pop()?.toLowerCase() || "txt";
-          const lang =
-            ext === "sql"
-              ? "sql"
-              : ext === "json"
-                ? "json"
-                : ext === "csv"
-                  ? "csv"
-                  : "";
-          return `**Attached file: ${a.name}**\n\`\`\`${lang}\n${a.content}\n\`\`\``;
-        })
-        .join("\n\n");
-      aiMessageContent = userText
-        ? `${userText}\n\n${attachmentText}`
-        : attachmentText;
+  const handleCancel = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
     }
+  }, []);
 
-    // Store the display message (with attachments metadata, not content)
-    const userMessage: Message = {
-      id: crypto.randomUUID(),
-      role: "user",
-      content: userText,
-      attachments: attachments.length > 0 ? [...attachments] : undefined,
-    };
+  const sendMessage = useCallback(
+    async (userText: string, addUserMessage: boolean = true) => {
+      if (!agentRef.current) return;
 
-    // Clear attachments after sending
-    setAttachments([]);
+      // Create abort controller for this request
+      abortControllerRef.current = new AbortController();
+      setLastUserMessage(userText);
 
-    const newMessages = [...messages, userMessage];
-    setMessages(newMessages);
-    setInput("");
-    setIsLoading(true);
+      if (addUserMessage) {
+        const userMessage: Message = {
+          id: crypto.randomUUID(),
+          role: "user",
+          content: userText,
+        };
+        setMessages((prev) => [...prev, userMessage]);
+      }
 
-    // Add loading indicator
-    const loadingId = crypto.randomUUID();
-    setMessages((prev) => [
-      ...prev,
-      { id: loadingId, role: "assistant", content: "", isLoading: true },
-    ]);
+      setInput("");
+      setIsLoading(true);
 
-    try {
-      // Use streaming API - send full content with attachments to AI
-      const stream = agentRef.current.chatStream(
-        aiMessageContent,
-        (toolName, args) => {
-          // Update loading message to show tool being called
+      const loadingId = crypto.randomUUID();
+      setMessages((prev) => [
+        ...prev,
+        { id: loadingId, role: "assistant", content: "", isLoading: true },
+      ]);
+
+      try {
+        const stream = agentRef.current.chatStream(
+          userText,
+          (toolName, args) => {
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === loadingId
+                  ? {
+                      ...m,
+                      toolCalls: [
+                        ...(m.toolCalls || []),
+                        {
+                          id: crypto.randomUUID(),
+                          name: toolName,
+                          arguments: args,
+                        },
+                      ],
+                    }
+                  : m,
+              ),
+            );
+          },
+        );
+
+        let fullContent = "";
+        for await (const chunk of stream) {
+          // Check if aborted
+          if (abortControllerRef.current?.signal.aborted) {
+            throw new Error("Request cancelled");
+          }
+          fullContent += chunk;
           setMessages((prev) =>
             prev.map((m) =>
               m.id === loadingId
-                ? {
-                    ...m,
-                    toolCalls: [
-                      ...(m.toolCalls || []),
-                      {
-                        id: crypto.randomUUID(),
-                        name: toolName,
-                        arguments: args,
-                      },
-                    ],
-                  }
+                ? { ...m, content: fullContent, isLoading: true }
                 : m,
             ),
           );
-        },
-      );
+          scrollToBottom();
+        }
 
-      // Stream response chunks
-      let fullContent = "";
-      for await (const chunk of stream) {
-        fullContent += chunk;
-        // Update message content as chunks arrive
-        setMessages((prev) =>
-          prev.map((m) =>
+        setMessages((prev) => {
+          const updated = prev.map((m) =>
+            m.id === loadingId ? { ...m, isLoading: false } : m,
+          );
+          saveCurrentSession(updated);
+          return updated;
+        });
+      } catch (error) {
+        const isCancelled =
+          error instanceof Error && error.message === "Request cancelled";
+        setMessages((prev) => {
+          const updated = prev.map((m) =>
             m.id === loadingId
-              ? { ...m, content: fullContent, isLoading: true }
+              ? {
+                  ...m,
+                  content: isCancelled
+                    ? "_Response cancelled_"
+                    : `Error: ${error instanceof Error ? error.message : "Failed to get response"}`,
+                  isLoading: false,
+                }
               : m,
-          ),
-        );
-        // Keep scrolled to bottom while streaming
-        scrollToBottom();
+          );
+          return updated;
+        });
+      } finally {
+        setIsLoading(false);
+        abortControllerRef.current = null;
       }
+    },
+    [scrollToBottom, saveCurrentSession],
+  );
 
-      // Mark message as complete
-      setMessages((prev) => {
-        const updated = prev.map((m) =>
-          m.id === loadingId ? { ...m, isLoading: false } : m,
-        );
-        // Save session after streaming completes
-        saveCurrentSession(updated);
-        return updated;
-      });
-    } catch (error) {
-      setMessages((prev) => {
-        const updated = prev.map((m) =>
-          m.id === loadingId
-            ? {
-                ...m,
-                content: `Error: ${error instanceof Error ? error.message : "Failed to get response"}`,
-                isLoading: false,
-              }
-            : m,
-        );
-        return updated;
-      });
-    } finally {
-      setIsLoading(false);
-    }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isLoading || !agentRef.current) return;
+    await sendMessage(input.trim(), true);
   };
+
+  const handleRetry = useCallback(() => {
+    if (!lastUserMessage || isLoading || !agentRef.current) return;
+
+    // Remove the last assistant message
+    setMessages((prev) => {
+      // Find last assistant message index
+      let lastAssistantIndex = -1;
+      for (let i = prev.length - 1; i >= 0; i--) {
+        if (prev[i].role === "assistant") {
+          lastAssistantIndex = i;
+          break;
+        }
+      }
+      if (lastAssistantIndex === -1) return prev;
+      return prev.slice(0, lastAssistantIndex);
+    });
+
+    // Clear the agent's last exchange and resend
+    agentRef.current.clearHistory();
+
+    sendMessage(lastUserMessage, false);
+  }, [lastUserMessage, isLoading, sendMessage]);
+
+  // ============================================================================
+  // Render States
+  // ============================================================================
 
   if (!connection) {
     return (
-      <div className="flex h-full items-center justify-center text-muted-foreground">
-        <div className="text-center">
-          <p className="text-lg">Connect to a database first</p>
+      <div className="flex h-full items-center justify-center">
+        <div className="text-center space-y-2">
+          <p className="text-lg font-medium text-foreground">
+            Connect to a database first
+          </p>
           <p className="text-sm text-muted-foreground">
             The AI assistant needs an active connection
           </p>
@@ -535,14 +691,17 @@ export function AIChat() {
 
   if (!apiKey) {
     return (
-      <div className="flex h-full items-center justify-center text-muted-foreground">
-        <div className="text-center space-y-4">
-          <Bot className="mx-auto h-12 w-12 mb-4 opacity-50" />
-          <p className="text-lg">API Key Required</p>
-          <p className="text-sm text-muted-foreground max-w-md">
-            To use the AI assistant, you need to provide an OpenAI API key. Your
-            key is stored locally and never sent to our servers.
-          </p>
+      <div className="flex h-full items-center justify-center">
+        <div className="text-center space-y-4 max-w-sm">
+          <div className="space-y-2">
+            <p className="text-lg font-medium text-foreground">
+              API Key Required
+            </p>
+            <p className="text-sm text-muted-foreground">
+              To use the AI assistant, you need to provide an API key (OpenAI or
+              Anthropic). Your key is stored locally.
+            </p>
+          </div>
           <Button
             onClick={() => {
               setTempApiKey(apiKey);
@@ -552,447 +711,267 @@ export function AIChat() {
             <Settings className="mr-2 h-4 w-4" />
             Configure API Key
           </Button>
-        </div>
 
-        <Dialog open={showSettings} onOpenChange={setShowSettings}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>API Key</DialogTitle>
-              <DialogDescription>
-                Enter your OpenAI API key to enable the AI assistant.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="openaiKey">OpenAI API Key</Label>
-                <Input
-                  id="openaiKey"
-                  type="password"
-                  placeholder="sk-..."
-                  value={tempApiKey}
-                  onChange={(e) => setTempApiKey(e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Get your key from{" "}
-                  <a
-                    href="https://platform.openai.com/api-keys"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-400 hover:underline"
-                  >
-                    platform.openai.com
-                  </a>
-                </p>
+          <Dialog open={showSettings} onOpenChange={setShowSettings}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>API Key</DialogTitle>
+                <DialogDescription>
+                  Enter your API key to enable the AI assistant.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="apiKey">API Key</Label>
+                  <Input
+                    id="apiKey"
+                    type="password"
+                    placeholder="sk-... or sk-ant-..."
+                    value={tempApiKey}
+                    onChange={(e) => setTempApiKey(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Works with OpenAI (sk-...) or Anthropic (sk-ant-...) keys
+                  </p>
+                </div>
               </div>
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowSettings(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleSaveApiKey} disabled={!tempApiKey.trim()}>
-                Save
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowSettings(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSaveApiKey}
+                  disabled={!tempApiKey.trim()}
+                >
+                  Save
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
     );
   }
 
+  // ============================================================================
+  // Main Chat UI
+  // ============================================================================
+
   return (
-    <div className="flex h-full relative">
-      {/* Chat History Sidebar */}
-      <div
-        className={cn(
-          "flex flex-col border-r border-border bg-card/50 transition-all duration-200",
-          sidebarOpen ? "w-64" : "w-0 overflow-hidden",
-        )}
-      >
-        <div className="flex items-center justify-between border-b border-border p-3">
-          <span className="text-sm font-medium text-muted-foreground">
-            History
-          </span>
-          <Button variant="ghost" size="sm" onClick={handleNewChat}>
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
-        <ScrollArea className="flex-1">
-          <div className="space-y-1 p-2">
-            {connectionSessions.length === 0 ? (
-              <p className="px-2 py-4 text-center text-xs text-muted-foreground">
-                No chat history yet
-              </p>
-            ) : (
-              connectionSessions
-                .sort((a, b) => b.updatedAt - a.updatedAt)
-                .map((session) => (
-                  <div
-                    key={session.id}
-                    onClick={() => handleSelectSession(session.id)}
-                    className={cn(
-                      "group flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors",
-                      currentSessionId === session.id
-                        ? "bg-secondary text-foreground"
-                        : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground",
-                    )}
-                  >
-                    <MessageSquare className="h-4 w-4 shrink-0" />
-                    <span className="flex-1 truncate">{session.title}</span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100"
-                      onClick={(e) => handleDeleteSession(session.id, e)}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                ))
-            )}
-          </div>
-        </ScrollArea>
-      </div>
-
-      {/* Toggle Sidebar Button */}
-      <button
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="flex h-6 w-6 items-center justify-center self-center -ml-3 z-10 rounded-full border border-border bg-card hover:bg-secondary text-muted-foreground hover:text-foreground"
-      >
-        {sidebarOpen ? (
-          <ChevronLeft className="h-3 w-3" />
-        ) : (
-          <ChevronRight className="h-3 w-3" />
-        )}
-      </button>
-
-      {/* Main Chat Area */}
-      <div className="flex flex-1 flex-col min-w-0">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-border px-4 py-3">
-          <div className="flex items-center gap-3">
-            <h2 className="font-medium text-foreground">AI Assistant</h2>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleNewChat}
-              title="New Chat"
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleClearChat}
-              disabled={messages.length === 0}
-              title="Clear Chat"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+    <div className="flex h-full flex-col">
+      {/* Action Bar */}
+      <div className="flex items-center justify-end gap-1 px-2 py-1.5 border-b border-border/50">
+        {/* Chat History Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => {
-                setTempApiKey(apiKey);
-                setShowSettings(true);
-              }}
+              className="h-7 w-7"
+              title="Chat History"
             >
-              <Settings className="h-4 w-4" />
+              <History className="h-4 w-4" />
             </Button>
-          </div>
-        </div>
-
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4" ref={scrollRef}>
-          {messages.length === 0 ? (
-            <div className="flex h-full items-center justify-center text-muted-foreground">
-              <div className="text-center space-y-2">
-                <p>Ask me anything about your database!</p>
-                <p className="text-sm text-muted-foreground">
-                  Examples: "What tables do I have?" or "Show me the top 10
-                  users"
-                </p>
-              </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-72">
+            <div className="px-2 py-1.5">
+              <p className="text-xs font-medium text-muted-foreground">
+                Recent Chats
+              </p>
             </div>
-          ) : (
-            <div className="space-y-4">
-              {messages.map((message, index) => (
-                <motion.div
-                  key={message.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2, delay: index * 0.05 }}
-                  className={cn(
-                    "flex gap-3",
-                    message.role === "user" && "justify-end",
-                  )}
-                >
-                  {message.role === "assistant" && (
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-500/20">
-                      <Bot className="h-4 w-4 text-blue-400" />
-                    </div>
-                  )}
-                  <div
-                    className={cn(
-                      "max-w-[80%] rounded-lg px-4 py-2",
-                      message.role === "user"
-                        ? "bg-secondary text-foreground"
-                        : "bg-secondary text-foreground",
-                    )}
-                  >
-                    {/* Show attachments for user messages */}
-                    {message.role === "user" &&
-                      message.attachments &&
-                      message.attachments.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 mb-2">
-                          {message.attachments.map((attachment) => (
-                            <div
-                              key={attachment.id}
-                              className="flex items-center gap-1.5 rounded bg-background/50 px-2 py-1 text-xs"
-                            >
-                              <FileText className="h-3 w-3 text-muted-foreground" />
-                              <span className="max-w-32 truncate">
-                                {attachment.name}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    {message.isLoading && !message.content ? (
-                      <div className="space-y-2">
-                        {message.toolCalls?.length ? (
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <Wrench className="h-3 w-3" />
-                            <span>
-                              Calling{" "}
-                              {
-                                message.toolCalls[message.toolCalls.length - 1]
-                                  .name
-                              }
-                              ...
-                            </span>
-                          </div>
-                        ) : null}
-                        <Skeleton className="h-4 w-48 bg-muted" />
-                        <Skeleton className="h-4 w-36 bg-muted" />
-                        <Skeleton className="h-4 w-24 bg-muted" />
-                      </div>
-                    ) : message.isLoading && message.content ? (
-                      // Streaming state - show content with cursor
-                      <>
-                        {message.toolCalls && message.toolCalls.length > 0 && (
-                          <div className="mb-2 space-y-1">
-                            {message.toolCalls.map((tc) => (
-                              <div
-                                key={tc.id}
-                                className="flex items-center gap-1 text-xs text-muted-foreground"
-                              >
-                                <Wrench className="h-3 w-3" />
-                                <span>{tc.name}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        <div className="prose prose-sm prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0">
-                          <ReactMarkdown
-                            components={{
-                              code({ className, children, ...props }) {
-                                const isBlock =
-                                  className?.includes("language-") ||
-                                  String(children).includes("\n");
-                                if (isBlock) {
-                                  return (
-                                    <CodeBlock className={className}>
-                                      {children}
-                                    </CodeBlock>
-                                  );
-                                }
-                                return (
-                                  <InlineCode {...props}>{children}</InlineCode>
-                                );
-                              },
-                              pre({ children }) {
-                                return <>{children}</>;
-                              },
-                            }}
-                          >
-                            {message.content}
-                          </ReactMarkdown>
-                          <span className="inline-block w-2 h-4 bg-blue-400 animate-pulse ml-0.5" />
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        {message.toolCalls && message.toolCalls.length > 0 && (
-                          <div className="mb-2 space-y-1">
-                            {message.toolCalls.map((tc) => (
-                              <div
-                                key={tc.id}
-                                className="flex items-center gap-1 text-xs text-muted-foreground"
-                              >
-                                <Wrench className="h-3 w-3" />
-                                <span>{tc.name}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        {message.content ? (
-                          <div className="prose prose-sm prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0">
-                            <ReactMarkdown
-                              components={{
-                                code({ className, children, ...props }) {
-                                  const isBlock =
-                                    className?.includes("language-") ||
-                                    String(children).includes("\n");
-                                  if (isBlock) {
-                                    return (
-                                      <CodeBlock className={className}>
-                                        {children}
-                                      </CodeBlock>
-                                    );
-                                  }
-                                  return (
-                                    <InlineCode {...props}>
-                                      {children}
-                                    </InlineCode>
-                                  );
-                                },
-                                pre({ children }) {
-                                  return <>{children}</>;
-                                },
-                              }}
-                            >
-                              {message.content}
-                            </ReactMarkdown>
-                          </div>
-                        ) : (
-                          /* Attachment-only message with no text */
-                          message.role === "user" &&
-                          message.attachments &&
-                          message.attachments.length > 0 && (
-                            <span className="text-muted-foreground text-sm italic">
-                              Sent {message.attachments.length} file
-                              {message.attachments.length > 1 ? "s" : ""}
-                            </span>
-                          )
-                        )}
-                      </>
-                    )}
-                  </div>
-                  {message.role === "user" && (
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary">
-                      <User className="h-4 w-4 text-foreground" />
-                    </div>
-                  )}
-                </motion.div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Input - Sticky at bottom */}
-        <div className="sticky bottom-0 border-t border-border bg-background p-4">
-          <form onSubmit={handleSubmit} className="space-y-3">
-            {/* Attachments preview */}
-            {attachments.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {attachments.map((attachment) => (
-                  <div
-                    key={attachment.id}
-                    className="flex items-center gap-1.5 rounded-md bg-secondary px-2 py-1 text-xs"
-                  >
-                    <FileText className="h-3 w-3 text-muted-foreground" />
-                    <span className="max-w-32 truncate">{attachment.name}</span>
-                    <button
-                      type="button"
-                      onClick={() => removeAttachment(attachment.id)}
-                      className="text-muted-foreground hover:text-foreground"
+            <DropdownMenuSeparator />
+            <ScrollArea className="max-h-64">
+              {connectionSessions.length === 0 ? (
+                <div className="px-2 py-4 text-center text-xs text-muted-foreground">
+                  No chat history yet
+                </div>
+              ) : (
+                connectionSessions
+                  .sort((a, b) => b.updatedAt - a.updatedAt)
+                  .slice(0, 20)
+                  .map((session) => (
+                    <DropdownMenuItem
+                      key={session.id}
+                      className="flex items-center justify-between gap-2 cursor-pointer"
+                      onClick={() => handleSelectSession(session.id)}
                     >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <MessageSquare className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                        <span className="truncate text-sm">
+                          {session.title}
+                        </span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 shrink-0 opacity-50 hover:opacity-100"
+                        onClick={(e) => handleDeleteSession(session.id, e)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </DropdownMenuItem>
+                  ))
+              )}
+            </ScrollArea>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* New Chat */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7"
+          onClick={handleNewChat}
+          title="New Chat"
+        >
+          <Plus className="h-4 w-4" />
+        </Button>
+
+        {/* Clear Chat */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7"
+          onClick={handleClearChat}
+          disabled={messages.length === 0}
+          title="Clear Chat"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+
+        {/* Settings */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7"
+          onClick={() => {
+            setTempApiKey(apiKey);
+            setShowSettings(true);
+          }}
+        >
+          <Settings className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto px-3 py-3" ref={scrollRef}>
+        {messages.length === 0 ? (
+          <div className="flex h-full items-center justify-center">
+            <div className="text-center space-y-3 max-w-xs">
+              <div className="flex justify-center">
+                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Bot className="h-6 w-6 text-primary/40" />
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Ask me anything about your database
+              </p>
+              <div className="flex flex-wrap justify-center gap-2">
+                {[
+                  "What tables do I have?",
+                  "Show me recent data",
+                  "Describe the schema",
+                ].map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    onClick={() => setInput(suggestion)}
+                    className="text-[11px] px-2.5 py-1 rounded-full bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {suggestion}
+                  </button>
                 ))}
               </div>
-            )}
-            <div className="relative">
-              <Textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    if (
-                      (input.trim() || attachments.length > 0) &&
-                      !isLoading
-                    ) {
-                      handleSubmit(e);
-                    }
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {messages.map((message) => (
+              <MessageBubble key={message.id} message={message} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Input Area */}
+      <div className="border-t border-border p-4">
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div className="relative">
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  if (input.trim() && !isLoading) {
+                    handleSubmit(e);
                   }
-                }}
-                placeholder="Ask about your database..."
-                disabled={isLoading}
-                className="min-h-11 max-h-50 resize-none pr-20"
-                rows={1}
-              />
-              <div className="absolute right-2 bottom-2 flex items-center gap-1">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  multiple
-                  onChange={handleFileSelect}
-                  className="sr-only"
-                  tabIndex={-1}
-                />
+                }
+              }}
+              placeholder="Ask about your database..."
+              disabled={isLoading}
+              className="pr-24 rounded-xl"
+            />
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+              {isLoading ? (
                 <Button
                   type="button"
                   size="icon"
                   variant="ghost"
-                  onClick={() => {
-                    console.log("Attach button clicked");
-                    fileInputRef.current?.click();
-                  }}
-                  disabled={isLoading}
-                  className="h-8 w-8"
-                  title="Attach files"
+                  onClick={handleCancel}
+                  className="h-8 w-8 text-destructive hover:text-destructive"
+                  title="Cancel"
                 >
-                  <Paperclip className="h-4 w-4" />
+                  <Square className="h-4 w-4" />
                 </Button>
-                <Button
-                  type="submit"
-                  size="icon"
-                  disabled={
-                    isLoading || (!input.trim() && attachments.length === 0)
-                  }
-                  className="h-8 w-8"
-                >
-                  {isLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Send className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
+              ) : (
+                lastUserMessage &&
+                messages.length > 0 && (
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={handleRetry}
+                    className="h-8 w-8"
+                    title="Retry last message"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                  </Button>
+                )
+              )}
+              <Button
+                type="submit"
+                size="icon"
+                disabled={isLoading || !input.trim()}
+                className="h-8 w-8"
+              >
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </Button>
             </div>
-            <div className="flex items-center justify-between">
-              <Select value={selectedModel} onValueChange={handleModelChange}>
-                <SelectTrigger className="h-8 w-32 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {AI_MODELS.map((model) => (
-                    <SelectItem key={model.id} value={model.id}>
-                      {model.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <span className="text-xs text-muted-foreground">
-                Enter to send, Shift+Enter for new line
-              </span>
-            </div>
-          </form>
-        </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <Select value={selectedModel} onValueChange={handleModelChange}>
+              <SelectTrigger className="h-8 w-40 text-xs">
+                <SelectValue placeholder="GPT-5" />
+              </SelectTrigger>
+              <SelectContent>
+                {AI_MODELS.map((model) => (
+                  <SelectItem key={model.id} value={model.id}>
+                    {model.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <span className="text-xs text-muted-foreground">↵ to send</span>
+          </div>
+        </form>
       </div>
 
       {/* Settings Dialog */}
@@ -1001,29 +980,21 @@ export function AIChat() {
           <DialogHeader>
             <DialogTitle>AI Settings</DialogTitle>
             <DialogDescription>
-              Configure your OpenAI API key for the AI assistant.
+              Configure your API key for the AI assistant.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="openaiKey2">OpenAI API Key</Label>
+              <Label htmlFor="openaiKey2">API Key</Label>
               <Input
                 id="openaiKey2"
                 type="password"
-                placeholder="sk-..."
+                placeholder="sk-... or sk-ant-..."
                 value={tempApiKey}
                 onChange={(e) => setTempApiKey(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
-                Get your key from{" "}
-                <a
-                  href="https://platform.openai.com/api-keys"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-400 hover:underline"
-                >
-                  platform.openai.com
-                </a>
+                Supports OpenAI (sk-...) and Anthropic (sk-ant-...) keys.
               </p>
             </div>
           </div>
