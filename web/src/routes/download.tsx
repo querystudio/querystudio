@@ -1,8 +1,11 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { Header } from '@/components/header'
 import { Button } from '@/components/ui/button'
-import { Download, Apple, Monitor, ExternalLink } from 'lucide-react'
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
+import { Download, Apple, Monitor, ExternalLink, Info } from 'lucide-react'
 import { createServerFn } from '@tanstack/react-start'
+
+const donateUrl = 'https://buy.polar.sh/polar_cl_GjR7lflPCEnKKPTB2QE5eNOfWOLqlRNYJAvsF2Tf9t6'
 
 interface FormattedAsset {
   name: string
@@ -274,6 +277,21 @@ function DownloadPage() {
             <pre className='whitespace-pre-wrap text-sm text-muted-foreground border rounded-lg p-4'>{release.body}</pre>
           </div>
         )}
+
+        <Alert className='max-w-3xl mt-12'>
+          <Info className='h-4 w-4' />
+          <AlertTitle>macOS App Not Signed</AlertTitle>
+          <AlertDescription>
+            <p className='mb-2'>
+              To get QueryStudio signed for macOS, it costs $100 per year. As a student who created this app, it's a lot of money. So if you want to support the goal of $100 to get QueryStudio signed,
+              you are more than welcome to do it.
+            </p>
+            <a href={donateUrl} target='_blank' rel='noopener noreferrer' className='inline-flex items-center gap-1 text-primary hover:underline font-medium'>
+              Donate to support signing
+              <ExternalLink className='h-3 w-3' />
+            </a>
+          </AlertDescription>
+        </Alert>
       </section>
     </div>
   )
