@@ -9,6 +9,7 @@ const envSchema = z.object({
   POLAR_WEBHOOK_SECRET: z.string(),
   POLAR_PRICING_ID: z.string(),
   POLAR_EARLY_BIRD_DISCOUNT: z.string(),
+  POLAR_ORGANIZATION_ID: z.string(),
 })
 
 export const env = envSchema.parse(process.env)

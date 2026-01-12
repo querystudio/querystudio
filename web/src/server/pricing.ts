@@ -27,6 +27,9 @@ const pricing = {
       },
     },
   },
+  ai: {
+    supportedProviders: ['openai', 'anthropic', 'google'],
+  },
 } as const
 
 export const getPricing = createServerFn({ method: 'GET' }).handler(async () => pricing)

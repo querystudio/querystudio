@@ -1,5 +1,5 @@
 import { createFileRoute, Link, Outlet, useLocation } from '@tanstack/react-router'
-import { User, Shield, CreditCard, Users } from 'lucide-react'
+import { User, Shield, CreditCard, Users, Monitor } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export const Route = createFileRoute('/_authed/dashboard')({
@@ -21,6 +21,11 @@ const sidebarItems = [
     label: 'Billing',
     href: '/dashboard/billing',
     icon: CreditCard,
+  },
+  {
+    label: 'Devices',
+    href: '/dashboard/devices',
+    icon: Monitor,
   },
   {
     label: 'Admin',

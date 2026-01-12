@@ -16,11 +16,14 @@ import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiTestRouteImport } from './routes/api/test'
 import { Route as ApiRealtimeRouteImport } from './routes/api/realtime'
+import { Route as ApiLicenseRouteImport } from './routes/api.license'
 import { Route as AuthedDashboardRouteImport } from './routes/_authed/dashboard'
 import { Route as AuthedDashboardIndexRouteImport } from './routes/_authed/dashboard/index'
 import { Route as ApiPolarWebhooksRouteImport } from './routes/api.polar.webhooks'
+import { Route as ApiLicenseSplatRouteImport } from './routes/api.license.$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api.auth.$'
 import { Route as AuthedDashboardSecurityRouteImport } from './routes/_authed/dashboard/security'
+import { Route as AuthedDashboardDevicesRouteImport } from './routes/_authed/dashboard/devices'
 import { Route as AuthedDashboardBillingRouteImport } from './routes/_authed/dashboard/billing'
 import { Route as AuthedDashboardAdminRouteImport } from './routes/_authed/dashboard/admin'
 import { Route as AuthedDashboardAccountRouteImport } from './routes/_authed/dashboard/account'
@@ -59,6 +62,11 @@ const ApiRealtimeRoute = ApiRealtimeRouteImport.update({
   path: '/api/realtime',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiLicenseRoute = ApiLicenseRouteImport.update({
+  id: '/api/license',
+  path: '/api/license',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthedDashboardRoute = AuthedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -74,6 +82,11 @@ const ApiPolarWebhooksRoute = ApiPolarWebhooksRouteImport.update({
   path: '/api/polar/webhooks',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiLicenseSplatRoute = ApiLicenseSplatRouteImport.update({
+  id: '/$',
+  path: '/$',
+  getParentRoute: () => ApiLicenseRoute,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -82,6 +95,11 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 const AuthedDashboardSecurityRoute = AuthedDashboardSecurityRouteImport.update({
   id: '/security',
   path: '/security',
+  getParentRoute: () => AuthedDashboardRoute,
+} as any)
+const AuthedDashboardDevicesRoute = AuthedDashboardDevicesRouteImport.update({
+  id: '/devices',
+  path: '/devices',
   getParentRoute: () => AuthedDashboardRoute,
 } as any)
 const AuthedDashboardBillingRoute = AuthedDashboardBillingRouteImport.update({
@@ -106,13 +124,16 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/waitlist': typeof WaitlistRoute
   '/dashboard': typeof AuthedDashboardRouteWithChildren
+  '/api/license': typeof ApiLicenseRouteWithChildren
   '/api/realtime': typeof ApiRealtimeRoute
   '/api/test': typeof ApiTestRoute
   '/dashboard/account': typeof AuthedDashboardAccountRoute
   '/dashboard/admin': typeof AuthedDashboardAdminRoute
   '/dashboard/billing': typeof AuthedDashboardBillingRoute
+  '/dashboard/devices': typeof AuthedDashboardDevicesRoute
   '/dashboard/security': typeof AuthedDashboardSecurityRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/license/$': typeof ApiLicenseSplatRoute
   '/api/polar/webhooks': typeof ApiPolarWebhooksRoute
   '/dashboard/': typeof AuthedDashboardIndexRoute
 }
@@ -121,13 +142,16 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/waitlist': typeof WaitlistRoute
+  '/api/license': typeof ApiLicenseRouteWithChildren
   '/api/realtime': typeof ApiRealtimeRoute
   '/api/test': typeof ApiTestRoute
   '/dashboard/account': typeof AuthedDashboardAccountRoute
   '/dashboard/admin': typeof AuthedDashboardAdminRoute
   '/dashboard/billing': typeof AuthedDashboardBillingRoute
+  '/dashboard/devices': typeof AuthedDashboardDevicesRoute
   '/dashboard/security': typeof AuthedDashboardSecurityRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/license/$': typeof ApiLicenseSplatRoute
   '/api/polar/webhooks': typeof ApiPolarWebhooksRoute
   '/dashboard': typeof AuthedDashboardIndexRoute
 }
@@ -139,13 +163,16 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/waitlist': typeof WaitlistRoute
   '/_authed/dashboard': typeof AuthedDashboardRouteWithChildren
+  '/api/license': typeof ApiLicenseRouteWithChildren
   '/api/realtime': typeof ApiRealtimeRoute
   '/api/test': typeof ApiTestRoute
   '/_authed/dashboard/account': typeof AuthedDashboardAccountRoute
   '/_authed/dashboard/admin': typeof AuthedDashboardAdminRoute
   '/_authed/dashboard/billing': typeof AuthedDashboardBillingRoute
+  '/_authed/dashboard/devices': typeof AuthedDashboardDevicesRoute
   '/_authed/dashboard/security': typeof AuthedDashboardSecurityRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/license/$': typeof ApiLicenseSplatRoute
   '/api/polar/webhooks': typeof ApiPolarWebhooksRoute
   '/_authed/dashboard/': typeof AuthedDashboardIndexRoute
 }
@@ -157,13 +184,16 @@ export interface FileRouteTypes {
     | '/signup'
     | '/waitlist'
     | '/dashboard'
+    | '/api/license'
     | '/api/realtime'
     | '/api/test'
     | '/dashboard/account'
     | '/dashboard/admin'
     | '/dashboard/billing'
+    | '/dashboard/devices'
     | '/dashboard/security'
     | '/api/auth/$'
+    | '/api/license/$'
     | '/api/polar/webhooks'
     | '/dashboard/'
   fileRoutesByTo: FileRoutesByTo
@@ -172,13 +202,16 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/waitlist'
+    | '/api/license'
     | '/api/realtime'
     | '/api/test'
     | '/dashboard/account'
     | '/dashboard/admin'
     | '/dashboard/billing'
+    | '/dashboard/devices'
     | '/dashboard/security'
     | '/api/auth/$'
+    | '/api/license/$'
     | '/api/polar/webhooks'
     | '/dashboard'
   id:
@@ -189,13 +222,16 @@ export interface FileRouteTypes {
     | '/signup'
     | '/waitlist'
     | '/_authed/dashboard'
+    | '/api/license'
     | '/api/realtime'
     | '/api/test'
     | '/_authed/dashboard/account'
     | '/_authed/dashboard/admin'
     | '/_authed/dashboard/billing'
+    | '/_authed/dashboard/devices'
     | '/_authed/dashboard/security'
     | '/api/auth/$'
+    | '/api/license/$'
     | '/api/polar/webhooks'
     | '/_authed/dashboard/'
   fileRoutesById: FileRoutesById
@@ -206,6 +242,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   SignupRoute: typeof SignupRoute
   WaitlistRoute: typeof WaitlistRoute
+  ApiLicenseRoute: typeof ApiLicenseRouteWithChildren
   ApiRealtimeRoute: typeof ApiRealtimeRoute
   ApiTestRoute: typeof ApiTestRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -263,6 +300,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiRealtimeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/license': {
+      id: '/api/license'
+      path: '/api/license'
+      fullPath: '/api/license'
+      preLoaderRoute: typeof ApiLicenseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authed/dashboard': {
       id: '/_authed/dashboard'
       path: '/dashboard'
@@ -284,6 +328,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPolarWebhooksRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/license/$': {
+      id: '/api/license/$'
+      path: '/$'
+      fullPath: '/api/license/$'
+      preLoaderRoute: typeof ApiLicenseSplatRouteImport
+      parentRoute: typeof ApiLicenseRoute
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -296,6 +347,13 @@ declare module '@tanstack/react-router' {
       path: '/security'
       fullPath: '/dashboard/security'
       preLoaderRoute: typeof AuthedDashboardSecurityRouteImport
+      parentRoute: typeof AuthedDashboardRoute
+    }
+    '/_authed/dashboard/devices': {
+      id: '/_authed/dashboard/devices'
+      path: '/devices'
+      fullPath: '/dashboard/devices'
+      preLoaderRoute: typeof AuthedDashboardDevicesRouteImport
       parentRoute: typeof AuthedDashboardRoute
     }
     '/_authed/dashboard/billing': {
@@ -326,6 +384,7 @@ interface AuthedDashboardRouteChildren {
   AuthedDashboardAccountRoute: typeof AuthedDashboardAccountRoute
   AuthedDashboardAdminRoute: typeof AuthedDashboardAdminRoute
   AuthedDashboardBillingRoute: typeof AuthedDashboardBillingRoute
+  AuthedDashboardDevicesRoute: typeof AuthedDashboardDevicesRoute
   AuthedDashboardSecurityRoute: typeof AuthedDashboardSecurityRoute
   AuthedDashboardIndexRoute: typeof AuthedDashboardIndexRoute
 }
@@ -334,6 +393,7 @@ const AuthedDashboardRouteChildren: AuthedDashboardRouteChildren = {
   AuthedDashboardAccountRoute: AuthedDashboardAccountRoute,
   AuthedDashboardAdminRoute: AuthedDashboardAdminRoute,
   AuthedDashboardBillingRoute: AuthedDashboardBillingRoute,
+  AuthedDashboardDevicesRoute: AuthedDashboardDevicesRoute,
   AuthedDashboardSecurityRoute: AuthedDashboardSecurityRoute,
   AuthedDashboardIndexRoute: AuthedDashboardIndexRoute,
 }
@@ -353,12 +413,25 @@ const AuthedRouteChildren: AuthedRouteChildren = {
 const AuthedRouteWithChildren =
   AuthedRoute._addFileChildren(AuthedRouteChildren)
 
+interface ApiLicenseRouteChildren {
+  ApiLicenseSplatRoute: typeof ApiLicenseSplatRoute
+}
+
+const ApiLicenseRouteChildren: ApiLicenseRouteChildren = {
+  ApiLicenseSplatRoute: ApiLicenseSplatRoute,
+}
+
+const ApiLicenseRouteWithChildren = ApiLicenseRoute._addFileChildren(
+  ApiLicenseRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthedRoute: AuthedRouteWithChildren,
   LoginRoute: LoginRoute,
   SignupRoute: SignupRoute,
   WaitlistRoute: WaitlistRoute,
+  ApiLicenseRoute: ApiLicenseRouteWithChildren,
   ApiRealtimeRoute: ApiRealtimeRoute,
   ApiTestRoute: ApiTestRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,

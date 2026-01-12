@@ -1,8 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Check, Infinity as InfinityIcon, ExternalLink, Key } from 'lucide-react'
+import { Check, ExternalLink, Crown, Sparkles } from 'lucide-react'
 import { getPricing } from '@/server/pricing'
 import { useMutation } from '@tanstack/react-query'
 import { createCheckout, createCustomerPortal } from '@/server/billing'
@@ -33,96 +33,6 @@ function BillingPage() {
     },
   })
 
-  return (
-    <div className='space-y-6'>
-      <div>
-        <h1 className='text-2xl font-bold'>Billing</h1>
-        <p className='text-muted-foreground'>Manage your subscription and billing</p>
-      </div>
-
-      <div className='grid md:grid-cols-2 gap-6'>
-        {/* Free Tier */}
-        <Card className={!user.isPro ? 'border-primary' : ''}>
-          <CardHeader>
-            <div className='flex items-center justify-between'>
-              <CardTitle className='text-xl'>{pricing.tiers.free.name}</CardTitle>
-              {!user.isPro && <Badge variant='secondary'>Current Plan</Badge>}
-            </div>
-            <CardDescription>Perfect for getting started</CardDescription>
-            <div className='mt-4'>
-              <span className='text-3xl font-bold'>${pricing.tiers.free.price}</span>
-              <span className='text-muted-foreground ml-2'>forever</span>
-            </div>
-          </CardHeader>
-          <CardContent className='space-y-3'>
-            <FeatureItem>{pricing.tiers.free.features.maxConnections} database connection</FeatureItem>
-            <FeatureItem>{pricing.tiers.free.features.dialects.map((d) => capitalize(d)).join(' & ')} support</FeatureItem>
-            <FeatureItem>SQL query runner</FeatureItem>
-            <FeatureItem>Auto-complete</FeatureItem>
-            <FeatureItem>AI assistant (bring your own key)</FeatureItem>
-          </CardContent>
-        </Card>
-
-        {/* Pro Tier */}
-        <Card className={`relative ${user.isPro ? 'border-primary' : 'border-primary'}`}>
-          {!user.isPro && (
-            <div className='absolute -top-3 left-1/2 -translate-x-1/2'>
-              <span className='bg-primary text-primary-foreground text-xs font-medium px-3 py-1 rounded-full'>Early Bird</span>
-            </div>
-          )}
-          <CardHeader>
-            <div className='flex items-center justify-between'>
-              <CardTitle className='text-xl'>{pricing.tiers.pro.name}</CardTitle>
-              {user.isPro && <Badge variant='default'>Current Plan</Badge>}
-            </div>
-            <CardDescription>For power users and teams</CardDescription>
-            <div className='mt-4'>
-              <span className='text-3xl font-bold'>${pricing.tiers.pro.earlyBirdPrice}</span>
-              <span className='text-muted-foreground ml-2 line-through'>${pricing.tiers.pro.price}</span>
-              <span className='text-muted-foreground ml-2'>one-time</span>
-            </div>
-            <p className='text-sm text-green-600 dark:text-green-400 mt-1'>Save 70% during beta!</p>
-          </CardHeader>
-          <CardContent className='space-y-3'>
-            <FeatureItem>
-              <InfinityIcon className='h-4 w-4 inline mr-1' />
-              Unlimited connections
-            </FeatureItem>
-            <FeatureItem>{pricing.tiers.pro.features.dialects.map((d) => capitalize(d)).join(', ')} support</FeatureItem>
-            <FeatureItem>SQL query runner</FeatureItem>
-            <FeatureItem>Auto-complete</FeatureItem>
-            <FeatureItem>AI assistant (bring your own key)</FeatureItem>
-            <FeatureItem>Priority support</FeatureItem>
-            <FeatureItem>Lifetime updates</FeatureItem>
-          </CardContent>
-          {!user.isPro && (
-            <CardFooter>
-              <Button className='w-full' onClick={() => createCheckoutMutation.mutate()} disabled={createCheckoutMutation.isPending}>
-                {createCheckoutMutation.isPending ? <Spinner /> : 'Upgrade to Pro'}
-              </Button>
-            </CardFooter>
-          )}
-        </Card>
-      </div>
-
-      {/* Customer Portal - Only show for Pro users */}
-      {user.isPro && <CustomerPortalCard />}
-
-      {/* AI Note */}
-      <Card className='bg-muted/50'>
-        <CardContent className='pt-6'>
-          <h3 className='font-semibold mb-2'>Bring Your Own API Key</h3>
-          <p className='text-sm text-muted-foreground'>
-            QueryStudio's AI features work with your own API keys from {pricing.ai.supportedProviders.map((p) => capitalize(p)).join(', ')}. Your data stays private and you only pay for what you use
-            directly to the provider.
-          </p>
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
-
-function CustomerPortalCard() {
   const portalMutation = useMutation({
     mutationFn: async () => {
       return await createCustomerPortal()
@@ -136,34 +46,84 @@ function CustomerPortalCard() {
   })
 
   return (
-    <Card>
-      <CardHeader>
-        <div className='flex items-center gap-2'>
-          <Key className='h-5 w-5' />
-          <CardTitle>Customer Portal</CardTitle>
-        </div>
-        <CardDescription>Manage your subscription, view your license key, and download invoices</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <p className='text-sm text-muted-foreground mb-4'>Access your customer portal to find your license key, manage billing details, and view your complete purchase history.</p>
-        <Button onClick={() => portalMutation.mutate()} disabled={portalMutation.isPending}>
-          {portalMutation.isPending ? <Spinner className='h-4 w-4 mr-2' /> : <ExternalLink className='h-4 w-4 mr-2' />}
-          Open Customer Portal
-        </Button>
-      </CardContent>
-    </Card>
-  )
-}
+    <div className='space-y-6'>
+      <div>
+        <h1 className='text-2xl font-bold'>Billing</h1>
+        <p className='text-muted-foreground'>Manage your subscription and billing</p>
+      </div>
 
-function FeatureItem({ children }: { children: React.ReactNode }) {
-  return (
-    <div className='flex items-center gap-3'>
-      <Check className='h-4 w-4 text-green-500 shrink-0' />
-      <span className='text-sm'>{children}</span>
+      {/* Current Plan Card */}
+      <Card>
+        <CardHeader>
+          <div className='flex items-center justify-between'>
+            <div className='flex items-center gap-3'>
+              {user.isPro ? (
+                <div className='p-2 rounded-full bg-primary/10'>
+                  <Crown className='h-5 w-5 text-primary' />
+                </div>
+              ) : (
+                <div className='p-2 rounded-full bg-muted'>
+                  <Sparkles className='h-5 w-5 text-muted-foreground' />
+                </div>
+              )}
+              <div>
+                <CardTitle className='text-xl'>{user.isPro ? 'Pro' : 'Free'}</CardTitle>
+                <CardDescription>{user.isPro ? 'Lifetime access' : 'Basic features'}</CardDescription>
+              </div>
+            </div>
+            <Badge variant={user.isPro ? 'default' : 'secondary'}>{user.isPro ? 'Active' : 'Current Plan'}</Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {user.isPro ? (
+            <div className='space-y-4'>
+              <div className='flex flex-wrap gap-2'>
+                <FeatureBadge>Unlimited connections</FeatureBadge>
+                <FeatureBadge>Priority support</FeatureBadge>
+                <FeatureBadge>Lifetime updates</FeatureBadge>
+              </div>
+              <Button variant='outline' onClick={() => portalMutation.mutate()} disabled={portalMutation.isPending}>
+                {portalMutation.isPending ? <Spinner className='h-4 w-4 mr-2' color='#101010' /> : <ExternalLink className='h-4 w-4 mr-2' />}
+                Manage License
+              </Button>
+            </div>
+          ) : (
+            <div className='space-y-4'>
+              <p className='text-sm text-muted-foreground'>You're on the free plan with limited features.</p>
+              <div className='p-4 rounded-lg bg-muted/50 border'>
+                <div className='flex items-center justify-between mb-3'>
+                  <div>
+                    <p className='font-medium'>Upgrade to Pro</p>
+                    <p className='text-sm text-muted-foreground'>One-time payment, lifetime access</p>
+                  </div>
+                  <div className='text-right'>
+                    <p className='text-2xl font-bold'>${pricing.tiers.pro.earlyBirdPrice}</p>
+                    <p className='text-sm text-muted-foreground line-through'>${pricing.tiers.pro.price}</p>
+                  </div>
+                </div>
+                <div className='flex flex-wrap gap-2 mb-4'>
+                  <FeatureBadge>Unlimited connections</FeatureBadge>
+                  <FeatureBadge>Priority support</FeatureBadge>
+                  <FeatureBadge>Lifetime updates</FeatureBadge>
+                </div>
+                <Button className='w-full' onClick={() => createCheckoutMutation.mutate()} disabled={createCheckoutMutation.isPending}>
+                  {createCheckoutMutation.isPending ? <Spinner className='h-4 w-4 mr-2' /> : null}
+                  Upgrade Now
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }
 
-function capitalize(str: string) {
-  return str.charAt(0).toUpperCase() + str.slice(1)
+function FeatureBadge({ children }: { children: React.ReactNode }) {
+  return (
+    <span className='inline-flex items-center gap-1 text-xs bg-primary/10 text-primary px-2 py-1 rounded-full'>
+      <Check className='h-3 w-3' />
+      {children}
+    </span>
+  )
 }
