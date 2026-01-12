@@ -80,6 +80,12 @@ jobs:
           mkdir -p assets
           gh release download ${{ github.event.release.tag_name }} --repo ${{ github.repository }} --dir assets --pattern "*"
 
+      - name: Rewrite URLs in latest.json
+        run: |
+          if [ -f assets/latest.json ]; then
+            sed -i 's|github.com/lassejlv/querystudio/releases|github.com/lassejlv/querystudio-releases/releases|g' assets/latest.json
+          fi
+
       - name: Create Public Release and Upload Assets
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
