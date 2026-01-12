@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as WaitlistRouteImport } from './routes/waitlist'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as DownloadRouteImport } from './routes/download'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiTestRouteImport } from './routes/api/test'
@@ -21,6 +22,7 @@ import { Route as AuthedDashboardRouteImport } from './routes/_authed/dashboard'
 import { Route as AuthedDashboardIndexRouteImport } from './routes/_authed/dashboard/index'
 import { Route as ApiPolarWebhooksRouteImport } from './routes/api.polar.webhooks'
 import { Route as ApiLicenseSplatRouteImport } from './routes/api.license.$'
+import { Route as ApiDownloadsSplatRouteImport } from './routes/api.downloads.$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api.auth.$'
 import { Route as AuthedDashboardSecurityRouteImport } from './routes/_authed/dashboard/security'
 import { Route as AuthedDashboardDevicesRouteImport } from './routes/_authed/dashboard/devices'
@@ -41,6 +43,11 @@ const SignupRoute = SignupRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DownloadRoute = DownloadRouteImport.update({
+  id: '/download',
+  path: '/download',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthedRoute = AuthedRouteImport.update({
@@ -87,6 +94,11 @@ const ApiLicenseSplatRoute = ApiLicenseSplatRouteImport.update({
   path: '/$',
   getParentRoute: () => ApiLicenseRoute,
 } as any)
+const ApiDownloadsSplatRoute = ApiDownloadsSplatRouteImport.update({
+  id: '/api/downloads/$',
+  path: '/api/downloads/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -120,6 +132,7 @@ const AuthedDashboardAccountRoute = AuthedDashboardAccountRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/download': typeof DownloadRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/waitlist': typeof WaitlistRoute
@@ -133,12 +146,14 @@ export interface FileRoutesByFullPath {
   '/dashboard/devices': typeof AuthedDashboardDevicesRoute
   '/dashboard/security': typeof AuthedDashboardSecurityRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/downloads/$': typeof ApiDownloadsSplatRoute
   '/api/license/$': typeof ApiLicenseSplatRoute
   '/api/polar/webhooks': typeof ApiPolarWebhooksRoute
   '/dashboard/': typeof AuthedDashboardIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/download': typeof DownloadRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/waitlist': typeof WaitlistRoute
@@ -151,6 +166,7 @@ export interface FileRoutesByTo {
   '/dashboard/devices': typeof AuthedDashboardDevicesRoute
   '/dashboard/security': typeof AuthedDashboardSecurityRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/downloads/$': typeof ApiDownloadsSplatRoute
   '/api/license/$': typeof ApiLicenseSplatRoute
   '/api/polar/webhooks': typeof ApiPolarWebhooksRoute
   '/dashboard': typeof AuthedDashboardIndexRoute
@@ -159,6 +175,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authed': typeof AuthedRouteWithChildren
+  '/download': typeof DownloadRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/waitlist': typeof WaitlistRoute
@@ -172,6 +189,7 @@ export interface FileRoutesById {
   '/_authed/dashboard/devices': typeof AuthedDashboardDevicesRoute
   '/_authed/dashboard/security': typeof AuthedDashboardSecurityRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/downloads/$': typeof ApiDownloadsSplatRoute
   '/api/license/$': typeof ApiLicenseSplatRoute
   '/api/polar/webhooks': typeof ApiPolarWebhooksRoute
   '/_authed/dashboard/': typeof AuthedDashboardIndexRoute
@@ -180,6 +198,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/download'
     | '/login'
     | '/signup'
     | '/waitlist'
@@ -193,12 +212,14 @@ export interface FileRouteTypes {
     | '/dashboard/devices'
     | '/dashboard/security'
     | '/api/auth/$'
+    | '/api/downloads/$'
     | '/api/license/$'
     | '/api/polar/webhooks'
     | '/dashboard/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/download'
     | '/login'
     | '/signup'
     | '/waitlist'
@@ -211,6 +232,7 @@ export interface FileRouteTypes {
     | '/dashboard/devices'
     | '/dashboard/security'
     | '/api/auth/$'
+    | '/api/downloads/$'
     | '/api/license/$'
     | '/api/polar/webhooks'
     | '/dashboard'
@@ -218,6 +240,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_authed'
+    | '/download'
     | '/login'
     | '/signup'
     | '/waitlist'
@@ -231,6 +254,7 @@ export interface FileRouteTypes {
     | '/_authed/dashboard/devices'
     | '/_authed/dashboard/security'
     | '/api/auth/$'
+    | '/api/downloads/$'
     | '/api/license/$'
     | '/api/polar/webhooks'
     | '/_authed/dashboard/'
@@ -239,6 +263,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthedRoute: typeof AuthedRouteWithChildren
+  DownloadRoute: typeof DownloadRoute
   LoginRoute: typeof LoginRoute
   SignupRoute: typeof SignupRoute
   WaitlistRoute: typeof WaitlistRoute
@@ -246,6 +271,7 @@ export interface RootRouteChildren {
   ApiRealtimeRoute: typeof ApiRealtimeRoute
   ApiTestRoute: typeof ApiTestRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiDownloadsSplatRoute: typeof ApiDownloadsSplatRoute
   ApiPolarWebhooksRoute: typeof ApiPolarWebhooksRoute
 }
 
@@ -270,6 +296,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/download': {
+      id: '/download'
+      path: '/download'
+      fullPath: '/download'
+      preLoaderRoute: typeof DownloadRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authed': {
@@ -334,6 +367,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/license/$'
       preLoaderRoute: typeof ApiLicenseSplatRouteImport
       parentRoute: typeof ApiLicenseRoute
+    }
+    '/api/downloads/$': {
+      id: '/api/downloads/$'
+      path: '/api/downloads/$'
+      fullPath: '/api/downloads/$'
+      preLoaderRoute: typeof ApiDownloadsSplatRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/auth/$': {
       id: '/api/auth/$'
@@ -428,6 +468,7 @@ const ApiLicenseRouteWithChildren = ApiLicenseRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthedRoute: AuthedRouteWithChildren,
+  DownloadRoute: DownloadRoute,
   LoginRoute: LoginRoute,
   SignupRoute: SignupRoute,
   WaitlistRoute: WaitlistRoute,
@@ -435,6 +476,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiRealtimeRoute: ApiRealtimeRoute,
   ApiTestRoute: ApiTestRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiDownloadsSplatRoute: ApiDownloadsSplatRoute,
   ApiPolarWebhooksRoute: ApiPolarWebhooksRoute,
 }
 export const routeTree = rootRouteImport

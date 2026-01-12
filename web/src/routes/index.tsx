@@ -24,12 +24,11 @@ function LandingPage() {
           <p className='text-xl text-muted-foreground max-w-2xl'>A beautiful & lightweight sql studio, built with Tauri, React, and Rust. Query your data with SQL or let AI do it for you.</p>
 
           <div className='flex flex-col sm:flex-row gap-4 mt-4'>
-            <Button size='lg' className='text-base' disabled>
-              <Download className='h-5 w-5 mr-2' />
-              Coming Soon
-            </Button>
-            <Button size='lg' variant='outline' className='text-base' asChild>
-              <Link to='/waitlist'>Waitlist</Link>
+            <Button size='lg' className='text-base' asChild>
+              <Link to='/download'>
+                <Download className='h-5 w-5 mr-2' />
+                Download
+              </Link>
             </Button>
           </div>
         </div>
@@ -104,7 +103,7 @@ function LandingPage() {
             </CardContent>
             <CardFooter>
               <Button variant='outline' className='w-full' asChild>
-                <Link to='/waitlist'>Join Waitlist</Link>
+                <Link to='/download'>Download</Link>
               </Button>
             </CardFooter>
           </Card>
@@ -136,7 +135,9 @@ function LandingPage() {
             </CardContent>
             <CardFooter>
               <Button className='w-full' asChild>
-                <Link to='/waitlist'>Join Waitlist</Link>
+                <Link to='/dashboard/billing' search={{ upgrade: true }}>
+                  Get Pro
+                </Link>
               </Button>
             </CardFooter>
           </Card>
