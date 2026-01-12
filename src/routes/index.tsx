@@ -299,7 +299,6 @@ function App() {
                   </Button>
                 </div>
 
-                {/* AI Chat Content */}
                 <div className="flex-1 overflow-hidden">
                   <AIChat />
                 </div>

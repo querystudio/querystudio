@@ -17,13 +17,14 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useUpdateRow } from "@/lib/hooks";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
-import type { ColumnInfo } from "@/lib/types";
+import { cn, quoteIdentifier, quoteTableRef } from "@/lib/utils";
+import type { ColumnInfo, DatabaseType } from "@/lib/types";
 
 interface EditRowSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   connectionId: string;
+  dbType: DatabaseType;
   schema: string;
   table: string;
   columns: ColumnInfo[];
@@ -35,6 +36,7 @@ export function EditRowSheet({
   open,
   onOpenChange,
   connectionId,
+  dbType,
   schema,
   table,
   columns,
@@ -82,6 +84,24 @@ export function EditRowSheet({
       return;
     }
 
+    // Validate non-nullable timestamp/date/time fields
+    for (const col of columns) {
+      const isNull = nullFields.has(col.name);
+      const newValue = formData[col.name];
+      const lowerType = col.data_type.toLowerCase();
+      const isTimestampType =
+        lowerType.includes("timestamp") ||
+        lowerType.includes("date") ||
+        lowerType.includes("time");
+
+      if (isTimestampType && !col.is_nullable && !isNull && newValue === "") {
+        toast.error(
+          `Column "${col.name}" cannot be empty (NOT NULL constraint)`,
+        );
+        return;
+      }
+    }
+
     // Build SET clause
     const setClauses: string[] = [];
     columns.forEach((col) => {
@@ -100,10 +120,10 @@ export function EditRowSheet({
 
       if (oldStr !== newStr) {
         if (isNull) {
-          setClauses.push(`"${col.name}" = NULL`);
+          setClauses.push(`${quoteIdentifier(col.name, dbType)} = NULL`);
         } else {
           setClauses.push(
-            `"${col.name}" = ${formatValueForSQL(newValue, col.data_type)}`,
+            `${quoteIdentifier(col.name, dbType)} = ${formatValueForSQL(newValue, col.data_type, col.is_nullable)}`,
           );
         }
       }
@@ -119,12 +139,12 @@ export function EditRowSheet({
     const whereClauses = pkColumns.map((col) => {
       const value = originalData[col.name];
       if (value === null || value === undefined) {
-        return `"${col.name}" IS NULL`;
+        return `${quoteIdentifier(col.name, dbType)} IS NULL`;
       }
-      return `"${col.name}" = ${formatValueForSQL(String(value), col.data_type)}`;
+      return `${quoteIdentifier(col.name, dbType)} = ${formatValueForSQL(String(value), col.data_type, col.is_nullable)}`;
     });
 
-    const query = `UPDATE "${schema}"."${table}" SET ${setClauses.join(", ")} WHERE ${whereClauses.join(" AND ")}`;
+    const query = `UPDATE ${quoteTableRef(schema, table, dbType)} SET ${setClauses.join(", ")} WHERE ${whereClauses.join(" AND ")}`;
 
     try {
       await updateRow.mutateAsync({ schema, table, query });
@@ -136,7 +156,11 @@ export function EditRowSheet({
     }
   };
 
-  const formatValueForSQL = (value: string, dataType: string): string => {
+  const formatValueForSQL = (
+    value: string,
+    dataType: string,
+    isNullable: boolean,
+  ): string => {
     const lowerType = dataType.toLowerCase();
 
     if (
@@ -161,6 +185,18 @@ export function EditRowSheet({
       } catch {
         return `'${value.replace(/'/g, "''")}'`;
       }
+    }
+
+    // Timestamp/date/time types cannot accept empty strings - use NULL if nullable
+    if (
+      lowerType.includes("timestamp") ||
+      lowerType.includes("date") ||
+      lowerType.includes("time")
+    ) {
+      if (value === "" && isNullable) {
+        return "NULL";
+      }
+      return `'${value.replace(/'/g, "''")}'`;
     }
 
     return `'${value.replace(/'/g, "''")}'`;

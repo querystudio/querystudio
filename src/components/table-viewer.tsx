@@ -40,6 +40,7 @@ import { Badge } from "@/components/ui/badge";
 import { AddRowSheet } from "@/components/add-row-sheet";
 import { EditRowSheet } from "@/components/edit-row-sheet";
 import { useConnectionStore } from "@/lib/store";
+import { quoteIdentifier, quoteTableRef } from "@/lib/utils";
 import {
   useTableData,
   useTableColumns,
@@ -159,15 +160,16 @@ export function TableViewer() {
       return;
     }
 
+    const dbType = connection?.db_type ?? "postgres";
     const whereClauses = pkColumns.map((col) => {
       const value = deleteRowData[col.name];
       if (value === null || value === undefined) {
-        return `"${col.name}" IS NULL`;
+        return `${quoteIdentifier(col.name, dbType)} IS NULL`;
       }
-      return `"${col.name}" = ${formatValueForSQL(String(value), col.data_type)}`;
+      return `${quoteIdentifier(col.name, dbType)} = ${formatValueForSQL(String(value), col.data_type)}`;
     });
 
-    const query = `DELETE FROM "${selectedTable.schema}"."${selectedTable.name}" WHERE ${whereClauses.join(" AND ")}`;
+    const query = `DELETE FROM ${quoteTableRef(selectedTable.schema, selectedTable.name, dbType)} WHERE ${whereClauses.join(" AND ")}`;
 
     try {
       await deleteRow.mutateAsync({
@@ -373,6 +375,7 @@ export function TableViewer() {
             open={addRowOpen}
             onOpenChange={setAddRowOpen}
             connectionId={connectionId}
+            dbType={connection?.db_type ?? "postgres"}
             schema={selectedTable.schema}
             table={selectedTable.name}
             columns={columns}
@@ -381,6 +384,7 @@ export function TableViewer() {
             open={editRowOpen}
             onOpenChange={setEditRowOpen}
             connectionId={connectionId}
+            dbType={connection?.db_type ?? "postgres"}
             schema={selectedTable.schema}
             table={selectedTable.name}
             columns={columns}

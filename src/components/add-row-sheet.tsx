@@ -16,12 +16,14 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useInsertRow } from "@/lib/hooks";
 import { toast } from "sonner";
-import type { ColumnInfo } from "@/lib/types";
+import { quoteIdentifier, quoteTableRef } from "@/lib/utils";
+import type { ColumnInfo, DatabaseType } from "@/lib/types";
 
 interface AddRowSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   connectionId: string;
+  dbType: DatabaseType;
   schema: string;
   table: string;
   columns: ColumnInfo[];
@@ -32,6 +34,7 @@ export function AddRowSheet({
   open,
   onOpenChange,
   connectionId,
+  dbType,
   schema,
   table,
   columns,
@@ -61,6 +64,30 @@ export function AddRowSheet({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Validate non-nullable timestamp/date/time fields
+    for (const col of columns) {
+      const isNull = nullFields.has(col.name);
+      const value = formData[col.name];
+      const lowerType = col.data_type.toLowerCase();
+      const isTimestampType =
+        lowerType.includes("timestamp") ||
+        lowerType.includes("date") ||
+        lowerType.includes("time");
+
+      if (
+        isTimestampType &&
+        !col.is_nullable &&
+        !col.has_default &&
+        !isNull &&
+        value === ""
+      ) {
+        toast.error(
+          `Column "${col.name}" cannot be empty (NOT NULL constraint)`,
+        );
+        return;
+      }
+    }
+
     // Build column/value arrays for non-null fields
     const insertColumns: string[] = [];
     const insertValues: string[] = [];
@@ -77,8 +104,10 @@ export function AddRowSheet({
         return;
       }
 
-      insertColumns.push(`"${col.name}"`);
-      insertValues.push(formatValueForSQL(value, col.data_type));
+      insertColumns.push(quoteIdentifier(col.name, dbType));
+      insertValues.push(
+        formatValueForSQL(value, col.data_type, col.is_nullable),
+      );
     });
 
     if (insertColumns.length === 0) {
@@ -86,7 +115,7 @@ export function AddRowSheet({
       return;
     }
 
-    const query = `INSERT INTO "${schema}"."${table}" (${insertColumns.join(", ")}) VALUES (${insertValues.join(", ")})`;
+    const query = `INSERT INTO ${quoteTableRef(schema, table, dbType)} (${insertColumns.join(", ")}) VALUES (${insertValues.join(", ")})`;
 
     try {
       await insertRow.mutateAsync({ schema, table, query });
@@ -98,7 +127,11 @@ export function AddRowSheet({
     }
   };
 
-  const formatValueForSQL = (value: string, dataType: string): string => {
+  const formatValueForSQL = (
+    value: string,
+    dataType: string,
+    isNullable: boolean,
+  ): string => {
     const lowerType = dataType.toLowerCase();
 
     // Numeric types - no quotes
@@ -126,6 +159,18 @@ export function AddRowSheet({
       } catch {
         return `'${value.replace(/'/g, "''")}'`;
       }
+    }
+
+    // Timestamp/date/time types cannot accept empty strings - use NULL if nullable
+    if (
+      lowerType.includes("timestamp") ||
+      lowerType.includes("date") ||
+      lowerType.includes("time")
+    ) {
+      if (value === "" && isNullable) {
+        return "NULL";
+      }
+      return `'${value.replace(/'/g, "''")}'`;
     }
 
     // Default - string with escaped quotes
