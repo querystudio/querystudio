@@ -1,0 +1,9 @@
+{
+  "file_scan_exclusions": [
+    "src/routeTree.gen.ts",
+    "src/vite-env.d.ts",
+    ".tanstack",
+    ".git",
+    "tsconfig.node.json",
+  ],
+}
