@@ -68,3 +68,28 @@ jobs:
           prerelease: ${{ github.event.release.prerelease }}
           updaterJsonKeepUniversal: true
           args: ${{ matrix.args }}
+
+  sync-release:
+    needs: publish-tauri
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Artifacts from Private Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p assets
+          gh release download ${{ github.event.release.tag_name }} --repo ${{ github.repository }} --dir assets --pattern "*"
+
+      - name: Create Public Release and Upload Assets
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          # Create release on public repo (or edit if exists)
+          gh release create ${{ github.event.release.tag_name }} ./assets/* \
+            --repo lassejlv/querystudio-releases \
+            --title "${{ github.event.release.name }}" \
+            --notes "${{ github.event.release.body }}" \
+            --verify-tag
+
