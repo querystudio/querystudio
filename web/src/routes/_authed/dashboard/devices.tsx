@@ -1,7 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,7 +11,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { Monitor, Smartphone, Laptop, Trash2, Power, PowerOff, Crown } from 'lucide-react'
+import { Monitor, Smartphone, Laptop, Trash2, Power, PowerOff } from 'lucide-react'
 import { getDevicesFn, deactivateDeviceFn, reactivateDeviceFn, deleteDeviceFn } from '@/server/devices'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -82,113 +80,105 @@ function DevicesPage() {
 
   if (!user.isPro) {
     return (
-      <div className='space-y-6'>
-        <div>
-          <h1 className='text-2xl font-bold'>Devices</h1>
-          <p className='text-muted-foreground'>Manage your activated devices</p>
+      <div className='max-w-lg'>
+        <h1 className='text-xl font-semibold mb-1'>Devices</h1>
+        <p className='text-sm text-muted-foreground mb-6'>Manage your activated devices</p>
+
+        <div className='border rounded-lg p-6 text-center'>
+          <p className='text-sm text-muted-foreground mb-4'>Upgrade to Pro to manage devices across multiple machines.</p>
+          <Button size='sm' asChild>
+            <Link to='/dashboard/billing'>Upgrade to Pro</Link>
+          </Button>
         </div>
-        <Card>
-          <CardContent className='flex flex-col items-center justify-center py-12 text-center'>
-            <Crown className='h-10 w-10 text-muted-foreground mb-3' />
-            <h3 className='font-semibold mb-1'>Pro Required</h3>
-            <p className='text-sm text-muted-foreground mb-4'>Upgrade to manage devices across multiple machines.</p>
-            <Button asChild>
-              <Link to='/dashboard/billing'>Upgrade to Pro</Link>
-            </Button>
-          </CardContent>
-        </Card>
       </div>
     )
   }
 
   return (
-    <div className='space-y-6'>
-      <div className='flex items-center justify-between'>
+    <div className='max-w-lg'>
+      <div className='flex items-center justify-between mb-6'>
         <div>
-          <h1 className='text-2xl font-bold'>Devices</h1>
-          <p className='text-muted-foreground'>
-            {data.activeCount} of {data.maxDevices} devices active
+          <h1 className='text-xl font-semibold mb-1'>Devices</h1>
+          <p className='text-sm text-muted-foreground'>
+            {data.activeCount} of {data.maxDevices} active
           </p>
         </div>
-        {!data.licenseValid && <Badge variant='destructive'>{data.licenseError || 'License Invalid'}</Badge>}
+        {!data.licenseValid && <span className='text-xs text-destructive'>{data.licenseError || 'License invalid'}</span>}
       </div>
 
-      <Card>
-        <CardHeader className='pb-3'>
-          <CardTitle className='text-base'>Your Devices</CardTitle>
-          <CardDescription>Devices activated with your license key</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className='flex justify-center py-8'>
-              <Spinner />
-            </div>
-          ) : data.devices.length === 0 ? (
-            <div className='text-center py-8 text-muted-foreground'>
-              <Monitor className='h-10 w-10 mx-auto mb-3 opacity-50' />
-              <p className='text-sm'>No devices yet. Open QueryStudio and activate with your license key.</p>
-            </div>
-          ) : (
-            <div className='divide-y'>
-              {data.devices.map((device: Device) => {
-                const DeviceIcon = getDeviceIcon(device.osType)
-                const isPending = deactivateMutation.isPending || reactivateMutation.isPending || deleteMutation.isPending
+      <div className='border rounded-lg'>
+        {isLoading ? (
+          <div className='flex justify-center py-8'>
+            <Spinner />
+          </div>
+        ) : data.devices.length === 0 ? (
+          <div className='text-center py-8 text-muted-foreground'>
+            <Monitor className='h-8 w-8 mx-auto mb-2 opacity-50' />
+            <p className='text-sm'>No devices yet</p>
+          </div>
+        ) : (
+          <div className='divide-y'>
+            {data.devices.map((device: Device) => {
+              const DeviceIcon = getDeviceIcon(device.osType)
+              const isPending = deactivateMutation.isPending || reactivateMutation.isPending || deleteMutation.isPending
 
-                return (
-                  <div key={device.id} className='flex items-center justify-between py-3 first:pt-0 last:pb-0'>
-                    <div className='flex items-center gap-3'>
-                      <DeviceIcon className={`h-5 w-5 ${device.active ? 'text-primary' : 'text-muted-foreground'}`} />
-                      <div>
-                        <div className='flex items-center gap-2'>
-                          <span className={`font-medium ${!device.active ? 'text-muted-foreground' : ''}`}>{device.name}</span>
-                          {device.active && (
-                            <Badge variant='secondary' className='text-xs'>
-                              Active
-                            </Badge>
-                          )}
-                        </div>
-                        <p className='text-xs text-muted-foreground'>{device.lastSeenAt ? formatDistanceToNow(new Date(device.lastSeenAt), { addSuffix: true }) : 'Never used'}</p>
+              return (
+                <div key={device.id} className='flex items-center justify-between p-4'>
+                  <div className='flex items-center gap-3'>
+                    <DeviceIcon className={`h-4 w-4 ${device.active ? '' : 'text-muted-foreground'}`} />
+                    <div>
+                      <div className='flex items-center gap-2'>
+                        <span className={`text-sm ${!device.active ? 'text-muted-foreground' : ''}`}>{device.name}</span>
+                        {device.active && <span className='text-xs bg-muted px-1.5 py-0.5 rounded'>Active</span>}
                       </div>
-                    </div>
-
-                    <div className='flex items-center gap-1'>
-                      {device.active ? (
-                        <Button variant='ghost' size='icon' onClick={() => deactivateMutation.mutate(device.id)} disabled={isPending} title='Deactivate'>
-                          <PowerOff className='h-4 w-4' />
-                        </Button>
-                      ) : (
-                        <Button variant='ghost' size='icon' onClick={() => reactivateMutation.mutate(device.id)} disabled={isPending || data.activeCount >= data.maxDevices} title='Reactivate'>
-                          <Power className='h-4 w-4' />
-                        </Button>
-                      )}
-
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant='ghost' size='icon' className='text-destructive hover:text-destructive' title='Delete'>
-                            <Trash2 className='h-4 w-4' />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete {device.name}?</AlertDialogTitle>
-                            <AlertDialogDescription>This device will need to be reactivated to use QueryStudio again.</AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => deleteMutation.mutate(device.id)} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                      <p className='text-xs text-muted-foreground'>{device.lastSeenAt ? formatDistanceToNow(new Date(device.lastSeenAt), { addSuffix: true }) : 'Never used'}</p>
                     </div>
                   </div>
-                )
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+
+                  <div className='flex items-center gap-1'>
+                    {device.active ? (
+                      <Button variant='ghost' size='icon' className='h-8 w-8' onClick={() => deactivateMutation.mutate(device.id)} disabled={isPending} title='Deactivate'>
+                        <PowerOff className='h-4 w-4' />
+                      </Button>
+                    ) : (
+                      <Button
+                        variant='ghost'
+                        size='icon'
+                        className='h-8 w-8'
+                        onClick={() => reactivateMutation.mutate(device.id)}
+                        disabled={isPending || data.activeCount >= data.maxDevices}
+                        title='Reactivate'
+                      >
+                        <Power className='h-4 w-4' />
+                      </Button>
+                    )}
+
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant='ghost' size='icon' className='h-8 w-8 text-destructive hover:text-destructive' title='Delete'>
+                          <Trash2 className='h-4 w-4' />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete {device.name}?</AlertDialogTitle>
+                          <AlertDialogDescription>This device will need to be reactivated to use QueryStudio again.</AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => deleteMutation.mutate(device.id)} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

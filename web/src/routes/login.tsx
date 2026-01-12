@@ -3,7 +3,6 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Header } from '@/components/header'
 import { authClient } from '@/lib/auth-client'
 import { toast } from 'sonner'
@@ -46,45 +45,33 @@ function LoginPage() {
   return (
     <div className='min-h-screen bg-background'>
       <Header />
-      <div className='flex items-center justify-center px-4 py-24'>
-        <div className='w-full max-w-md'>
-          <div className='flex flex-col items-center mb-8'>
-            <img src='https://assets-cdn.querystudio.dev/QueryStudioIconNoBG.png' alt='QueryStudio' className='h-16 w-16 mb-4' />
-            <h1 className='text-2xl font-bold'>Welcome back</h1>
-            <p className='text-muted-foreground'>Sign in to your account</p>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Sign in</CardTitle>
-              <CardDescription>Enter your email and password to access your account</CardDescription>
-            </CardHeader>
-            <form onSubmit={handleSubmit}>
-              <CardContent className='space-y-4'>
-                <div className='space-y-2'>
-                  <Label htmlFor='email'>Email</Label>
-                  <Input id='email' type='email' placeholder='you@example.com' value={email} onChange={(e) => setEmail(e.target.value)} required disabled={isLoading} />
-                </div>
-                <div className='space-y-2'>
-                  <Label htmlFor='password'>Password</Label>
-                  <Input id='password' type='password' placeholder='••••••••' value={password} onChange={(e) => setPassword(e.target.value)} required disabled={isLoading} />
-                </div>
-              </CardContent>
-              <CardFooter className='flex flex-col gap-4 pt-2'>
-                <Button type='submit' className='w-full' disabled={isLoading}>
-                  {isLoading && <Spinner size={16} />}
-                  Sign in
-                </Button>
-                <p className='text-sm text-muted-foreground text-center'>
-                  Don't have an account?{' '}
-                  <Link to='/signup' className='text-primary hover:underline font-medium'>
-                    Sign up
-                  </Link>
-                </p>
-              </CardFooter>
-            </form>
-          </Card>
+      <div className='container mx-auto px-4 py-16 max-w-sm'>
+        <div className='mb-8'>
+          <h1 className='text-xl font-semibold mb-1'>Sign in</h1>
+          <p className='text-sm text-muted-foreground'>Enter your credentials to continue</p>
         </div>
+
+        <form onSubmit={handleSubmit} className='space-y-4'>
+          <div className='space-y-2'>
+            <Label htmlFor='email'>Email</Label>
+            <Input id='email' type='email' placeholder='you@example.com' value={email} onChange={(e) => setEmail(e.target.value)} required disabled={isLoading} />
+          </div>
+          <div className='space-y-2'>
+            <Label htmlFor='password'>Password</Label>
+            <Input id='password' type='password' placeholder='••••••••' value={password} onChange={(e) => setPassword(e.target.value)} required disabled={isLoading} />
+          </div>
+          <Button type='submit' className='w-full' disabled={isLoading}>
+            {isLoading && <Spinner size={16} />}
+            Sign in
+          </Button>
+        </form>
+
+        <p className='text-sm text-muted-foreground mt-6'>
+          Don't have an account?{' '}
+          <Link to='/signup' className='text-foreground underline'>
+            Sign up
+          </Link>
+        </p>
       </div>
     </div>
   )

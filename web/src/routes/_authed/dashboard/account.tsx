@@ -1,7 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
 import { getRequest } from '@tanstack/react-start/server'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -52,18 +51,13 @@ function AccountPage() {
   }
 
   return (
-    <div className='space-y-6'>
-      <div>
-        <h1 className='text-2xl font-bold'>Account</h1>
-        <p className='text-muted-foreground'>Manage your account settings</p>
-      </div>
+    <div className='max-w-lg'>
+      <h1 className='text-xl font-semibold mb-1'>Account</h1>
+      <p className='text-sm text-muted-foreground mb-6'>Manage your account settings</p>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Profile</CardTitle>
-          <CardDescription>Update your personal information</CardDescription>
-        </CardHeader>
-        <CardContent className='space-y-4'>
+      <div className='space-y-6'>
+        <div className='border rounded-lg p-5 space-y-4'>
+          <h2 className='font-medium'>Profile</h2>
           <div className='space-y-2'>
             <Label htmlFor='name'>Name</Label>
             <Input id='name' value={name} onChange={(e) => setName(e.target.value)} />
@@ -76,18 +70,16 @@ function AccountPage() {
           <Button onClick={handleSave} disabled={isSaving}>
             {isSaving ? 'Saving...' : 'Save changes'}
           </Button>
-        </CardContent>
-      </Card>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className='text-destructive'>Danger Zone</CardTitle>
-          <CardDescription>Irreversible actions for your account</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button variant='destructive'>Delete account</Button>
-        </CardContent>
-      </Card>
+        <div className='border border-destructive/20 rounded-lg p-5'>
+          <h2 className='font-medium text-destructive mb-2'>Danger zone</h2>
+          <p className='text-sm text-muted-foreground mb-4'>Permanently delete your account and all data</p>
+          <Button variant='destructive' size='sm'>
+            Delete account
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }

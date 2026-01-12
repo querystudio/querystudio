@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WaitlistRouteImport } from './routes/waitlist'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DownloadRouteImport } from './routes/download'
 import { Route as AuthedRouteImport } from './routes/_authed'
@@ -38,6 +39,11 @@ const WaitlistRoute = WaitlistRouteImport.update({
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PricingRoute = PricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -134,6 +140,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/download': typeof DownloadRoute
   '/login': typeof LoginRoute
+  '/pricing': typeof PricingRoute
   '/signup': typeof SignupRoute
   '/waitlist': typeof WaitlistRoute
   '/dashboard': typeof AuthedDashboardRouteWithChildren
@@ -155,6 +162,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/download': typeof DownloadRoute
   '/login': typeof LoginRoute
+  '/pricing': typeof PricingRoute
   '/signup': typeof SignupRoute
   '/waitlist': typeof WaitlistRoute
   '/api/license': typeof ApiLicenseRouteWithChildren
@@ -177,6 +185,7 @@ export interface FileRoutesById {
   '/_authed': typeof AuthedRouteWithChildren
   '/download': typeof DownloadRoute
   '/login': typeof LoginRoute
+  '/pricing': typeof PricingRoute
   '/signup': typeof SignupRoute
   '/waitlist': typeof WaitlistRoute
   '/_authed/dashboard': typeof AuthedDashboardRouteWithChildren
@@ -200,6 +209,7 @@ export interface FileRouteTypes {
     | '/'
     | '/download'
     | '/login'
+    | '/pricing'
     | '/signup'
     | '/waitlist'
     | '/dashboard'
@@ -221,6 +231,7 @@ export interface FileRouteTypes {
     | '/'
     | '/download'
     | '/login'
+    | '/pricing'
     | '/signup'
     | '/waitlist'
     | '/api/license'
@@ -242,6 +253,7 @@ export interface FileRouteTypes {
     | '/_authed'
     | '/download'
     | '/login'
+    | '/pricing'
     | '/signup'
     | '/waitlist'
     | '/_authed/dashboard'
@@ -265,6 +277,7 @@ export interface RootRouteChildren {
   AuthedRoute: typeof AuthedRouteWithChildren
   DownloadRoute: typeof DownloadRoute
   LoginRoute: typeof LoginRoute
+  PricingRoute: typeof PricingRoute
   SignupRoute: typeof SignupRoute
   WaitlistRoute: typeof WaitlistRoute
   ApiLicenseRoute: typeof ApiLicenseRouteWithChildren
@@ -289,6 +302,13 @@ declare module '@tanstack/react-router' {
       path: '/signup'
       fullPath: '/signup'
       preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pricing': {
+      id: '/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof PricingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -470,6 +490,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthedRoute: AuthedRouteWithChildren,
   DownloadRoute: DownloadRoute,
   LoginRoute: LoginRoute,
+  PricingRoute: PricingRoute,
   SignupRoute: SignupRoute,
   WaitlistRoute: WaitlistRoute,
   ApiLicenseRoute: ApiLicenseRouteWithChildren,

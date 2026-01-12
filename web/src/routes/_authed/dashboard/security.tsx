@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -47,29 +46,24 @@ function SecurityPage() {
   }
 
   return (
-    <div className='space-y-6'>
-      <div>
-        <h1 className='text-2xl font-bold'>Security</h1>
-        <p className='text-muted-foreground'>Manage your security settings</p>
-      </div>
+    <div className='max-w-lg'>
+      <h1 className='text-xl font-semibold mb-1'>Security</h1>
+      <p className='text-sm text-muted-foreground mb-6'>Manage your security settings</p>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Change Password</CardTitle>
-          <CardDescription>Update your password to keep your account secure</CardDescription>
-        </CardHeader>
-        <CardContent>
+      <div className='space-y-6'>
+        <div className='border rounded-lg p-5'>
+          <h2 className='font-medium mb-4'>Change password</h2>
           <form onSubmit={handleChangePassword} className='space-y-4'>
             <div className='space-y-2'>
-              <Label htmlFor='current-password'>Current Password</Label>
+              <Label htmlFor='current-password'>Current password</Label>
               <Input id='current-password' type='password' placeholder='••••••••' value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required disabled={isLoading} />
             </div>
             <div className='space-y-2'>
-              <Label htmlFor='new-password'>New Password</Label>
+              <Label htmlFor='new-password'>New password</Label>
               <Input id='new-password' type='password' placeholder='••••••••' value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength={8} disabled={isLoading} />
             </div>
             <div className='space-y-2'>
-              <Label htmlFor='confirm-password'>Confirm New Password</Label>
+              <Label htmlFor='confirm-password'>Confirm new password</Label>
               <Input
                 id='confirm-password'
                 type='password'
@@ -86,27 +80,22 @@ function SecurityPage() {
               Update password
             </Button>
           </form>
-        </CardContent>
-      </Card>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Active Sessions</CardTitle>
-          <CardDescription>Manage your active sessions across devices</CardDescription>
-        </CardHeader>
-        <CardContent className='space-y-4'>
-          <div className='flex items-center justify-between p-3 border rounded-lg'>
+        <div className='border rounded-lg p-5'>
+          <h2 className='font-medium mb-4'>Sessions</h2>
+          <div className='flex items-center justify-between p-3 border rounded mb-4'>
             <div>
-              <p className='font-medium'>Current Session</p>
-              <p className='text-sm text-muted-foreground'>This device</p>
+              <p className='text-sm font-medium'>Current session</p>
+              <p className='text-xs text-muted-foreground'>This device</p>
             </div>
-            <span className='text-xs bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 px-2 py-1 rounded-full'>Active</span>
+            <span className='text-xs bg-muted px-2 py-1 rounded'>Active</span>
           </div>
-          <Button variant='outline' className='w-full'>
-            Sign out of all other sessions
+          <Button variant='outline' size='sm'>
+            Sign out other sessions
           </Button>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   )
 }

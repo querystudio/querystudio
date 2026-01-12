@@ -1,8 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { Header } from '@/components/header'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Download, Apple, Monitor, ExternalLink } from 'lucide-react'
 import { createServerFn } from '@tanstack/react-start'
 
@@ -128,30 +126,12 @@ function getLinuxLabel(filename: string): string {
   return filename
 }
 
-function getPlatformIcon(platform: FormattedAsset['platform']) {
-  switch (platform) {
-    case 'macos':
-      return <Apple className='h-5 w-5' />
-    case 'windows':
-      return <Monitor className='h-5 w-5' />
-    case 'linux':
-      return <Monitor className='h-5 w-5' />
-    default:
-      return <Download className='h-5 w-5' />
-  }
-}
-
-function getPlatformName(platform: FormattedAsset['platform']) {
-  switch (platform) {
-    case 'macos':
-      return 'macOS'
-    case 'windows':
-      return 'Windows'
-    case 'linux':
-      return 'Linux'
-    default:
-      return 'Unknown'
-  }
+function getWindowsLabel(asset: FormattedAsset): string {
+  const lower = asset.name.toLowerCase()
+  const arch = getArchName(asset.arch)
+  if (lower.includes('.msi')) return arch ? `${arch} (.msi)` : '.msi'
+  if (lower.includes('.exe')) return arch ? `${arch} (.exe)` : '.exe'
+  return arch || asset.name
 }
 
 function getArchName(arch: FormattedAsset['arch']) {
@@ -174,20 +154,17 @@ function DownloadPage() {
     return (
       <div className='min-h-screen bg-background'>
         <Header />
-        <div className='container mx-auto px-4 py-24'>
-          <div className='text-center'>
-            <h1 className='text-4xl font-bold mb-4'>Downloads</h1>
-            <p className='text-muted-foreground text-lg mb-8'>No releases available yet. Check back soon!</p>
-            <Button variant='outline' asChild>
-              <Link to='/'>Go Home</Link>
-            </Button>
-          </div>
+        <div className='container mx-auto px-4 py-16'>
+          <h1 className='text-2xl font-semibold mb-4'>Downloads</h1>
+          <p className='text-muted-foreground mb-6'>No releases available yet.</p>
+          <Button variant='outline' asChild>
+            <Link to='/'>Go Home</Link>
+          </Button>
         </div>
       </div>
     )
   }
 
-  // Filter out signature files for the main download cards
   const macosAssets = release.assets.filter((a) => a.platform === 'macos' && !isSignatureFile(a.name))
   const windowsAssets = release.assets.filter((a) => a.platform === 'windows' && !isSignatureFile(a.name))
   const linuxAssets = release.assets.filter((a) => a.platform === 'linux' && !isSignatureFile(a.name))
@@ -196,170 +173,105 @@ function DownloadPage() {
     <div className='min-h-screen bg-background'>
       <Header />
 
-      <section className='container mx-auto px-4 py-24'>
-        <div className='text-center mb-16'>
-          <h1 className='text-4xl md:text-5xl font-bold mb-4'>Download QueryStudio</h1>
-          <p className='text-muted-foreground text-lg max-w-2xl mx-auto mb-4'>Get the latest version of QueryStudio for your platform.</p>
-          <div className='flex items-center justify-center gap-2'>
-            <Badge variant='secondary' className='text-sm'>
-              {release.version}
-            </Badge>
-            {release.isPrerelease && <Badge variant='outline'>Pre-release</Badge>}
-          </div>
+      <section className='container mx-auto px-4 py-16'>
+        <div className='mb-8'>
+          <h1 className='text-2xl font-semibold mb-2'>Download QueryStudio</h1>
+          <p className='text-muted-foreground'>
+            Version {release.version}
+            {release.isPrerelease && <span className='ml-2 text-sm'>(pre-release)</span>}
+          </p>
         </div>
 
-        <div className='grid md:grid-cols-3 gap-6 max-w-5xl mx-auto mb-16 items-start'>
+        <div className='grid md:grid-cols-3 gap-6 max-w-3xl mb-12'>
           {/* macOS */}
-          <Card className='relative h-full'>
-            <CardHeader className='text-center'>
-              <div className='h-16 w-16 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-4'>
-                <Apple className='h-8 w-8' />
-              </div>
-              <CardTitle>macOS</CardTitle>
-              <CardDescription>For Mac computers</CardDescription>
-            </CardHeader>
-            <CardContent className='space-y-3'>
+          <div className='border rounded-lg p-5'>
+            <div className='flex items-center gap-2 mb-4'>
+              <Apple className='h-5 w-5' />
+              <h2 className='font-medium'>macOS</h2>
+            </div>
+            <div className='space-y-2'>
               {macosAssets.length > 0 ? (
                 macosAssets.map((asset) => (
-                  <Button key={asset.name} className='w-full justify-between' variant='outline' asChild>
-                    <a href={asset.downloadUrl} download>
-                      <span className='flex items-center gap-2'>
-                        <Download className='h-4 w-4' />
-                        {getArchName(asset.arch) || asset.name}
-                      </span>
-                      <span className='text-xs text-muted-foreground'>{formatBytes(asset.size)}</span>
-                    </a>
-                  </Button>
+                  <a key={asset.name} href={asset.downloadUrl} download className='flex items-center justify-between p-2 border rounded hover:bg-muted transition-colors'>
+                    <span className='flex items-center gap-2 text-sm'>
+                      <Download className='h-4 w-4' />
+                      {getArchName(asset.arch) || asset.name}
+                    </span>
+                    <span className='text-xs text-muted-foreground'>{formatBytes(asset.size)}</span>
+                  </a>
                 ))
               ) : (
-                <p className='text-sm text-muted-foreground text-center'>Coming soon</p>
+                <p className='text-sm text-muted-foreground'>Coming soon</p>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {/* Windows */}
-          <Card className='relative h-full'>
-            <CardHeader className='text-center'>
-              <div className='h-16 w-16 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-4'>
-                <Monitor className='h-8 w-8' />
-              </div>
-              <CardTitle>Windows</CardTitle>
-              <CardDescription>For Windows PCs</CardDescription>
-            </CardHeader>
-            <CardContent className='space-y-3'>
+          <div className='border rounded-lg p-5'>
+            <div className='flex items-center gap-2 mb-4'>
+              <Monitor className='h-5 w-5' />
+              <h2 className='font-medium'>Windows</h2>
+            </div>
+            <div className='space-y-2'>
               {windowsAssets.length > 0 ? (
                 windowsAssets.map((asset) => (
-                  <Button key={asset.name} className='w-full justify-between' variant='outline' asChild>
-                    <a href={asset.downloadUrl} download>
-                      <span className='flex items-center gap-2'>
-                        <Download className='h-4 w-4' />
-                        {getArchName(asset.arch) || asset.name}
-                      </span>
-                      <span className='text-xs text-muted-foreground'>{formatBytes(asset.size)}</span>
-                    </a>
-                  </Button>
+                  <a key={asset.name} href={asset.downloadUrl} download className='flex items-center justify-between p-2 border rounded hover:bg-muted transition-colors'>
+                    <span className='flex items-center gap-2 text-sm'>
+                      <Download className='h-4 w-4' />
+                      {getWindowsLabel(asset)}
+                    </span>
+                    <span className='text-xs text-muted-foreground'>{formatBytes(asset.size)}</span>
+                  </a>
                 ))
               ) : (
-                <p className='text-sm text-muted-foreground text-center'>Coming soon</p>
+                <p className='text-sm text-muted-foreground'>Coming soon</p>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {/* Linux */}
-          <Card className='relative h-full'>
-            <CardHeader className='text-center'>
-              <div className='h-16 w-16 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-4'>
-                <Monitor className='h-8 w-8' />
-              </div>
-              <CardTitle>Linux</CardTitle>
-              <CardDescription>For Linux distros</CardDescription>
-            </CardHeader>
-            <CardContent className='space-y-3'>
+          <div className='border rounded-lg p-5'>
+            <div className='flex items-center gap-2 mb-4'>
+              <Monitor className='h-5 w-5' />
+              <h2 className='font-medium'>Linux</h2>
+            </div>
+            <div className='space-y-2'>
               {linuxAssets.length > 0 ? (
                 linuxAssets.map((asset) => (
-                  <Button key={asset.name} className='w-full justify-between' variant='outline' asChild>
-                    <a href={asset.downloadUrl} download>
-                      <span className='flex items-center gap-2'>
-                        <Download className='h-4 w-4' />
-                        {getLinuxLabel(asset.name)}
-                      </span>
-                      <span className='text-xs text-muted-foreground'>{formatBytes(asset.size)}</span>
-                    </a>
-                  </Button>
+                  <a key={asset.name} href={asset.downloadUrl} download className='flex items-center justify-between p-2 border rounded hover:bg-muted transition-colors'>
+                    <span className='flex items-center gap-2 text-sm'>
+                      <Download className='h-4 w-4' />
+                      {getLinuxLabel(asset.name)}
+                    </span>
+                    <span className='text-xs text-muted-foreground'>{formatBytes(asset.size)}</span>
+                  </a>
                 ))
               ) : (
-                <p className='text-sm text-muted-foreground text-center'>Coming soon</p>
+                <p className='text-sm text-muted-foreground'>Coming soon</p>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
 
         {/* Release Notes */}
         {release.body && (
-          <div className='max-w-3xl mx-auto'>
-            <Card>
-              <CardHeader>
-                <CardTitle className='flex items-center justify-between'>
-                  <span>Release Notes</span>
-                  <Button variant='ghost' size='sm' asChild>
-                    <a href={release.htmlUrl} target='_blank' rel='noopener noreferrer'>
-                      <ExternalLink className='h-4 w-4 mr-2' />
-                      View on GitHub
-                    </a>
-                  </Button>
-                </CardTitle>
-                <CardDescription>
-                  Published on{' '}
-                  {new Date(release.publishedAt).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                  })}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className='prose prose-sm dark:prose-invert max-w-none'>
-                  <pre className='whitespace-pre-wrap text-sm text-muted-foreground'>{release.body}</pre>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* All Downloads */}
-        {release.assets.filter((a) => !isSignatureFile(a.name)).length > 0 && (
-          <div className='max-w-3xl mx-auto mt-8'>
-            <Card>
-              <CardHeader>
-                <CardTitle>All Downloads</CardTitle>
-                <CardDescription>All available files for this release</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className='divide-y'>
-                  {release.assets
-                    .filter((a) => !isSignatureFile(a.name))
-                    .map((asset) => (
-                      <div key={asset.name} className='flex items-center justify-between py-3'>
-                        <div className='flex items-center gap-3'>
-                          {getPlatformIcon(asset.platform)}
-                          <div>
-                            <p className='font-medium text-sm'>{asset.name}</p>
-                            <p className='text-xs text-muted-foreground'>
-                              {getPlatformName(asset.platform)} {getArchName(asset.arch) && `• ${getArchName(asset.arch)}`} • {formatBytes(asset.size)} • {asset.downloadCount.toLocaleString()}{' '}
-                              downloads
-                            </p>
-                          </div>
-                        </div>
-                        <Button size='sm' variant='outline' asChild>
-                          <a href={asset.downloadUrl} download>
-                            <Download className='h-4 w-4' />
-                          </a>
-                        </Button>
-                      </div>
-                    ))}
-                </div>
-              </CardContent>
-            </Card>
+          <div className='max-w-2xl'>
+            <div className='flex items-center justify-between mb-4'>
+              <h2 className='font-medium'>Release Notes</h2>
+              <a href={release.htmlUrl} target='_blank' rel='noopener noreferrer' className='text-sm text-muted-foreground hover:text-foreground flex items-center gap-1'>
+                <ExternalLink className='h-3 w-3' />
+                GitHub
+              </a>
+            </div>
+            <p className='text-sm text-muted-foreground mb-4'>
+              Published{' '}
+              {new Date(release.publishedAt).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              })}
+            </p>
+            <pre className='whitespace-pre-wrap text-sm text-muted-foreground border rounded-lg p-4'>{release.body}</pre>
           </div>
         )}
       </section>

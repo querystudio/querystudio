@@ -1,11 +1,9 @@
 import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { authClient } from '@/lib/auth-client'
 import { toast } from 'sonner'
-import { Check, X, RefreshCw, Users, Clock, CheckCircle, XCircle } from 'lucide-react'
+import { Check, X, RefreshCw } from 'lucide-react'
 import Spinner from '@/components/ui/spinner'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
@@ -84,18 +82,12 @@ function AdminPage() {
 
   if (!isAdmin) {
     return (
-      <div className='space-y-6'>
-        <div>
-          <h1 className='text-2xl font-bold'>Admin</h1>
-          <p className='text-muted-foreground'>Manage waitlist entries</p>
+      <div className='max-w-lg'>
+        <h1 className='text-xl font-semibold mb-1'>Admin</h1>
+        <p className='text-sm text-muted-foreground mb-6'>Manage waitlist entries</p>
+        <div className='border rounded-lg p-8 text-center'>
+          <p className='text-sm text-muted-foreground'>You don't have permission to access this page.</p>
         </div>
-        <Card>
-          <CardContent className='py-12'>
-            <div className='text-center text-muted-foreground'>
-              <p>You don't have permission to access this page.</p>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     )
   }
@@ -109,11 +101,11 @@ function AdminPage() {
   }
 
   return (
-    <div className='space-y-6'>
-      <div className='flex items-center justify-between'>
+    <div className='max-w-2xl'>
+      <div className='flex items-center justify-between mb-6'>
         <div>
-          <h1 className='text-2xl font-bold'>Admin</h1>
-          <p className='text-muted-foreground'>Manage waitlist entries</p>
+          <h1 className='text-xl font-semibold mb-1'>Admin</h1>
+          <p className='text-sm text-muted-foreground'>Manage waitlist entries</p>
         </div>
         <Button variant='outline' size='sm' onClick={() => refetch()} disabled={isLoading}>
           <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
@@ -122,131 +114,83 @@ function AdminPage() {
       </div>
 
       {/* Stats */}
-      <div className='grid grid-cols-1 md:grid-cols-4 gap-4'>
-        <Card>
-          <CardContent className='pt-6'>
-            <div className='flex items-center gap-4'>
-              <div className='p-2 bg-primary/10 rounded-lg'>
-                <Users className='h-5 w-5 text-primary' />
-              </div>
-              <div>
-                <p className='text-2xl font-bold'>{entries.length}</p>
-                <p className='text-sm text-muted-foreground'>Total</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className='pt-6'>
-            <div className='flex items-center gap-4'>
-              <div className='p-2 bg-yellow-500/10 rounded-lg'>
-                <Clock className='h-5 w-5 text-yellow-500' />
-              </div>
-              <div>
-                <p className='text-2xl font-bold'>{pendingEntries.length}</p>
-                <p className='text-sm text-muted-foreground'>Pending</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className='pt-6'>
-            <div className='flex items-center gap-4'>
-              <div className='p-2 bg-green-500/10 rounded-lg'>
-                <CheckCircle className='h-5 w-5 text-green-500' />
-              </div>
-              <div>
-                <p className='text-2xl font-bold'>{acceptedEntries.length}</p>
-                <p className='text-sm text-muted-foreground'>Accepted</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className='pt-6'>
-            <div className='flex items-center gap-4'>
-              <div className='p-2 bg-red-500/10 rounded-lg'>
-                <XCircle className='h-5 w-5 text-red-500' />
-              </div>
-              <div>
-                <p className='text-2xl font-bold'>{rejectedEntries.length}</p>
-                <p className='text-sm text-muted-foreground'>Rejected</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className='grid grid-cols-4 gap-4 mb-6'>
+        <div className='border rounded-lg p-4'>
+          <p className='text-2xl font-semibold'>{entries.length}</p>
+          <p className='text-sm text-muted-foreground'>Total</p>
+        </div>
+        <div className='border rounded-lg p-4'>
+          <p className='text-2xl font-semibold'>{pendingEntries.length}</p>
+          <p className='text-sm text-muted-foreground'>Pending</p>
+        </div>
+        <div className='border rounded-lg p-4'>
+          <p className='text-2xl font-semibold'>{acceptedEntries.length}</p>
+          <p className='text-sm text-muted-foreground'>Accepted</p>
+        </div>
+        <div className='border rounded-lg p-4'>
+          <p className='text-2xl font-semibold'>{rejectedEntries.length}</p>
+          <p className='text-sm text-muted-foreground'>Rejected</p>
+        </div>
       </div>
 
       {/* Pending Entries */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Pending Requests</CardTitle>
-          <CardDescription>Review and approve or reject waitlist requests</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className='flex items-center justify-center py-8'>
-              <Spinner size={24} color='currentColor' className='text-muted-foreground' />
-            </div>
-          ) : pendingEntries.length === 0 ? (
-            <div className='text-center py-8 text-muted-foreground'>
-              <p>No pending requests</p>
-            </div>
-          ) : (
-            <div className='space-y-3'>
-              {pendingEntries.map((entry) => (
-                <div key={entry.id} className='flex items-center justify-between p-4 border rounded-lg'>
-                  <div>
-                    <p className='font-medium'>{entry.email}</p>
-                    <p className='text-sm text-muted-foreground'>Requested {formatDate(entry.requestedAt)}</p>
-                  </div>
-                  <div className='flex items-center gap-2'>
-                    <Button size='sm' variant='outline' onClick={() => rejectMutation.mutate(entry.id)} disabled={processingId === entry.id}>
-                      {processingId === entry.id && rejectMutation.isPending ? <Spinner size={16} color='currentColor' /> : <X className='h-4 w-4' />}
-                      Reject
-                    </Button>
-                    <Button size='sm' onClick={() => approveMutation.mutate(entry.id)} disabled={processingId === entry.id}>
-                      {processingId === entry.id && approveMutation.isPending ? <Spinner size={16} color='currentColor' /> : <Check className='h-4 w-4' />}
-                      Approve
-                    </Button>
-                  </div>
+      <div className='border rounded-lg p-5 mb-6'>
+        <h2 className='font-medium mb-1'>Pending requests</h2>
+        <p className='text-sm text-muted-foreground mb-4'>Review and approve or reject waitlist requests</p>
+
+        {isLoading ? (
+          <div className='flex items-center justify-center py-8'>
+            <Spinner size={24} color='currentColor' className='text-muted-foreground' />
+          </div>
+        ) : pendingEntries.length === 0 ? (
+          <p className='text-sm text-muted-foreground py-4'>No pending requests</p>
+        ) : (
+          <div className='space-y-2'>
+            {pendingEntries.map((entry) => (
+              <div key={entry.id} className='flex items-center justify-between p-3 border rounded'>
+                <div>
+                  <p className='text-sm font-medium'>{entry.email}</p>
+                  <p className='text-xs text-muted-foreground'>Requested {formatDate(entry.requestedAt)}</p>
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                <div className='flex items-center gap-2'>
+                  <Button size='sm' variant='outline' onClick={() => rejectMutation.mutate(entry.id)} disabled={processingId === entry.id}>
+                    {processingId === entry.id && rejectMutation.isPending ? <Spinner size={14} color='currentColor' /> : <X className='h-4 w-4' />}
+                  </Button>
+                  <Button size='sm' onClick={() => approveMutation.mutate(entry.id)} disabled={processingId === entry.id}>
+                    {processingId === entry.id && approveMutation.isPending ? <Spinner size={14} color='currentColor' /> : <Check className='h-4 w-4' />}
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* All Entries */}
-      <Card>
-        <CardHeader>
-          <CardTitle>All Entries</CardTitle>
-          <CardDescription>Complete list of waitlist entries</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className='flex items-center justify-center py-8'>
-              <Spinner size={24} color='currentColor' className='text-muted-foreground' />
-            </div>
-          ) : entries.length === 0 ? (
-            <div className='text-center py-8 text-muted-foreground'>
-              <p>No waitlist entries yet</p>
-            </div>
-          ) : (
-            <div className='space-y-2'>
-              {entries.map((entry) => (
-                <div key={entry.id} className='flex items-center justify-between p-3 border rounded-lg'>
-                  <div className='flex items-center gap-3'>
-                    <Badge variant={entry.status === 'accepted' ? 'default' : entry.status === 'rejected' ? 'destructive' : 'secondary'}>{entry.status}</Badge>
-                    <span className='font-medium'>{entry.email}</span>
-                  </div>
-                  <span className='text-sm text-muted-foreground'>{formatDate(entry.requestedAt)}</span>
+      <div className='border rounded-lg p-5'>
+        <h2 className='font-medium mb-1'>All entries</h2>
+        <p className='text-sm text-muted-foreground mb-4'>Complete list of waitlist entries</p>
+
+        {isLoading ? (
+          <div className='flex items-center justify-center py-8'>
+            <Spinner size={24} color='currentColor' className='text-muted-foreground' />
+          </div>
+        ) : entries.length === 0 ? (
+          <p className='text-sm text-muted-foreground py-4'>No waitlist entries yet</p>
+        ) : (
+          <div className='space-y-1'>
+            {entries.map((entry) => (
+              <div key={entry.id} className='flex items-center justify-between p-2 rounded hover:bg-muted'>
+                <div className='flex items-center gap-3'>
+                  <span className='text-xs bg-muted px-2 py-0.5 rounded'>{entry.status}</span>
+                  <span className='text-sm'>{entry.email}</span>
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                <span className='text-xs text-muted-foreground'>{formatDate(entry.requestedAt)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

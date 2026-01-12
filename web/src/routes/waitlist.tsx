@@ -3,10 +3,9 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardFooter } from '@/components/ui/card'
 import { authClient } from '@/lib/auth-client'
 import { toast } from 'sonner'
-import { CheckCircle, ArrowLeft } from 'lucide-react'
+import { Check, ArrowLeft } from 'lucide-react'
 import Spinner from '@/components/ui/spinner'
 import { Header } from '@/components/header'
 
@@ -50,28 +49,20 @@ function WaitlistPage() {
     return (
       <div className='min-h-screen bg-background'>
         <Header />
-        <div className='flex items-center justify-center px-4 py-24'>
-          <div className='w-full max-w-md'>
-            <Card>
-              <CardContent className='pt-6'>
-                <div className='flex flex-col items-center text-center gap-4'>
-                  <div className='h-16 w-16 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center'>
-                    <CheckCircle className='h-8 w-8 text-green-600 dark:text-green-400' />
-                  </div>
-                  <h2 className='text-2xl font-bold'>You're on the list!</h2>
-                  <p className='text-muted-foreground'>
-                    Thanks for joining the QueryStudio waitlist. We'll notify you at <span className='font-medium text-foreground'>{email}</span> when we're ready to launch.
-                  </p>
-                  <Button asChild variant='outline' className='mt-4'>
-                    <Link to='/'>
-                      <ArrowLeft className='h-4 w-4 mr-2' />
-                      Back to home
-                    </Link>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+        <div className='container mx-auto px-4 py-16 max-w-sm'>
+          <div className='flex items-center gap-2 mb-4'>
+            <Check className='h-5 w-5' />
+            <h1 className='text-xl font-semibold'>You're on the list</h1>
           </div>
+          <p className='text-sm text-muted-foreground mb-6'>
+            We'll notify you at <span className='text-foreground'>{email}</span> when we're ready.
+          </p>
+          <Button variant='outline' asChild>
+            <Link to='/'>
+              <ArrowLeft className='h-4 w-4 mr-2' />
+              Back
+            </Link>
+          </Button>
         </div>
       </div>
     )
@@ -80,30 +71,22 @@ function WaitlistPage() {
   return (
     <div className='min-h-screen bg-background'>
       <Header />
-      <div className='flex items-center justify-center px-4 py-24'>
-        <div className='w-full max-w-md'>
-          <div className='flex flex-col items-center mb-8'>
-            <h1 className='text-2xl font-bold'>Join the Waitlist</h1>
-            <p className='text-muted-foreground text-center'>Be the first to know when QueryStudio launches</p>
-          </div>
-
-          <Card>
-            <form onSubmit={handleSubmit}>
-              <CardContent className='space-y-4 pt-6'>
-                <div className='space-y-2'>
-                  <Label htmlFor='email'>Email</Label>
-                  <Input id='email' type='email' placeholder='you@example.com' value={email} onChange={(e) => setEmail(e.target.value)} required disabled={isLoading} />
-                </div>
-              </CardContent>
-              <CardFooter className='pt-2'>
-                <Button type='submit' className='w-full' disabled={isLoading}>
-                  {isLoading && <Spinner size={16} />}
-                  Join Waitlist
-                </Button>
-              </CardFooter>
-            </form>
-          </Card>
+      <div className='container mx-auto px-4 py-16 max-w-sm'>
+        <div className='mb-6'>
+          <h1 className='text-xl font-semibold mb-1'>Join the waitlist</h1>
+          <p className='text-sm text-muted-foreground'>Be the first to know when QueryStudio launches</p>
         </div>
+
+        <form onSubmit={handleSubmit} className='space-y-4'>
+          <div className='space-y-2'>
+            <Label htmlFor='email'>Email</Label>
+            <Input id='email' type='email' placeholder='you@example.com' value={email} onChange={(e) => setEmail(e.target.value)} required disabled={isLoading} />
+          </div>
+          <Button type='submit' className='w-full' disabled={isLoading}>
+            {isLoading && <Spinner size={16} />}
+            Join waitlist
+          </Button>
+        </form>
       </div>
     </div>
   )
