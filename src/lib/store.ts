@@ -85,6 +85,10 @@ interface AIQueryState {
   statusBarVisible: boolean;
   setStatusBarVisible: (visible: boolean) => void;
   toggleStatusBar: () => void;
+
+  // Auto-reconnect to last connection (persisted)
+  autoReconnect: boolean;
+  setAutoReconnect: (enabled: boolean) => void;
 }
 
 export const useAIQueryStore = create<AIQueryState>()(
@@ -120,6 +124,9 @@ export const useAIQueryStore = create<AIQueryState>()(
         set({ statusBarVisible: visible }),
       toggleStatusBar: () =>
         set((state) => ({ statusBarVisible: !state.statusBarVisible })),
+
+      autoReconnect: true,
+      setAutoReconnect: (enabled: boolean) => set({ autoReconnect: enabled }),
     }),
     {
       name: "querystudio_ui_state",
@@ -129,6 +136,7 @@ export const useAIQueryStore = create<AIQueryState>()(
         sidebarWidth: state.sidebarWidth,
         sidebarCollapsed: state.sidebarCollapsed,
         statusBarVisible: state.statusBarVisible,
+        autoReconnect: state.autoReconnect,
       }),
     },
   ),

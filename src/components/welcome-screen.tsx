@@ -2,7 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { Plus, Pencil, Key, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSavedConnections, useCanSaveConnection } from "@/lib/hooks";
-import { getLastConnectionId, useLicenseStore } from "@/lib/store";
+import {
+  getLastConnectionId,
+  useLicenseStore,
+  useAIQueryStore,
+} from "@/lib/store";
 import type { DatabaseType, SavedConnection } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { LicenseSettings } from "@/components/license-settings";
@@ -56,6 +60,7 @@ export function WelcomeScreen({
   const [licenseSettingsOpen, setLicenseSettingsOpen] = useState(false);
   const { setStatus } = useLicenseStore();
   const { canSave, currentSaved, maxSaved, isPro } = useCanSaveConnection();
+  const autoReconnect = useAIQueryStore((s) => s.autoReconnect);
 
   // Load license status on mount
   useEffect(() => {
@@ -71,7 +76,7 @@ export function WelcomeScreen({
   }, [setStatus]);
 
   useEffect(() => {
-    if (isLoading || autoConnectAttempted.current) return;
+    if (isLoading || autoConnectAttempted.current || !autoReconnect) return;
     autoConnectAttempted.current = true;
 
     const lastConnectionId = getLastConnectionId();
@@ -83,7 +88,7 @@ export function WelcomeScreen({
         onSelectConnection(lastConnection);
       }
     }
-  }, [isLoading, savedConnections, onSelectConnection]);
+  }, [isLoading, savedConnections, onSelectConnection, autoReconnect]);
 
   const getConnectionDescription = (connection: SavedConnection) => {
     const dbLabel = connection.db_type === "mysql" ? "MySQL" : "PostgreSQL";

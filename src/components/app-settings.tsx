@@ -22,6 +22,8 @@ export function AppSettings({ open, onOpenChange, trigger }: AppSettingsProps) {
   const setStatusBarVisible = useAIQueryStore((s) => s.setStatusBarVisible);
   const sidebarCollapsed = useAIQueryStore((s) => s.sidebarCollapsed);
   const setSidebarCollapsed = useAIQueryStore((s) => s.setSidebarCollapsed);
+  const autoReconnect = useAIQueryStore((s) => s.autoReconnect);
+  const setAutoReconnect = useAIQueryStore((s) => s.setAutoReconnect);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -38,6 +40,27 @@ export function AppSettings({ open, onOpenChange, trigger }: AppSettingsProps) {
         </DialogHeader>
 
         <div className="space-y-6 py-4">
+          {/* Behavior Section */}
+          <div className="space-y-4">
+            <h4 className="text-sm font-medium text-foreground">Behavior</h4>
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="auto-reconnect" className="text-sm font-normal">
+                  Auto-reconnect
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Automatically connect to last database on launch
+                </p>
+              </div>
+              <Switch
+                id="auto-reconnect"
+                checked={autoReconnect}
+                onCheckedChange={setAutoReconnect}
+              />
+            </div>
+          </div>
+
           {/* Appearance Section */}
           <div className="space-y-4">
             <h4 className="text-sm font-medium text-foreground">Appearance</h4>
