@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { Header } from '@/components/header'
 import { Button } from '@/components/ui/button'
-import { ExternalLink } from 'lucide-react'
+import { Download, ExternalLink } from 'lucide-react'
 import { createServerFn } from '@tanstack/react-start'
 
 const donateUrl = 'https://buy.polar.sh/polar_cl_GjR7lflPCEnKKPTB2QE5eNOfWOLqlRNYJAvsF2Tf9t6'
@@ -112,27 +112,11 @@ function formatBytes(bytes: number): string {
   const k = 1024
   const sizes = ['Bytes', 'KB', 'MB', 'GB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
 }
 
 function isSignatureFile(filename: string): boolean {
   return filename.endsWith('.sig') || filename.endsWith('.asc')
-}
-
-function getLinuxLabel(filename: string): string {
-  const lower = filename.toLowerCase()
-  if (lower.includes('.appimage')) return 'AppImage'
-  if (lower.includes('.deb')) return '.deb'
-  if (lower.includes('.rpm')) return '.rpm'
-  if (lower.includes('.tar.gz')) return '.tar.gz'
-  return filename
-}
-
-function getWindowsLabel(asset: FormattedAsset): string {
-  const lower = asset.name.toLowerCase()
-  if (lower.includes('.msi')) return '.msi'
-  if (lower.includes('.exe')) return '.exe'
-  return asset.name
 }
 
 function getArchLabel(arch: FormattedAsset['arch']) {
@@ -178,107 +162,108 @@ function DownloadPage() {
 
       <main className='container mx-auto px-4 py-16 md:py-24'>
         <div className='max-w-2xl'>
-          <h1 className='text-3xl font-semibold tracking-tight'>Download</h1>
+          <h1 className='text-3xl font-semibold tracking-tight'>Download QueryStudio</h1>
           <p className='mt-2 text-muted-foreground'>
             Version {release.version}
-            {release.isPrerelease && <span className='ml-1'>(pre-release)</span>}
-            {' · '}
-            <a href={release.htmlUrl} target='_blank' rel='noopener noreferrer' className='hover:text-foreground'>
-              Release notes
-            </a>
+            {release.isPrerelease && ' (pre-release)'}
           </p>
         </div>
 
-        {/* Download table */}
-        <div className='mt-12 max-w-3xl'>
-          <table className='w-full'>
-            <thead>
-              <tr className='border-b text-left'>
-                <th className='pb-4 font-medium'>Platform</th>
-                <th className='pb-4 font-medium'>Architecture</th>
-                <th className='pb-4 font-medium'>Format</th>
-                <th className='pb-4 font-medium text-right'>Size</th>
-              </tr>
-            </thead>
-            <tbody className='text-sm'>
-              {/* macOS */}
-              {macosAssets.length > 0 ? (
-                macosAssets.map((asset, i) => (
-                  <tr key={asset.name} className='border-b'>
-                    <td className='py-4'>{i === 0 && <span className='font-medium'>macOS</span>}</td>
-                    <td className='py-4 text-muted-foreground'>{getArchLabel(asset.arch)}</td>
-                    <td className='py-4'>
-                      <a href={asset.downloadUrl} download className='text-foreground hover:underline'>
-                        .dmg
-                      </a>
-                    </td>
-                    <td className='py-4 text-right text-muted-foreground'>{formatBytes(asset.size)}</td>
-                  </tr>
-                ))
-              ) : (
-                <tr className='border-b'>
-                  <td className='py-4 font-medium'>macOS</td>
-                  <td className='py-4 text-muted-foreground' colSpan={3}>
-                    Coming soon
-                  </td>
-                </tr>
-              )}
+        {/* Download cards */}
+        <div className='mt-12 grid gap-6 md:grid-cols-3 max-w-4xl'>
+          {/* macOS */}
+          <div className='border rounded-lg p-6'>
+            <h2 className='text-lg font-medium'>macOS</h2>
+            <p className='mt-1 text-sm text-muted-foreground'>.dmg installer</p>
 
-              {/* Windows */}
-              {windowsAssets.length > 0 ? (
-                windowsAssets.map((asset, i) => (
-                  <tr key={asset.name} className='border-b'>
-                    <td className='py-4'>{i === 0 && <span className='font-medium'>Windows</span>}</td>
-                    <td className='py-4 text-muted-foreground'>{asset.arch === 'x64' ? 'x64' : asset.arch === 'arm64' ? 'ARM64' : '—'}</td>
-                    <td className='py-4'>
-                      <a href={asset.downloadUrl} download className='text-foreground hover:underline'>
-                        {getWindowsLabel(asset)}
-                      </a>
-                    </td>
-                    <td className='py-4 text-right text-muted-foreground'>{formatBytes(asset.size)}</td>
-                  </tr>
-                ))
-              ) : (
-                <tr className='border-b'>
-                  <td className='py-4 font-medium'>Windows</td>
-                  <td className='py-4 text-muted-foreground' colSpan={3}>
-                    Coming soon
-                  </td>
-                </tr>
-              )}
+            {macosAssets.length > 0 ? (
+              <div className='mt-6 space-y-3'>
+                {macosAssets.map((asset) => (
+                  <Button key={asset.name} asChild className='w-full justify-start'>
+                    <a href={asset.downloadUrl} download>
+                      <Download className='h-4 w-4 mr-2' />
+                      {getArchLabel(asset.arch)}
+                      <span className='ml-auto text-xs opacity-70'>{formatBytes(asset.size)}</span>
+                    </a>
+                  </Button>
+                ))}
+              </div>
+            ) : (
+              <p className='mt-6 text-sm text-muted-foreground'>Coming soon</p>
+            )}
+          </div>
 
-              {/* Linux */}
-              {linuxAssets.length > 0 ? (
-                linuxAssets.map((asset, i) => (
-                  <tr key={asset.name} className='border-b'>
-                    <td className='py-4'>{i === 0 && <span className='font-medium'>Linux</span>}</td>
-                    <td className='py-4 text-muted-foreground'>{asset.arch === 'x64' ? 'x64' : asset.arch === 'arm64' ? 'ARM64' : '—'}</td>
-                    <td className='py-4'>
-                      <a href={asset.downloadUrl} download className='text-foreground hover:underline'>
-                        {getLinuxLabel(asset.name)}
+          {/* Windows */}
+          <div className='border rounded-lg p-6'>
+            <h2 className='text-lg font-medium'>Windows</h2>
+            <p className='mt-1 text-sm text-muted-foreground'>.msi or .exe installer</p>
+
+            {windowsAssets.length > 0 ? (
+              <div className='mt-6 space-y-3'>
+                {windowsAssets.map((asset) => {
+                  const label = asset.name.toLowerCase().includes('.msi') ? 'Installer (.msi)' : 'Installer (.exe)'
+                  return (
+                    <Button key={asset.name} asChild className='w-full justify-start'>
+                      <a href={asset.downloadUrl} download>
+                        <Download className='h-4 w-4 mr-2' />
+                        {label}
+                        <span className='ml-auto text-xs opacity-70'>{formatBytes(asset.size)}</span>
                       </a>
-                    </td>
-                    <td className='py-4 text-right text-muted-foreground'>{formatBytes(asset.size)}</td>
-                  </tr>
-                ))
-              ) : (
-                <tr className='border-b'>
-                  <td className='py-4 font-medium'>Linux</td>
-                  <td className='py-4 text-muted-foreground' colSpan={3}>
-                    Coming soon
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                    </Button>
+                  )
+                })}
+              </div>
+            ) : (
+              <p className='mt-6 text-sm text-muted-foreground'>Coming soon</p>
+            )}
+          </div>
+
+          {/* Linux */}
+          <div className='border rounded-lg p-6'>
+            <h2 className='text-lg font-medium'>Linux</h2>
+            <p className='mt-1 text-sm text-muted-foreground'>AppImage, .deb, or .rpm</p>
+
+            {linuxAssets.length > 0 ? (
+              <div className='mt-6 space-y-3'>
+                {linuxAssets.map((asset) => {
+                  const lower = asset.name.toLowerCase()
+                  let label = 'Download'
+                  if (lower.includes('.appimage')) label = 'AppImage'
+                  else if (lower.includes('.deb')) label = '.deb (Debian/Ubuntu)'
+                  else if (lower.includes('.rpm')) label = '.rpm (Fedora/RHEL)'
+
+                  return (
+                    <Button key={asset.name} variant='outline' asChild className='w-full justify-start'>
+                      <a href={asset.downloadUrl} download>
+                        <Download className='h-4 w-4 mr-2' />
+                        {label}
+                        <span className='ml-auto text-xs opacity-70'>{formatBytes(asset.size)}</span>
+                      </a>
+                    </Button>
+                  )
+                })}
+              </div>
+            ) : (
+              <p className='mt-6 text-sm text-muted-foreground'>Coming soon</p>
+            )}
+          </div>
+        </div>
+
+        {/* Release notes link */}
+        <div className='mt-8 max-w-4xl'>
+          <a href={release.htmlUrl} target='_blank' rel='noopener noreferrer' className='inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground'>
+            View release notes on GitHub
+            <ExternalLink className='h-3 w-3' />
+          </a>
         </div>
 
         {/* macOS signing note */}
         <div className='mt-16 max-w-xl'>
           <h2 className='text-lg font-medium'>macOS not signed</h2>
           <p className='mt-2 text-sm text-muted-foreground leading-relaxed'>
-            The macOS app isn't signed with an Apple Developer certificate yet. This requires a $99/year developer account. As a student, I'd appreciate any support towards this goal.
+            The macOS app isn't signed with an Apple Developer certificate yet. On first launch, right-click the app and select "Open" to bypass Gatekeeper.
           </p>
+          <p className='mt-3 text-sm text-muted-foreground leading-relaxed'>Signing requires a $99/year developer account. As a student, I'd appreciate any support towards this goal.</p>
           <div className='mt-4'>
             <a href={donateUrl} target='_blank' rel='noopener noreferrer' className='inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground'>
               Support signing
@@ -287,21 +272,21 @@ function DownloadPage() {
           </div>
         </div>
 
-        {/* Installation instructions */}
+        {/* Installation */}
         <div className='mt-16 max-w-xl'>
           <h2 className='text-lg font-medium'>Installation</h2>
           <dl className='mt-4 space-y-4 text-sm'>
             <div>
               <dt className='font-medium'>macOS</dt>
-              <dd className='mt-1 text-muted-foreground'>Open the .dmg file and drag QueryStudio to Applications. On first launch, right-click and select "Open" to bypass Gatekeeper.</dd>
+              <dd className='mt-1 text-muted-foreground'>Open the .dmg and drag QueryStudio to Applications.</dd>
             </div>
             <div>
               <dt className='font-medium'>Windows</dt>
-              <dd className='mt-1 text-muted-foreground'>Run the .msi installer or .exe file. You may need to allow the app through Windows Defender.</dd>
+              <dd className='mt-1 text-muted-foreground'>Run the installer. You may need to allow the app through Windows Defender.</dd>
             </div>
             <div>
               <dt className='font-medium'>Linux</dt>
-              <dd className='mt-1 text-muted-foreground'>Use your package manager for .deb or .rpm files, or run the AppImage directly after making it executable.</dd>
+              <dd className='mt-1 text-muted-foreground'>Install the .deb or .rpm with your package manager, or make the AppImage executable and run it.</dd>
             </div>
           </dl>
         </div>
