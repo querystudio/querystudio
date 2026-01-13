@@ -3,6 +3,7 @@ mod database;
 mod license;
 mod providers;
 mod storage;
+mod terminal;
 
 use ai::{ai_chat, ai_chat_stream, ai_get_models, ai_validate_key};
 use database::{test_connection, ConnectionConfig, ConnectionManager};
@@ -17,6 +18,10 @@ use storage::{SavedConnection, SavedConnections};
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem, Submenu},
     AppHandle, Emitter, Manager, State,
+};
+use terminal::{
+    terminal_close, terminal_create, terminal_resize, terminal_write, TerminalManager,
+    TerminalState,
 };
 
 type DbState = Arc<ConnectionManager>;
@@ -171,12 +176,14 @@ fn get_app_version() -> String {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let db_state: DbState = Arc::new(ConnectionManager::new());
+    let terminal_state: TerminalState = Arc::new(TerminalManager::new());
 
     tauri::Builder::default()
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
         .manage(db_state)
+        .manage(terminal_state)
         .setup(|app| {
             // Initialize license manager
             let license_manager = create_license_manager(&app.handle())?;
@@ -367,6 +374,11 @@ pub fn run() {
             license_is_pro,
             license_clear,
             license_refresh,
+            // Terminal commands
+            terminal_create,
+            terminal_write,
+            terminal_resize,
+            terminal_close,
             // App info commands
             get_app_version,
         ])

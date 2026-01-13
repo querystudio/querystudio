@@ -13,9 +13,11 @@ import { WelcomeScreen } from "@/components/welcome-screen";
 import { CommandPalette } from "@/components/command-palette";
 import { PasswordPromptDialog } from "@/components/password-prompt-dialog";
 import { StatusBar } from "@/components/status-bar";
+import { TerminalPanel } from "@/components/terminal-panel";
 import { useConnectionStore, useAIQueryStore } from "@/lib/store";
 import { useGlobalShortcuts } from "@/lib/use-global-shortcuts";
 import type { SavedConnection } from "@/lib/types";
+import { FpsCounter } from "@/components/fps-counter";
 import {
   Bot,
   X,
@@ -57,6 +59,12 @@ function App() {
 
   // Status bar visibility
   const statusBarVisible = useAIQueryStore((s) => s.statusBarVisible);
+
+  // Experimental terminal
+  const experimentalTerminal = useAIQueryStore((s) => s.experimentalTerminal);
+
+  // Debug mode
+  const debugMode = useAIQueryStore((s) => s.debugMode);
 
   // AI Panel width (resizable)
   const [aiPanelWidth, setAiPanelWidth] = useState(() => {
@@ -366,6 +374,9 @@ function App() {
         </div>
       </div>
 
+      {/* Terminal Panel - above status bar, only when experimental terminal is enabled */}
+      {experimentalTerminal && <TerminalPanel />}
+
       {/* Status Bar */}
       {statusBarVisible && <StatusBar />}
 
@@ -391,6 +402,7 @@ function App() {
         open={passwordPromptConnection !== null}
         onOpenChange={(open) => !open && setPasswordPromptConnection(null)}
       />
+      {debugMode && <FpsCounter />}
     </div>
   );
 }

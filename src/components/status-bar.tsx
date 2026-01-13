@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   Database,
   Clock,
@@ -9,11 +9,20 @@ import {
   XCircle,
   Wifi,
   WifiOff,
+  TerminalSquare,
 } from "lucide-react";
-import { useConnectionStore } from "@/lib/store";
+import { invoke } from "@tauri-apps/api/core";
+import { useConnectionStore, useAIQueryStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import type { DatabaseType } from "@/lib/types";
 import { create } from "zustand";
+import { useTerminalStore, type TerminalInstance } from "@/lib/terminal-store";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // Store for status bar state
 interface StatusBarState {
@@ -120,6 +129,12 @@ export function StatusBar() {
   const lastQueryStatus = useStatusBarStore((s) => s.lastQueryStatus);
   const cursorPosition = useStatusBarStore((s) => s.cursorPosition);
 
+  const terminals = useTerminalStore((s) => s.terminals);
+  const addTerminal = useTerminalStore((s) => s.addTerminal);
+  const openTerminalPanel = useTerminalStore((s) => s.openTerminalPanel);
+
+  const experimentalTerminal = useAIQueryStore((s) => s.experimentalTerminal);
+
   const [currentTime, setCurrentTime] = useState(new Date());
 
   // Update time every minute
@@ -131,6 +146,33 @@ export function StatusBar() {
   }, []);
 
   const isConnected = !!connection;
+
+  const handleCreateTerminal = useCallback(async () => {
+    try {
+      const id = await invoke<string>("terminal_create", {
+        rows: 24,
+        cols: 80,
+      });
+
+      const terminal: TerminalInstance = {
+        id,
+        title: `Terminal ${terminals.length + 1}`,
+        createdAt: new Date(),
+      };
+
+      addTerminal(terminal);
+    } catch (error) {
+      console.error("Failed to create terminal:", error);
+    }
+  }, [terminals.length, addTerminal]);
+
+  const handleTerminalClick = useCallback(() => {
+    if (terminals.length === 0) {
+      handleCreateTerminal();
+    } else {
+      openTerminalPanel();
+    }
+  }, [terminals.length, handleCreateTerminal, openTerminalPanel]);
 
   return (
     <div className="flex h-6 items-center justify-between border-t border-border bg-card px-3 text-xs text-muted-foreground">
@@ -247,6 +289,34 @@ export function StatusBar() {
                 Ln {cursorPosition.line}, Col {cursorPosition.column}
               </span>
             </div>
+          </>
+        )}
+
+        {/* Terminal button - only shown when experimental terminal is enabled */}
+        {experimentalTerminal && (
+          <>
+            <div className="h-3 w-px bg-border" />
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={handleTerminalClick}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded px-1 py-0.5 transition-colors hover:bg-accent hover:text-accent-foreground",
+                      terminals.length > 0 && "text-primary"
+                    )}
+                  >
+                    <TerminalSquare className="h-3 w-3" />
+                    {terminals.length > 0 && (
+                      <span className="text-[10px]">{terminals.length}</span>
+                    )}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs">
+                  {terminals.length === 0 ? "New Terminal" : "Show Terminal"}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </>
         )}
 

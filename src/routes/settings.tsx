@@ -5,6 +5,7 @@ import {
   Palette,
   Keyboard,
   ArrowLeft,
+  FlaskConical,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -17,7 +18,7 @@ export const Route = createFileRoute("/settings")({
   component: SettingsPage,
 });
 
-type SettingsTab = "general" | "appearance" | "shortcuts";
+type SettingsTab = "general" | "appearance" | "shortcuts" | "experimental";
 
 function SettingsPage() {
   const navigate = useNavigate();
@@ -73,6 +74,15 @@ function SettingsPage() {
             <Keyboard className="h-4 w-4" />
             Shortcuts
           </Button>
+          
+          <Button
+            variant={activeTab === "experimental" ? "secondary" : "ghost"}
+            className="justify-start gap-2"
+            onClick={() => setActiveTab("experimental")}
+          >
+            <FlaskConical className="h-4 w-4" />
+            Experimental
+          </Button>
         </aside>
 
         {/* Settings Content */}
@@ -80,6 +90,7 @@ function SettingsPage() {
           {activeTab === "general" && <GeneralSettings />}
           {activeTab === "appearance" && <AppearanceSettings />}
           {activeTab === "shortcuts" && <ShortcutsSettings />}
+          {activeTab === "experimental" && <ExperimentalSettings />}
         </main>
       </div>
     </div>
@@ -91,6 +102,8 @@ function GeneralSettings() {
   const setAutoReconnect = useAIQueryStore((s) => s.setAutoReconnect);
   const sidebarCollapsed = useAIQueryStore((s) => s.sidebarCollapsed);
   const setSidebarCollapsed = useAIQueryStore((s) => s.setSidebarCollapsed);
+  const debugMode = useAIQueryStore((s) => s.debugMode);
+  const setDebugMode = useAIQueryStore((s) => s.setDebugMode);
 
   return (
     <div className="space-y-6">
@@ -130,6 +143,22 @@ function GeneralSettings() {
           <Switch
             checked={sidebarCollapsed}
             onCheckedChange={setSidebarCollapsed}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <h3 className="text-lg font-medium">Debug</h3>
+        <div className="flex items-center justify-between rounded-lg border p-4">
+          <div className="space-y-0.5">
+            <Label className="text-base">Debug Mode</Label>
+            <p className="text-sm text-muted-foreground">
+              Show performance metrics like FPS counter overlay
+            </p>
+          </div>
+          <Switch
+            checked={debugMode}
+            onCheckedChange={setDebugMode}
           />
         </div>
       </div>
@@ -188,6 +217,7 @@ function ShortcutsSettings() {
     { name: "Go to Data Tab", keys: ["⌘", "1"] },
     { name: "Go to Query Tab", keys: ["⌘", "2"] },
     { name: "Go to Querybuddy Tab", keys: ["⌘", "3"] },
+    { name: "Toggle Terminal", keys: ["⌃", "`"] },
   ];
 
   return (
@@ -219,6 +249,50 @@ function ShortcutsSettings() {
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function ExperimentalSettings() {
+  const experimentalTerminal = useAIQueryStore((s) => s.experimentalTerminal);
+  const setExperimentalTerminal = useAIQueryStore(
+    (s) => s.setExperimentalTerminal
+  );
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold tracking-tight">Experimental</h2>
+        <p className="text-muted-foreground">
+          Try out experimental features. These features may be unstable or
+          change in future updates.
+        </p>
+      </div>
+      <Separator />
+
+      <div className="space-y-4">
+        <h3 className="text-lg font-medium">Features</h3>
+        <div className="flex items-center justify-between rounded-lg border p-4">
+          <div className="space-y-0.5">
+            <Label className="text-base">Integrated Terminal</Label>
+            <p className="text-sm text-muted-foreground">
+              Enable an integrated terminal panel for running shell commands
+              directly within the application
+            </p>
+          </div>
+          <Switch
+            checked={experimentalTerminal}
+            onCheckedChange={setExperimentalTerminal}
+          />
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/10 p-4">
+        <p className="text-sm text-yellow-600 dark:text-yellow-400">
+          Experimental features are provided as-is and may contain bugs or
+          undergo significant changes. Use at your own discretion.
+        </p>
       </div>
     </div>
   );

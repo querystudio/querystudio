@@ -85,6 +85,14 @@ interface AIQueryState {
   // Auto-reconnect to last connection (persisted)
   autoReconnect: boolean;
   setAutoReconnect: (enabled: boolean) => void;
+
+  // Experimental features (persisted)
+  experimentalTerminal: boolean;
+  setExperimentalTerminal: (enabled: boolean) => void;
+
+  // Debug settings (persisted)
+  debugMode: boolean;
+  setDebugMode: (enabled: boolean) => void;
 }
 
 export const useAIQueryStore = create<AIQueryState>()(
@@ -123,6 +131,13 @@ export const useAIQueryStore = create<AIQueryState>()(
 
       autoReconnect: true,
       setAutoReconnect: (enabled: boolean) => set({ autoReconnect: enabled }),
+
+      experimentalTerminal: false,
+      setExperimentalTerminal: (enabled: boolean) =>
+        set({ experimentalTerminal: enabled }),
+
+      debugMode: false,
+      setDebugMode: (enabled: boolean) => set({ debugMode: enabled }),
     }),
     {
       name: "querystudio_ui_state",
@@ -133,6 +148,8 @@ export const useAIQueryStore = create<AIQueryState>()(
         sidebarCollapsed: state.sidebarCollapsed,
         statusBarVisible: state.statusBarVisible,
         autoReconnect: state.autoReconnect,
+        experimentalTerminal: state.experimentalTerminal,
+        debugMode: state.debugMode,
       }),
     },
   ),
