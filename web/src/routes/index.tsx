@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
 import { Header } from '@/components/header'
+import { OptimizedVideo } from '@/components/optimized-video'
 import { Database, Terminal, Shield, Download, Check, Bot } from 'lucide-react'
 import { getPricing } from '@/server/pricing'
 
@@ -32,11 +33,7 @@ function LandingPage() {
 
       {/* Video */}
       <section className='container mx-auto px-4 pb-16'>
-        <div className='border rounded-lg overflow-hidden'>
-          <video className='w-full' autoPlay loop muted playsInline>
-            <source src='https://assets-cdn.querystudio.dev/QueryStudioExampleNew.mp4' type='video/mp4' />
-          </video>
-        </div>
+        <OptimizedVideo src='https://assets-cdn.querystudio.dev/QueryStudioExampleNew.mp4' containerClassName='border rounded-lg overflow-hidden aspect-video' />
       </section>
 
       {/* Features */}

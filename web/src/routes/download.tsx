@@ -2,7 +2,7 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { Header } from '@/components/header'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
-import { Download, Apple, Monitor, ExternalLink, Info } from 'lucide-react'
+import { Download, ExternalLink, Info } from 'lucide-react'
 import { createServerFn } from '@tanstack/react-start'
 
 const donateUrl = 'https://buy.polar.sh/polar_cl_GjR7lflPCEnKKPTB2QE5eNOfWOLqlRNYJAvsF2Tf9t6'
@@ -189,7 +189,6 @@ function DownloadPage() {
           {/* macOS */}
           <div className='border rounded-lg p-5'>
             <div className='flex items-center gap-2 mb-4'>
-              <Apple className='h-5 w-5' />
               <h2 className='font-medium'>macOS</h2>
             </div>
             <div className='space-y-2'>
@@ -212,7 +211,6 @@ function DownloadPage() {
           {/* Windows */}
           <div className='border rounded-lg p-5'>
             <div className='flex items-center gap-2 mb-4'>
-              <Monitor className='h-5 w-5' />
               <h2 className='font-medium'>Windows</h2>
             </div>
             <div className='space-y-2'>
@@ -235,7 +233,6 @@ function DownloadPage() {
           {/* Linux */}
           <div className='border rounded-lg p-5'>
             <div className='flex items-center gap-2 mb-4'>
-              <Monitor className='h-5 w-5' />
               <h2 className='font-medium'>Linux</h2>
             </div>
             <div className='space-y-2'>
