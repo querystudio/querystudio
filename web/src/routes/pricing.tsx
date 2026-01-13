@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { Header } from '@/components/header'
 import { Button } from '@/components/ui/button'
-import { Check } from 'lucide-react'
+import { Download } from 'lucide-react'
 import { getPricing } from '@/server/pricing'
 
 export const Route = createFileRoute('/pricing')({
@@ -16,114 +16,136 @@ function PricingPage() {
     <div className='min-h-screen bg-background'>
       <Header />
 
-      <section className='container mx-auto px-4 py-16'>
-        <div className='max-w-2xl mx-auto'>
-          <h1 className='text-2xl font-semibold mb-2'>Pricing</h1>
-          <p className='text-muted-foreground mb-8'>Start free, pay once for unlimited use.</p>
+      <main className='container mx-auto px-4 py-16 md:py-24'>
+        <div className='max-w-2xl'>
+          <h1 className='text-3xl font-semibold tracking-tight'>Pricing</h1>
+          <p className='mt-2 text-muted-foreground'>Free to use. One-time payment for Pro.</p>
+        </div>
 
-          <div className='grid md:grid-cols-2 gap-6'>
-            {/* Free */}
-            <div className='border rounded-lg p-6'>
-              <div className='mb-4'>
-                <h2 className='font-medium'>{pricing.tiers.free.name}</h2>
-                <p className='text-2xl font-semibold mt-1'>${pricing.tiers.free.price}</p>
-                <p className='text-sm text-muted-foreground'>Free forever</p>
-              </div>
-              <ul className='space-y-2 text-sm text-muted-foreground mb-6'>
-                <li className='flex items-center gap-2'>
-                  <Check className='h-4 w-4 text-foreground' />
-                  {pricing.tiers.free.features.maxConnections} connections
-                </li>
-                <li className='flex items-center gap-2'>
-                  <Check className='h-4 w-4 text-foreground' />
-                  All features
-                </li>
-                <li className='flex items-center gap-2'>
-                  <Check className='h-4 w-4 text-foreground' />
-                  All database dialects
-                </li>
-                <li className='flex items-center gap-2'>
-                  <Check className='h-4 w-4 text-foreground' />
-                  AI assistant (BYOK)
-                </li>
-              </ul>
-              <Button variant='outline' className='w-full' asChild>
-                <Link to='/download'>Download</Link>
-              </Button>
-            </div>
+        {/* Pricing table */}
+        <div className='mt-12 max-w-3xl'>
+          <table className='w-full'>
+            <thead>
+              <tr className='border-b text-left'>
+                <th className='pb-4 font-medium'>Plan</th>
+                <th className='pb-4 font-medium'>Connections</th>
+                <th className='pb-4 font-medium'>Features</th>
+                <th className='pb-4 font-medium text-right'>Price</th>
+              </tr>
+            </thead>
+            <tbody className='text-sm'>
+              <tr className='border-b'>
+                <td className='py-4'>
+                  <span className='font-medium'>{pricing.tiers.free.name}</span>
+                </td>
+                <td className='py-4 text-muted-foreground'>{pricing.tiers.free.features.maxConnections}</td>
+                <td className='py-4 text-muted-foreground'>All features, AI assistant (BYOK)</td>
+                <td className='py-4 text-right font-medium'>$0</td>
+              </tr>
+              <tr className='border-b'>
+                <td className='py-4'>
+                  <div className='flex items-center gap-2'>
+                    <span className='font-medium'>{pricing.tiers.pro.name}</span>
+                    <span className='text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded'>Early bird</span>
+                  </div>
+                </td>
+                <td className='py-4 text-muted-foreground'>Unlimited</td>
+                <td className='py-4 text-muted-foreground'>Everything in Free, priority support, 2 devices</td>
+                <td className='py-4 text-right'>
+                  <span className='font-medium'>${pricing.tiers.pro.earlyBirdPrice}</span>
+                  <span className='ml-2 text-muted-foreground line-through'>${pricing.tiers.pro.price}</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
 
-            {/* Pro */}
-            <div className='border rounded-lg p-6'>
-              <div className='mb-4'>
-                <div className='flex items-center gap-2'>
-                  <h2 className='font-medium'>{pricing.tiers.pro.name}</h2>
-                  <span className='text-xs bg-muted px-2 py-0.5 rounded'>Early Bird</span>
-                </div>
-                <div className='flex items-baseline gap-2 mt-1'>
-                  <p className='text-2xl font-semibold'>${pricing.tiers.pro.earlyBirdPrice}</p>
-                  <p className='text-sm text-muted-foreground line-through'>${pricing.tiers.pro.price}</p>
-                </div>
-                <p className='text-sm text-muted-foreground'>One-time payment</p>
-              </div>
-              <ul className='space-y-2 text-sm text-muted-foreground mb-6'>
-                <li className='flex items-center gap-2'>
-                  <Check className='h-4 w-4 text-foreground' />
-                  Unlimited connections
-                </li>
-                <li className='flex items-center gap-2'>
-                  <Check className='h-4 w-4 text-foreground' />
-                  All features
-                </li>
-                <li className='flex items-center gap-2'>
-                  <Check className='h-4 w-4 text-foreground' />
-                  All database dialects
-                </li>
-                <li className='flex items-center gap-2'>
-                  <Check className='h-4 w-4 text-foreground' />
-                  AI assistant (BYOK)
-                </li>
-                <li className='flex items-center gap-2'>
-                  <Check className='h-4 w-4 text-foreground' />
-                  Priority support
-                </li>
-                <li className='flex items-center gap-2'>
-                  <Check className='h-4 w-4 text-foreground' />2 devices
-                </li>
-              </ul>
-              <Button className='w-full' asChild>
-                <Link to='/dashboard/billing' search={{ upgrade: true }}>
-                  Get Pro
-                </Link>
-              </Button>
-            </div>
+          <div className='mt-8 flex gap-3'>
+            <Button asChild>
+              <Link to='/download'>
+                <Download className='h-4 w-4 mr-2' />
+                Download Free
+              </Link>
+            </Button>
+            <Button variant='outline' asChild>
+              <Link to='/dashboard/billing' search={{ upgrade: true }}>
+                Get Pro
+              </Link>
+            </Button>
           </div>
+        </div>
 
-          <div className='mt-12 border rounded-lg p-6'>
-            <h2 className='font-medium mb-2'>FAQ</h2>
-            <div className='space-y-4 text-sm'>
-              <div>
-                <p className='font-medium'>What does "BYOK" mean?</p>
-                <p className='text-muted-foreground'>Bring Your Own Key. You use your own API key for AI features.</p>
-              </div>
-              <div>
-                <p className='font-medium'>Is Pro really a one-time payment?</p>
-                <p className='text-muted-foreground'>Yes. Pay once and use QueryStudio forever with all future updates included.</p>
-              </div>
-              <div>
-                <p className='font-medium'>Can I upgrade later?</p>
-                <p className='text-muted-foreground'>Yes, you can upgrade from Free to Pro at any time from your dashboard.</p>
-              </div>
-              <div>
-                <p className='font-medium'>What databases are supported?</p>
-                <p className='text-muted-foreground'>PostgreSQL, MySQL, SQLite, and more to come. All dialects are available on both plans.</p>
-              </div>
+        {/* Details */}
+        <div className='mt-20 max-w-2xl'>
+          <h2 className='text-lg font-medium'>What's included</h2>
+          <div className='mt-6 grid gap-8 sm:grid-cols-2'>
+            <div>
+              <h3 className='font-medium text-sm'>Database support</h3>
+              <p className='mt-1 text-sm text-muted-foreground'>PostgreSQL, MySQL, and SQLite. More coming soon. Available on both plans.</p>
+            </div>
+            <div>
+              <h3 className='font-medium text-sm'>AI assistant</h3>
+              <p className='mt-1 text-sm text-muted-foreground'>Write queries in plain English. Bring your own OpenAI or Anthropic API key.</p>
+            </div>
+            <div>
+              <h3 className='font-medium text-sm'>Local-first</h3>
+              <p className='mt-1 text-sm text-muted-foreground'>Your data stays on your machine. Credentials stored in your system keychain.</p>
+            </div>
+            <div>
+              <h3 className='font-medium text-sm'>Updates</h3>
+              <p className='mt-1 text-sm text-muted-foreground'>Pro includes all future updates. No subscription, no recurring fees.</p>
             </div>
           </div>
         </div>
-      </section>
 
-      <footer className='container mx-auto px-4 py-8 border-t'>
-        <p className='text-sm text-muted-foreground'>QueryStudio</p>
+        {/* FAQ */}
+        <div className='mt-20 max-w-2xl'>
+          <h2 className='text-lg font-medium'>Questions</h2>
+          <dl className='mt-6 space-y-6 text-sm'>
+            <div>
+              <dt className='font-medium'>What does BYOK mean?</dt>
+              <dd className='mt-1 text-muted-foreground'>Bring Your Own Key. You provide your own API key for OpenAI or Anthropic to use the AI features.</dd>
+            </div>
+            <div>
+              <dt className='font-medium'>Is Pro really one-time?</dt>
+              <dd className='mt-1 text-muted-foreground'>Yes. Pay once, use forever. All future updates are included.</dd>
+            </div>
+            <div>
+              <dt className='font-medium'>Can I upgrade later?</dt>
+              <dd className='mt-1 text-muted-foreground'>Yes. Start with Free and upgrade to Pro anytime from your dashboard.</dd>
+            </div>
+            <div>
+              <dt className='font-medium'>What counts as a device?</dt>
+              <dd className='mt-1 text-muted-foreground'>Each computer where you activate Pro. You can deactivate and move your license anytime.</dd>
+            </div>
+            <div>
+              <dt className='font-medium'>Do you offer refunds?</dt>
+              <dd className='mt-1 text-muted-foreground'>Yes. If you're not satisfied, email within 14 days for a full refund.</dd>
+            </div>
+          </dl>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className='border-t'>
+        <div className='container mx-auto px-4 py-8'>
+          <div className='flex flex-col md:flex-row md:items-center md:justify-between gap-4'>
+            <div className='flex items-center gap-2'>
+              <img src='https://assets-cdn.querystudio.dev/QueryStudioIconNoBG.png' alt='QueryStudio' className='h-5 w-5' />
+              <span className='text-sm text-muted-foreground'>QueryStudio</span>
+            </div>
+            <nav className='flex items-center gap-6'>
+              <Link to='/download' className='text-sm text-muted-foreground hover:text-foreground'>
+                Download
+              </Link>
+              <Link to='/pricing' className='text-sm text-muted-foreground hover:text-foreground'>
+                Pricing
+              </Link>
+              <Link to='/login' className='text-sm text-muted-foreground hover:text-foreground'>
+                Login
+              </Link>
+            </nav>
+          </div>
+        </div>
       </footer>
     </div>
   )

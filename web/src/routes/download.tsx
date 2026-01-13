@@ -1,8 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { Header } from '@/components/header'
 import { Button } from '@/components/ui/button'
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
-import { Download, ExternalLink, Info } from 'lucide-react'
+import { ExternalLink } from 'lucide-react'
 import { createServerFn } from '@tanstack/react-start'
 
 const donateUrl = 'https://buy.polar.sh/polar_cl_GjR7lflPCEnKKPTB2QE5eNOfWOLqlRNYJAvsF2Tf9t6'
@@ -123,21 +122,20 @@ function isSignatureFile(filename: string): boolean {
 function getLinuxLabel(filename: string): string {
   const lower = filename.toLowerCase()
   if (lower.includes('.appimage')) return 'AppImage'
-  if (lower.includes('.deb')) return '.deb (Debian/Ubuntu)'
-  if (lower.includes('.rpm')) return '.rpm (Fedora/RHEL)'
+  if (lower.includes('.deb')) return '.deb'
+  if (lower.includes('.rpm')) return '.rpm'
   if (lower.includes('.tar.gz')) return '.tar.gz'
   return filename
 }
 
 function getWindowsLabel(asset: FormattedAsset): string {
   const lower = asset.name.toLowerCase()
-  const arch = getArchName(asset.arch)
-  if (lower.includes('.msi')) return arch ? `${arch} (.msi)` : '.msi'
-  if (lower.includes('.exe')) return arch ? `${arch} (.exe)` : '.exe'
-  return arch || asset.name
+  if (lower.includes('.msi')) return '.msi'
+  if (lower.includes('.exe')) return '.exe'
+  return asset.name
 }
 
-function getArchName(arch: FormattedAsset['arch']) {
+function getArchLabel(arch: FormattedAsset['arch']) {
   switch (arch) {
     case 'arm64':
       return 'Apple Silicon'
@@ -157,13 +155,15 @@ function DownloadPage() {
     return (
       <div className='min-h-screen bg-background'>
         <Header />
-        <div className='container mx-auto px-4 py-16'>
-          <h1 className='text-2xl font-semibold mb-4'>Downloads</h1>
-          <p className='text-muted-foreground mb-6'>No releases available yet.</p>
-          <Button variant='outline' asChild>
-            <Link to='/'>Go Home</Link>
-          </Button>
-        </div>
+        <main className='container mx-auto px-4 py-16 md:py-24'>
+          <h1 className='text-3xl font-semibold tracking-tight'>Download</h1>
+          <p className='mt-2 text-muted-foreground'>No releases available yet.</p>
+          <div className='mt-8'>
+            <Button variant='outline' asChild>
+              <Link to='/'>Back to home</Link>
+            </Button>
+          </div>
+        </main>
       </div>
     )
   }
@@ -176,120 +176,159 @@ function DownloadPage() {
     <div className='min-h-screen bg-background'>
       <Header />
 
-      <section className='container mx-auto px-4 py-16'>
-        <div className='mb-8'>
-          <h1 className='text-2xl font-semibold mb-2'>Download QueryStudio</h1>
-          <p className='text-muted-foreground'>
+      <main className='container mx-auto px-4 py-16 md:py-24'>
+        <div className='max-w-2xl'>
+          <h1 className='text-3xl font-semibold tracking-tight'>Download</h1>
+          <p className='mt-2 text-muted-foreground'>
             Version {release.version}
-            {release.isPrerelease && <span className='ml-2 text-sm'>(pre-release)</span>}
+            {release.isPrerelease && <span className='ml-1'>(pre-release)</span>}
+            {' · '}
+            <a href={release.htmlUrl} target='_blank' rel='noopener noreferrer' className='hover:text-foreground'>
+              Release notes
+            </a>
           </p>
         </div>
 
-        <div className='grid md:grid-cols-3 gap-6 max-w-3xl mb-12'>
-          {/* macOS */}
-          <div className='border rounded-lg p-5'>
-            <div className='flex items-center gap-2 mb-4'>
-              <h2 className='font-medium'>macOS</h2>
-            </div>
-            <div className='space-y-2'>
+        {/* Download table */}
+        <div className='mt-12 max-w-3xl'>
+          <table className='w-full'>
+            <thead>
+              <tr className='border-b text-left'>
+                <th className='pb-4 font-medium'>Platform</th>
+                <th className='pb-4 font-medium'>Architecture</th>
+                <th className='pb-4 font-medium'>Format</th>
+                <th className='pb-4 font-medium text-right'>Size</th>
+              </tr>
+            </thead>
+            <tbody className='text-sm'>
+              {/* macOS */}
               {macosAssets.length > 0 ? (
-                macosAssets.map((asset) => (
-                  <a key={asset.name} href={asset.downloadUrl} download className='flex items-center justify-between p-2 border rounded hover:bg-muted transition-colors'>
-                    <span className='flex items-center gap-2 text-sm'>
-                      <Download className='h-4 w-4' />
-                      {getArchName(asset.arch) || asset.name}
-                    </span>
-                    <span className='text-xs text-muted-foreground'>{formatBytes(asset.size)}</span>
-                  </a>
+                macosAssets.map((asset, i) => (
+                  <tr key={asset.name} className='border-b'>
+                    <td className='py-4'>{i === 0 && <span className='font-medium'>macOS</span>}</td>
+                    <td className='py-4 text-muted-foreground'>{getArchLabel(asset.arch)}</td>
+                    <td className='py-4'>
+                      <a href={asset.downloadUrl} download className='text-foreground hover:underline'>
+                        .dmg
+                      </a>
+                    </td>
+                    <td className='py-4 text-right text-muted-foreground'>{formatBytes(asset.size)}</td>
+                  </tr>
                 ))
               ) : (
-                <p className='text-sm text-muted-foreground'>Coming soon</p>
+                <tr className='border-b'>
+                  <td className='py-4 font-medium'>macOS</td>
+                  <td className='py-4 text-muted-foreground' colSpan={3}>
+                    Coming soon
+                  </td>
+                </tr>
               )}
-            </div>
-          </div>
 
-          {/* Windows */}
-          <div className='border rounded-lg p-5'>
-            <div className='flex items-center gap-2 mb-4'>
-              <h2 className='font-medium'>Windows</h2>
-            </div>
-            <div className='space-y-2'>
+              {/* Windows */}
               {windowsAssets.length > 0 ? (
-                windowsAssets.map((asset) => (
-                  <a key={asset.name} href={asset.downloadUrl} download className='flex items-center justify-between p-2 border rounded hover:bg-muted transition-colors'>
-                    <span className='flex items-center gap-2 text-sm'>
-                      <Download className='h-4 w-4' />
-                      {getWindowsLabel(asset)}
-                    </span>
-                    <span className='text-xs text-muted-foreground'>{formatBytes(asset.size)}</span>
-                  </a>
+                windowsAssets.map((asset, i) => (
+                  <tr key={asset.name} className='border-b'>
+                    <td className='py-4'>{i === 0 && <span className='font-medium'>Windows</span>}</td>
+                    <td className='py-4 text-muted-foreground'>{asset.arch === 'x64' ? 'x64' : asset.arch === 'arm64' ? 'ARM64' : '—'}</td>
+                    <td className='py-4'>
+                      <a href={asset.downloadUrl} download className='text-foreground hover:underline'>
+                        {getWindowsLabel(asset)}
+                      </a>
+                    </td>
+                    <td className='py-4 text-right text-muted-foreground'>{formatBytes(asset.size)}</td>
+                  </tr>
                 ))
               ) : (
-                <p className='text-sm text-muted-foreground'>Coming soon</p>
+                <tr className='border-b'>
+                  <td className='py-4 font-medium'>Windows</td>
+                  <td className='py-4 text-muted-foreground' colSpan={3}>
+                    Coming soon
+                  </td>
+                </tr>
               )}
-            </div>
-          </div>
 
-          {/* Linux */}
-          <div className='border rounded-lg p-5'>
-            <div className='flex items-center gap-2 mb-4'>
-              <h2 className='font-medium'>Linux</h2>
-            </div>
-            <div className='space-y-2'>
+              {/* Linux */}
               {linuxAssets.length > 0 ? (
-                linuxAssets.map((asset) => (
-                  <a key={asset.name} href={asset.downloadUrl} download className='flex items-center justify-between p-2 border rounded hover:bg-muted transition-colors'>
-                    <span className='flex items-center gap-2 text-sm'>
-                      <Download className='h-4 w-4' />
-                      {getLinuxLabel(asset.name)}
-                    </span>
-                    <span className='text-xs text-muted-foreground'>{formatBytes(asset.size)}</span>
-                  </a>
+                linuxAssets.map((asset, i) => (
+                  <tr key={asset.name} className='border-b'>
+                    <td className='py-4'>{i === 0 && <span className='font-medium'>Linux</span>}</td>
+                    <td className='py-4 text-muted-foreground'>{asset.arch === 'x64' ? 'x64' : asset.arch === 'arm64' ? 'ARM64' : '—'}</td>
+                    <td className='py-4'>
+                      <a href={asset.downloadUrl} download className='text-foreground hover:underline'>
+                        {getLinuxLabel(asset.name)}
+                      </a>
+                    </td>
+                    <td className='py-4 text-right text-muted-foreground'>{formatBytes(asset.size)}</td>
+                  </tr>
                 ))
               ) : (
-                <p className='text-sm text-muted-foreground'>Coming soon</p>
+                <tr className='border-b'>
+                  <td className='py-4 font-medium'>Linux</td>
+                  <td className='py-4 text-muted-foreground' colSpan={3}>
+                    Coming soon
+                  </td>
+                </tr>
               )}
-            </div>
+            </tbody>
+          </table>
+        </div>
+
+        {/* macOS signing note */}
+        <div className='mt-16 max-w-xl'>
+          <h2 className='text-lg font-medium'>macOS not signed</h2>
+          <p className='mt-2 text-sm text-muted-foreground leading-relaxed'>
+            The macOS app isn't signed with an Apple Developer certificate yet. This requires a $99/year developer account. As a student, I'd appreciate any support towards this goal.
+          </p>
+          <div className='mt-4'>
+            <a href={donateUrl} target='_blank' rel='noopener noreferrer' className='inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground'>
+              Support signing
+              <ExternalLink className='h-3 w-3' />
+            </a>
           </div>
         </div>
 
-        {/* Release Notes */}
-        {release.body && (
-          <div className='max-w-2xl'>
-            <div className='flex items-center justify-between mb-4'>
-              <h2 className='font-medium'>Release Notes</h2>
-              <a href={release.htmlUrl} target='_blank' rel='noopener noreferrer' className='text-sm text-muted-foreground hover:text-foreground flex items-center gap-1'>
-                <ExternalLink className='h-3 w-3' />
-                GitHub
-              </a>
+        {/* Installation instructions */}
+        <div className='mt-16 max-w-xl'>
+          <h2 className='text-lg font-medium'>Installation</h2>
+          <dl className='mt-4 space-y-4 text-sm'>
+            <div>
+              <dt className='font-medium'>macOS</dt>
+              <dd className='mt-1 text-muted-foreground'>Open the .dmg file and drag QueryStudio to Applications. On first launch, right-click and select "Open" to bypass Gatekeeper.</dd>
             </div>
-            <p className='text-sm text-muted-foreground mb-4'>
-              Published{' '}
-              {new Date(release.publishedAt).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              })}
-            </p>
-            <pre className='whitespace-pre-wrap text-sm text-muted-foreground border rounded-lg p-4'>{release.body}</pre>
-          </div>
-        )}
+            <div>
+              <dt className='font-medium'>Windows</dt>
+              <dd className='mt-1 text-muted-foreground'>Run the .msi installer or .exe file. You may need to allow the app through Windows Defender.</dd>
+            </div>
+            <div>
+              <dt className='font-medium'>Linux</dt>
+              <dd className='mt-1 text-muted-foreground'>Use your package manager for .deb or .rpm files, or run the AppImage directly after making it executable.</dd>
+            </div>
+          </dl>
+        </div>
+      </main>
 
-        <Alert className='max-w-3xl mt-12'>
-          <Info className='h-4 w-4' />
-          <AlertTitle>macOS App Not Signed</AlertTitle>
-          <AlertDescription>
-            <p className='mb-2'>
-              To get QueryStudio signed for macOS, it costs $100 per year. As a student who created this app, it's a lot of money. So if you want to support the goal of $100 to get QueryStudio signed,
-              you are more than welcome to do it.
-            </p>
-            <a href={donateUrl} target='_blank' rel='noopener noreferrer' className='inline-flex items-center gap-1 text-primary hover:underline font-medium'>
-              Donate to support signing
-              <ExternalLink className='h-3 w-3' />
-            </a>
-          </AlertDescription>
-        </Alert>
-      </section>
+      {/* Footer */}
+      <footer className='border-t'>
+        <div className='container mx-auto px-4 py-8'>
+          <div className='flex flex-col md:flex-row md:items-center md:justify-between gap-4'>
+            <div className='flex items-center gap-2'>
+              <img src='https://assets-cdn.querystudio.dev/QueryStudioIconNoBG.png' alt='QueryStudio' className='h-5 w-5' />
+              <span className='text-sm text-muted-foreground'>QueryStudio</span>
+            </div>
+            <nav className='flex items-center gap-6'>
+              <Link to='/download' className='text-sm text-muted-foreground hover:text-foreground'>
+                Download
+              </Link>
+              <Link to='/pricing' className='text-sm text-muted-foreground hover:text-foreground'>
+                Pricing
+              </Link>
+              <Link to='/login' className='text-sm text-muted-foreground hover:text-foreground'>
+                Login
+              </Link>
+            </nav>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }
