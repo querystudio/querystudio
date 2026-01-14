@@ -38,6 +38,9 @@ export const auth = betterAuth({
     },
   },
   advanced: {
+    crossSubDomainCookies: {
+      enabled: true,
+    },
     database: {
       generateId: () => zeroId({ randomLength: 32 }),
     },
@@ -53,6 +56,12 @@ export const auth = betterAuth({
       })
     },
     autoSignInAfterVerification: true,
+  },
+  socialProviders: {
+    github: {
+      clientId: env.GITHUB_CLIENT_ID,
+      clientSecret: env.GITHUB_CLIENT_SECRET,
+    },
   },
   plugins: [
     tauri({
@@ -83,5 +92,5 @@ export const auth = betterAuth({
       },
     }),
   ],
-  trustedOrigins: ['http://localhost:3000', 'https://querystudio.dev', 'tauri://localhost', 'http://tauri.localhost'],
+  trustedOrigins: ['http://localhost:3000', 'https://querystudio.dev', 'tauri://localhost', 'http://tauri.localhost', 'http://localhost:1420'],
 })

@@ -14,10 +14,8 @@ import { Route as SignupRouteImport } from './routes/signup'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DownloadRouteImport } from './routes/download'
-import { Route as DeviceRouteImport } from './routes/device'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as DeviceApproveRouteImport } from './routes/device/approve'
 import { Route as ApiTestRouteImport } from './routes/api/test'
 import { Route as ApiRealtimeRouteImport } from './routes/api/realtime'
 import { Route as ApiLicenseRouteImport } from './routes/api.license'
@@ -58,11 +56,6 @@ const DownloadRoute = DownloadRouteImport.update({
   path: '/download',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DeviceRoute = DeviceRouteImport.update({
-  id: '/device',
-  path: '/device',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AuthedRoute = AuthedRouteImport.update({
   id: '/_authed',
   getParentRoute: () => rootRouteImport,
@@ -71,11 +64,6 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
-} as any)
-const DeviceApproveRoute = DeviceApproveRouteImport.update({
-  id: '/approve',
-  path: '/approve',
-  getParentRoute: () => DeviceRoute,
 } as any)
 const ApiTestRoute = ApiTestRouteImport.update({
   id: '/api/test',
@@ -150,7 +138,6 @@ const AuthedDashboardAccountRoute = AuthedDashboardAccountRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/device': typeof DeviceRouteWithChildren
   '/download': typeof DownloadRoute
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
@@ -160,7 +147,6 @@ export interface FileRoutesByFullPath {
   '/api/license': typeof ApiLicenseRouteWithChildren
   '/api/realtime': typeof ApiRealtimeRoute
   '/api/test': typeof ApiTestRoute
-  '/device/approve': typeof DeviceApproveRoute
   '/dashboard/account': typeof AuthedDashboardAccountRoute
   '/dashboard/admin': typeof AuthedDashboardAdminRoute
   '/dashboard/billing': typeof AuthedDashboardBillingRoute
@@ -174,7 +160,6 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/device': typeof DeviceRouteWithChildren
   '/download': typeof DownloadRoute
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
@@ -183,7 +168,6 @@ export interface FileRoutesByTo {
   '/api/license': typeof ApiLicenseRouteWithChildren
   '/api/realtime': typeof ApiRealtimeRoute
   '/api/test': typeof ApiTestRoute
-  '/device/approve': typeof DeviceApproveRoute
   '/dashboard/account': typeof AuthedDashboardAccountRoute
   '/dashboard/admin': typeof AuthedDashboardAdminRoute
   '/dashboard/billing': typeof AuthedDashboardBillingRoute
@@ -199,7 +183,6 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authed': typeof AuthedRouteWithChildren
-  '/device': typeof DeviceRouteWithChildren
   '/download': typeof DownloadRoute
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
@@ -209,7 +192,6 @@ export interface FileRoutesById {
   '/api/license': typeof ApiLicenseRouteWithChildren
   '/api/realtime': typeof ApiRealtimeRoute
   '/api/test': typeof ApiTestRoute
-  '/device/approve': typeof DeviceApproveRoute
   '/_authed/dashboard/account': typeof AuthedDashboardAccountRoute
   '/_authed/dashboard/admin': typeof AuthedDashboardAdminRoute
   '/_authed/dashboard/billing': typeof AuthedDashboardBillingRoute
@@ -225,7 +207,6 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/device'
     | '/download'
     | '/login'
     | '/pricing'
@@ -235,7 +216,6 @@ export interface FileRouteTypes {
     | '/api/license'
     | '/api/realtime'
     | '/api/test'
-    | '/device/approve'
     | '/dashboard/account'
     | '/dashboard/admin'
     | '/dashboard/billing'
@@ -249,7 +229,6 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/device'
     | '/download'
     | '/login'
     | '/pricing'
@@ -258,7 +237,6 @@ export interface FileRouteTypes {
     | '/api/license'
     | '/api/realtime'
     | '/api/test'
-    | '/device/approve'
     | '/dashboard/account'
     | '/dashboard/admin'
     | '/dashboard/billing'
@@ -273,7 +251,6 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_authed'
-    | '/device'
     | '/download'
     | '/login'
     | '/pricing'
@@ -283,7 +260,6 @@ export interface FileRouteTypes {
     | '/api/license'
     | '/api/realtime'
     | '/api/test'
-    | '/device/approve'
     | '/_authed/dashboard/account'
     | '/_authed/dashboard/admin'
     | '/_authed/dashboard/billing'
@@ -299,7 +275,6 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthedRoute: typeof AuthedRouteWithChildren
-  DeviceRoute: typeof DeviceRouteWithChildren
   DownloadRoute: typeof DownloadRoute
   LoginRoute: typeof LoginRoute
   PricingRoute: typeof PricingRoute
@@ -350,13 +325,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DownloadRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/device': {
-      id: '/device'
-      path: '/device'
-      fullPath: '/device'
-      preLoaderRoute: typeof DeviceRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/_authed': {
       id: '/_authed'
       path: ''
@@ -370,13 +338,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/device/approve': {
-      id: '/device/approve'
-      path: '/approve'
-      fullPath: '/device/approve'
-      preLoaderRoute: typeof DeviceApproveRouteImport
-      parentRoute: typeof DeviceRoute
     }
     '/api/test': {
       id: '/api/test'
@@ -512,17 +473,6 @@ const AuthedRouteChildren: AuthedRouteChildren = {
 const AuthedRouteWithChildren =
   AuthedRoute._addFileChildren(AuthedRouteChildren)
 
-interface DeviceRouteChildren {
-  DeviceApproveRoute: typeof DeviceApproveRoute
-}
-
-const DeviceRouteChildren: DeviceRouteChildren = {
-  DeviceApproveRoute: DeviceApproveRoute,
-}
-
-const DeviceRouteWithChildren =
-  DeviceRoute._addFileChildren(DeviceRouteChildren)
-
 interface ApiLicenseRouteChildren {
   ApiLicenseSplatRoute: typeof ApiLicenseSplatRoute
 }
@@ -538,7 +488,6 @@ const ApiLicenseRouteWithChildren = ApiLicenseRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthedRoute: AuthedRouteWithChildren,
-  DeviceRoute: DeviceRouteWithChildren,
   DownloadRoute: DownloadRoute,
   LoginRoute: LoginRoute,
   PricingRoute: PricingRoute,

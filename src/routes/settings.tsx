@@ -6,19 +6,32 @@ import {
   Keyboard,
   ArrowLeft,
   FlaskConical,
+  User,
+  LogOut,
+  Mail,
+  Shield,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAIQueryStore } from "@/lib/store";
 import { ThemeSelector } from "@/components/theme-selector";
+import { authClient, signInWithProvider } from "@/lib/auth-client";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,
 });
 
-type SettingsTab = "general" | "appearance" | "shortcuts" | "experimental";
+type SettingsTab =
+  | "general"
+  | "account"
+  | "appearance"
+  | "shortcuts"
+  | "experimental";
 
 function SettingsPage() {
   const navigate = useNavigate();
@@ -58,6 +71,15 @@ function SettingsPage() {
           </Button>
 
           <Button
+            variant={activeTab === "account" ? "secondary" : "ghost"}
+            className="justify-start gap-2"
+            onClick={() => setActiveTab("account")}
+          >
+            <User className="h-4 w-4" />
+            Account
+          </Button>
+
+          <Button
             variant={activeTab === "appearance" ? "secondary" : "ghost"}
             className="justify-start gap-2"
             onClick={() => setActiveTab("appearance")}
@@ -88,11 +110,134 @@ function SettingsPage() {
         {/* Settings Content */}
         <main className="flex-1 overflow-auto p-8 max-w-3xl">
           {activeTab === "general" && <GeneralSettings />}
+          {activeTab === "account" && <AccountSettings />}
           {activeTab === "appearance" && <AppearanceSettings />}
           {activeTab === "shortcuts" && <ShortcutsSettings />}
           {activeTab === "experimental" && <ExperimentalSettings />}
         </main>
       </div>
+    </div>
+  );
+}
+
+function AccountSettings() {
+  const { data: session, isPending } = authClient.useSession();
+  const [isSigningIn, setIsSigningIn] = useState(false);
+
+  const handleSignIn = async (provider: "github") => {
+    try {
+      setIsSigningIn(true);
+      await signInWithProvider(provider);
+    } catch (error) {
+      console.error("Sign in error:", error);
+      toast.error("Failed to start sign in");
+    } finally {
+      setIsSigningIn(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await authClient.signOut();
+      toast.success("Signed out successfully");
+    } catch (error) {
+      console.error("Sign out error:", error);
+      toast.error("Failed to sign out");
+    }
+  };
+
+  if (isPending) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold tracking-tight">Account</h2>
+        <p className="text-muted-foreground">
+          Manage your account settings and preferences.
+        </p>
+      </div>
+      <Separator />
+
+      {session ? (
+        <div className="space-y-6">
+          <div className="flex items-center gap-4 rounded-lg border p-4">
+            <Avatar className="h-16 w-16">
+              <AvatarImage src={session.user.image || ""} />
+              <AvatarFallback>
+                {session.user.name?.charAt(0) || session.user.email.charAt(0)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 space-y-1">
+              <h3 className="font-semibold text-lg">{session.user.name}</h3>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Mail className="h-4 w-4" />
+                {session.user.email}
+              </div>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Shield className="h-4 w-4" />
+                User ID: {session.user.id}
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium">Session</h3>
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <Label className="text-base">Sign Out</Label>
+                <p className="text-sm text-muted-foreground">
+                  Sign out of your account on this device
+                </p>
+              </div>
+              <Button variant="destructive" onClick={handleSignOut}>
+                <LogOut className="mr-2 h-4 w-4" />
+                Sign Out
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          <div className="rounded-lg border border-dashed p-8 text-center">
+            <h3 className="text-lg font-medium">Not Signed In</h3>
+            <p className="text-sm text-muted-foreground mt-2 mb-6">
+              Sign in to sync your preferences and access premium features.
+            </p>
+            <div className="flex flex-col gap-2 max-w-xs mx-auto">
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => handleSignIn("github")}
+                disabled={isSigningIn}
+              >
+                {isSigningIn ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <svg
+                    className="mr-2 h-4 w-4"
+                    fill="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                )}
+                Sign in with GitHub
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
