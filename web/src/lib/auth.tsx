@@ -1,6 +1,7 @@
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { waitlist } from 'better-auth-waitlist'
+import { tauri } from '@daveyplate/better-auth-tauri/plugin'
 import { db } from 'drizzle'
 import { zeroId } from 'zero-id'
 import { emailer } from './emailer'
@@ -54,6 +55,9 @@ export const auth = betterAuth({
     autoSignInAfterVerification: true,
   },
   plugins: [
+    tauri({
+      scheme: 'querystudio',
+    }),
     waitlist({
       enabled: true,
       onJoinRequest: async ({ request }) => {
@@ -79,5 +83,5 @@ export const auth = betterAuth({
       },
     }),
   ],
-  trustedOrigins: ['http://localhost:3000', 'https://querystudio.dev'],
+  trustedOrigins: ['http://localhost:3000', 'https://querystudio.dev', 'tauri://localhost', 'http://tauri.localhost'],
 })

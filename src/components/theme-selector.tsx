@@ -20,8 +20,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useThemeStore } from "@/lib/theme-store";
 import { useThemeImport } from "@/lib/use-theme-import";
-import { useThemeExport } from "@/lib/use-theme-export";
-import { Download, Upload, Plus, Trash2 } from "lucide-react";
+import { Upload, Trash2 } from "lucide-react";
 
 export function ThemeSelector() {
   const {
@@ -31,12 +30,11 @@ export function ThemeSelector() {
     removeCustomTheme,
     addCustomTheme,
   } = useThemeStore();
-  
+
   const { importThemeFromJson, importAndApplyTheme } = useThemeImport();
-  const { exportCurrentTheme, exportAllThemes } = useThemeExport();
-  
+
   const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [_createDialogOpen, setCreateDialogOpen] = useState(false);
   const [importJson, setImportJson] = useState("");
   const [newTheme, setNewTheme] = useState({
     id: "",
@@ -98,7 +96,9 @@ export function ThemeSelector() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <div className="px-2 py-1.5 text-sm font-semibold">Built-in Themes</div>
+            <div className="px-2 py-1.5 text-sm font-semibold">
+              Built-in Themes
+            </div>
             {builtInThemes.map((theme) => (
               <SelectItem key={theme.id} value={theme.id}>
                 {theme.displayName || theme.name}
@@ -151,7 +151,9 @@ export function ThemeSelector() {
                   <span className="w-full border-t" />
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-background px-2 text-muted-foreground">Or</span>
+                  <span className="bg-background px-2 text-muted-foreground">
+                    Or
+                  </span>
                 </div>
               </div>
               <div>
@@ -178,105 +180,6 @@ export function ThemeSelector() {
             </div>
           </DialogContent>
         </Dialog>
-
-        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button variant="outline" size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Create Theme
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create New Theme</DialogTitle>
-              <DialogDescription>
-                Create a new theme based on the current theme.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="theme-id">Theme ID:</Label>
-                <Input
-                  id="theme-id"
-                  value={newTheme.id}
-                  onChange={(e) =>
-                    setNewTheme({ ...newTheme, id: e.target.value })
-                  }
-                  placeholder="my-custom-theme"
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="theme-name">Name:</Label>
-                <Input
-                  id="theme-name"
-                  value={newTheme.name}
-                  onChange={(e) =>
-                    setNewTheme({ ...newTheme, name: e.target.value })
-                  }
-                  placeholder="My Custom Theme"
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="theme-display-name">Display Name:</Label>
-                <Input
-                  id="theme-display-name"
-                  value={newTheme.displayName}
-                  onChange={(e) =>
-                    setNewTheme({ ...newTheme, displayName: e.target.value })
-                  }
-                  placeholder="My Custom Theme"
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="theme-description">Description:</Label>
-                <Input
-                  id="theme-description"
-                  value={newTheme.description}
-                  onChange={(e) =>
-                    setNewTheme({ ...newTheme, description: e.target.value })
-                  }
-                  placeholder="A beautiful custom theme"
-                  className="mt-1"
-                />
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setCreateDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleCreateTheme}
-                  disabled={!newTheme.id || !newTheme.name}
-                >
-                  Create
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={exportCurrentTheme}
-        >
-          <Download className="h-4 w-4 mr-2" />
-          Export Current
-        </Button>
-
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={exportAllThemes}
-        >
-          <Download className="h-4 w-4 mr-2" />
-          Export All
-        </Button>
       </div>
 
       {customThemes.length > 0 && (

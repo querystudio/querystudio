@@ -47,7 +47,7 @@ function SettingsPage() {
             </Button>
             <div className="font-semibold text-lg">Settings</div>
           </div>
-          
+
           <Button
             variant={activeTab === "general" ? "secondary" : "ghost"}
             className="justify-start gap-2"
@@ -56,7 +56,7 @@ function SettingsPage() {
             <Settings className="h-4 w-4" />
             General
           </Button>
-          
+
           <Button
             variant={activeTab === "appearance" ? "secondary" : "ghost"}
             className="justify-start gap-2"
@@ -65,7 +65,7 @@ function SettingsPage() {
             <Palette className="h-4 w-4" />
             Appearance
           </Button>
-          
+
           <Button
             variant={activeTab === "shortcuts" ? "secondary" : "ghost"}
             className="justify-start gap-2"
@@ -74,7 +74,7 @@ function SettingsPage() {
             <Keyboard className="h-4 w-4" />
             Shortcuts
           </Button>
-          
+
           <Button
             variant={activeTab === "experimental" ? "secondary" : "ghost"}
             className="justify-start gap-2"
@@ -114,20 +114,18 @@ function GeneralSettings() {
         </p>
       </div>
       <Separator />
-      
+
       <div className="space-y-4">
         <h3 className="text-lg font-medium">Startup</h3>
         <div className="flex items-center justify-between rounded-lg border p-4">
           <div className="space-y-0.5">
             <Label className="text-base">Auto-reconnect</Label>
             <p className="text-sm text-muted-foreground">
-              Automatically connect to the last used database when the application starts
+              Automatically connect to the last used database when the
+              application starts
             </p>
           </div>
-          <Switch
-            checked={autoReconnect}
-            onCheckedChange={setAutoReconnect}
-          />
+          <Switch checked={autoReconnect} onCheckedChange={setAutoReconnect} />
         </div>
       </div>
 
@@ -156,10 +154,7 @@ function GeneralSettings() {
               Show performance metrics like FPS counter overlay
             </p>
           </div>
-          <Switch
-            checked={debugMode}
-            onCheckedChange={setDebugMode}
-          />
+          <Switch checked={debugMode} onCheckedChange={setDebugMode} />
         </div>
       </div>
     </div>
@@ -193,7 +188,8 @@ function AppearanceSettings() {
           <div className="space-y-0.5">
             <Label className="text-base">Status Bar</Label>
             <p className="text-sm text-muted-foreground">
-              Show connection status, query times, and cursor position at the bottom
+              Show connection status, query times, and cursor position at the
+              bottom
             </p>
           </div>
           <Switch
@@ -223,7 +219,9 @@ function ShortcutsSettings() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">Keyboard Shortcuts</h2>
+        <h2 className="text-2xl font-bold tracking-tight">
+          Keyboard Shortcuts
+        </h2>
         <p className="text-muted-foreground">
           View keyboard shortcuts for quick navigation and actions.
         </p>
@@ -257,7 +255,7 @@ function ShortcutsSettings() {
 function ExperimentalSettings() {
   const experimentalTerminal = useAIQueryStore((s) => s.experimentalTerminal);
   const setExperimentalTerminal = useAIQueryStore(
-    (s) => s.setExperimentalTerminal
+    (s) => s.setExperimentalTerminal,
   );
 
   return (

@@ -26,13 +26,13 @@ interface ThemeState extends ThemeRegistry {
   getActiveTheme: () => Theme;
   getAllThemes: () => Theme[];
   getTheme: (themeId: string) => Theme | null;
-  
+
   // Custom theme management
   addCustomTheme: (theme: Theme) => void;
   removeCustomTheme: (themeId: string) => void;
   importTheme: (themeJson: string) => { success: boolean; error?: string };
   exportTheme: (themeId: string) => string | null;
-  
+
   // Theme application
   applyTheme: (theme: Theme) => void;
   refreshTheme: () => void;
@@ -50,12 +50,12 @@ export const useThemeStore = create<ThemeState>()(
       setActiveTheme: (themeId: string) => {
         const { themes, applyTheme } = get();
         const theme = themes[themeId];
-        
+
         if (!theme) {
           console.error(`Theme "${themeId}" not found`);
           return;
         }
-        
+
         set({ activeTheme: themeId });
         applyTheme(theme);
       },
@@ -91,25 +91,25 @@ export const useThemeStore = create<ThemeState>()(
 
       removeCustomTheme: (themeId: string) => {
         const { activeTheme } = get();
-        
+
         // Don't allow removing built-in themes
         if (BUILTIN_THEMES[themeId]) {
           console.error(`Cannot remove built-in theme "${themeId}"`);
           return;
         }
-        
+
         // Switch to default theme if removing active theme
         if (activeTheme === themeId) {
           get().setActiveTheme("default");
         }
-        
+
         set((state) => {
           const newThemes = { ...state.themes };
           const newCustomThemes = { ...state.customThemes };
-          
+
           delete newThemes[themeId];
           delete newCustomThemes[themeId];
-          
+
           return {
             themes: newThemes,
             customThemes: newCustomThemes,
@@ -120,23 +120,26 @@ export const useThemeStore = create<ThemeState>()(
       importTheme: (themeJson: string) => {
         try {
           const theme: Theme = JSON.parse(themeJson);
-          
+
           // Validate theme structure
           if (!theme.id || !theme.name || !theme.colors) {
             return { success: false, error: "Invalid theme structure" };
           }
-          
+
           // Mark as custom theme
           theme.isBuiltIn = false;
-          
+
           // Add or override theme
           get().addCustomTheme(theme);
-          
+
           return { success: true };
         } catch (error) {
-          return { 
-            success: false, 
-            error: error instanceof Error ? error.message : "Failed to parse theme JSON" 
+          return {
+            success: false,
+            error:
+              error instanceof Error
+                ? error.message
+                : "Failed to parse theme JSON",
           };
         }
       },
@@ -144,32 +147,41 @@ export const useThemeStore = create<ThemeState>()(
       exportTheme: (themeId: string) => {
         const { getTheme } = get();
         const theme = getTheme(themeId);
-        
+
         if (!theme) {
           return null;
         }
-        
+
         return JSON.stringify(theme, null, 2);
       },
 
       // Theme application
       applyTheme: (theme: Theme) => {
         if (typeof document === "undefined") return;
-        
+
         const root = document.documentElement;
         const colors = theme.colors;
-        
+
         // Apply CSS custom properties
         root.style.setProperty("--background", colors.background);
         root.style.setProperty("--foreground", colors.foreground);
         root.style.setProperty("--card", colors.card);
         root.style.setProperty("--card-foreground", colors.cardForeground);
         root.style.setProperty("--popover", colors.popover);
-        root.style.setProperty("--popover-foreground", colors.popoverForeground);
+        root.style.setProperty(
+          "--popover-foreground",
+          colors.popoverForeground,
+        );
         root.style.setProperty("--primary", colors.primary);
-        root.style.setProperty("--primary-foreground", colors.primaryForeground);
+        root.style.setProperty(
+          "--primary-foreground",
+          colors.primaryForeground,
+        );
         root.style.setProperty("--secondary", colors.secondary);
-        root.style.setProperty("--secondary-foreground", colors.secondaryForeground);
+        root.style.setProperty(
+          "--secondary-foreground",
+          colors.secondaryForeground,
+        );
         root.style.setProperty("--muted", colors.muted);
         root.style.setProperty("--muted-foreground", colors.mutedForeground);
         root.style.setProperty("--accent", colors.accent);
@@ -184,14 +196,23 @@ export const useThemeStore = create<ThemeState>()(
         root.style.setProperty("--chart-4", colors.chart4);
         root.style.setProperty("--chart-5", colors.chart5);
         root.style.setProperty("--sidebar", colors.sidebar);
-        root.style.setProperty("--sidebar-foreground", colors.sidebarForeground);
+        root.style.setProperty(
+          "--sidebar-foreground",
+          colors.sidebarForeground,
+        );
         root.style.setProperty("--sidebar-primary", colors.sidebarPrimary);
-        root.style.setProperty("--sidebar-primary-foreground", colors.sidebarPrimaryForeground);
+        root.style.setProperty(
+          "--sidebar-primary-foreground",
+          colors.sidebarPrimaryForeground,
+        );
         root.style.setProperty("--sidebar-accent", colors.sidebarAccent);
-        root.style.setProperty("--sidebar-accent-foreground", colors.sidebarAccentForeground);
+        root.style.setProperty(
+          "--sidebar-accent-foreground",
+          colors.sidebarAccentForeground,
+        );
         root.style.setProperty("--sidebar-border", colors.sidebarBorder);
         root.style.setProperty("--sidebar-ring", colors.sidebarRing);
-        
+
         // Update dark mode class
         if (theme.isDark) {
           root.classList.add("dark");
@@ -214,6 +235,15 @@ export const useThemeStore = create<ThemeState>()(
         activeTheme: state.activeTheme,
         customThemes: state.customThemes,
       }),
+      onRehydrateStorage: () => (state) => {
+        if (state && state.customThemes) {
+          // Merge custom themes back into the themes object
+          state.themes = {
+            ...BUILTIN_THEMES,
+            ...state.customThemes,
+          };
+        }
+      },
     },
   ),
 );

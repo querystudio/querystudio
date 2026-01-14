@@ -1,0 +1,137 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": [
+    "id",
+    "name",
+    "displayName",
+    "description",
+    "author",
+    "version",
+    "isDark",
+    "isBuiltIn",
+    "colors"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "displayName": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "author": {
+      "type": "string"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "isDark": {
+      "type": "boolean"
+    },
+    "isBuiltIn": {
+      "type": "boolean"
+    },
+    "colors": {
+      "type": "object",
+      "required": [
+        "background",
+        "foreground",
+        "card",
+        "cardForeground",
+        "popover",
+        "popoverForeground",
+        "primary",
+        "primaryForeground",
+        "secondary",
+        "secondaryForeground",
+        "muted",
+        "mutedForeground",
+        "accent",
+        "accentForeground",
+        "destructive",
+        "border",
+        "input",
+        "ring",
+        "chart1",
+        "chart2",
+        "chart3",
+        "chart4",
+        "chart5",
+        "sidebar",
+        "sidebarForeground",
+        "sidebarPrimary",
+        "sidebarPrimaryForeground",
+        "sidebarAccent",
+        "sidebarAccentForeground",
+        "sidebarBorder",
+        "sidebarRing"
+      ],
+      "properties": {
+        "background": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+        "foreground": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+        "card": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+        "cardForeground": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+        "popover": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+        "popoverForeground": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "primary": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+        "primaryForeground": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "secondary": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+        "secondaryForeground": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "muted": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+        "mutedForeground": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+        "accent": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+        "accentForeground": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "destructive": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+        "border": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+        "input": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+        "ring": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+        "chart1": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+        "chart2": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+        "chart3": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+        "chart4": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+        "chart5": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+        "sidebar": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+        "sidebarForeground": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "sidebarPrimary": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+        "sidebarPrimaryForeground": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "sidebarAccent": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+        "sidebarAccentForeground": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "sidebarBorder": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+        "sidebarRing": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

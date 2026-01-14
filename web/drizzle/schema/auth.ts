@@ -1,5 +1,5 @@
 import { relations } from 'drizzle-orm'
-import { pgTable, text, timestamp, boolean, index } from 'drizzle-orm/pg-core'
+import { pgTable, text, timestamp, boolean, integer, index } from 'drizzle-orm/pg-core'
 import { device } from './device'
 
 export const user = pgTable('user', {
@@ -75,6 +75,19 @@ export const verification = pgTable(
   },
   (table) => [index('verification_identifier_idx').on(table.identifier)],
 )
+
+export const deviceCode = pgTable('device_code', {
+  id: text('id').primaryKey(),
+  deviceCode: text('device_code').notNull(),
+  userCode: text('user_code').notNull(),
+  userId: text('user_id'),
+  expiresAt: timestamp('expires_at').notNull(),
+  status: text('status').notNull(),
+  lastPolledAt: timestamp('last_polled_at'),
+  pollingInterval: integer('polling_interval'),
+  clientId: text('client_id'),
+  scope: text('scope'),
+})
 
 export const waitlist = pgTable('waitlist', {
   id: text('id').primaryKey(),

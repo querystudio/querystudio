@@ -91,13 +91,14 @@ export function PasswordPromptDialog({
     };
 
     try {
+      const tId = toast.loading("Connecting to database...");
       await connect.mutateAsync({
         id: connection.id,
         name: connection.name,
         db_type: connection.db_type || "postgres",
         config,
       });
-      toast.success("Connected successfully");
+      toast.success("Connected successfully", { id: tId });
       onOpenChange(false);
       setPassword("");
     } catch (error) {

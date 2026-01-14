@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Plus, Pencil, Key, AlertTriangle } from "lucide-react";
+import { Plus, Pencil, Key } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSavedConnections, useCanSaveConnection } from "@/lib/hooks";
 import {

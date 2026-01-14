@@ -1,4 +1,5 @@
 {
+  "$schema": "https://assets-cdn.querystudio.dev/theme.schema.json",
   "id": "catppuccin",
   "name": "catppuccin",
   "displayName": "Catppuccin Mocha",

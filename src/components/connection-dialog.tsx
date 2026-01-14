@@ -166,13 +166,14 @@ export function ConnectionDialog({
     const config = getConfig();
 
     try {
+      const tId = toast.loading("Connecting to database...");
       await connect.mutateAsync({
         id,
         name: formData.name,
         db_type: dbType,
         config,
       });
-      toast.success("Connected successfully");
+      toast.success("Connected successfully", { id: tId });
       onOpenChange(false);
       resetForm();
     } catch (error) {
@@ -186,9 +187,10 @@ export function ConnectionDialog({
     const config = getConfig();
 
     try {
+      const tId = toast.loading("Connecting to database...");
       await testConnection.mutateAsync(config);
       setTested(true);
-      toast.success("Connection successful!");
+      toast.success("Connection successful!", { id: tId });
     } catch (error) {
       setTested(false);
       toast.error(`Connection failed: ${error}`);
