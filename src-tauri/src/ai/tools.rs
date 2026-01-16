@@ -30,6 +30,7 @@ fn get_table_columns_tool(db_type: DatabaseType) -> ToolDefinition {
         DatabaseType::Postgres => "The schema name (usually 'public' for PostgreSQL)",
         DatabaseType::Mysql => "The database/schema name",
         DatabaseType::Libsql => "The schema name (always 'main' for libSQL/Turso)",
+        DatabaseType::Sqlite => "The schema name (always 'main' for SQLite)",
     };
 
     ToolDefinition {
@@ -63,6 +64,9 @@ fn execute_select_query_tool(db_type: DatabaseType) -> ToolDefinition {
         DatabaseType::Libsql => {
             "The SELECT SQL query to execute. Must be a valid SQLite/libSQL SELECT statement."
         }
+        DatabaseType::Sqlite => {
+            "The SELECT SQL query to execute. Must be a valid SQLite SELECT statement."
+        }
     };
 
     ToolDefinition {
@@ -86,6 +90,7 @@ fn get_table_sample_tool(db_type: DatabaseType) -> ToolDefinition {
         DatabaseType::Postgres => "The schema name (usually 'public')",
         DatabaseType::Mysql => "The database/schema name",
         DatabaseType::Libsql => "The schema name (always 'main' for libSQL/Turso)",
+        DatabaseType::Sqlite => "The schema name (always 'main' for SQLite)",
     };
 
     ToolDefinition {
@@ -199,6 +204,7 @@ pub fn get_system_prompt(db_type: DatabaseType) -> String {
         DatabaseType::Postgres => "PostgreSQL",
         DatabaseType::Mysql => "MySQL",
         DatabaseType::Libsql => "libSQL/Turso",
+        DatabaseType::Sqlite => "SQLite",
     };
 
     let sql_syntax_tips = match db_type {
@@ -226,6 +232,15 @@ pub fn get_system_prompt(db_type: DatabaseType) -> String {
 - LIMIT and OFFSET for pagination
 - Use LOWER() with LIKE for case-insensitive matching
 - SQLite-compatible syntax (libSQL is a SQLite fork)
+- No schemas - all tables are in the 'main' schema"#
+        }
+        DatabaseType::Sqlite => {
+            r#"
+- Use double quotes for identifiers: "table_name", "column_name"
+- Use single quotes for strings: 'value'
+- Use CAST() for type casting: CAST(column AS TEXT)
+- LIMIT and OFFSET for pagination
+- Use LOWER() with LIKE for case-insensitive matching
 - No schemas - all tables are in the 'main' schema"#
         }
     };

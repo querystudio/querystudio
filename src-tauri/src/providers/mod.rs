@@ -1,6 +1,7 @@
 pub mod libsql;
 pub mod mysql;
 pub mod postgres;
+pub mod sqlite;
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -13,6 +14,7 @@ pub enum DatabaseType {
     Postgres,
     Mysql,
     Libsql,
+    Sqlite,
 }
 
 impl fmt::Display for DatabaseType {
@@ -21,6 +23,7 @@ impl fmt::Display for DatabaseType {
             DatabaseType::Postgres => write!(f, "PostgreSQL"),
             DatabaseType::Mysql => write!(f, "MySQL"),
             DatabaseType::Libsql => write!(f, "libSQL/Turso"),
+            DatabaseType::Sqlite => write!(f, "SQLite"),
         }
     }
 }
@@ -218,6 +221,10 @@ pub async fn create_provider(
         }
         DatabaseType::Libsql => {
             let provider = libsql::LibsqlProvider::connect(params).await?;
+            Ok(Box::new(provider))
+        }
+        DatabaseType::Sqlite => {
+            let provider = sqlite::SqliteProvider::connect(params).await?;
             Ok(Box::new(provider))
         }
     }

@@ -52,9 +52,19 @@ const DATABASE_OPTIONS: DatabaseOption[] = [
       host: "localhost",
     },
   },
+  {
+    id: "sqlite",
+    name: "SQLite",
+    defaults: {
+      port: "0",
+      database: "",
+      username: "",
+      host: "",
+    },
+  },
 ];
 
-type ConnectionMode = "params" | "string";
+type ConnectionMode = "params" | "string" | "file";
 
 export function ConnectionDialog({
   open,
@@ -91,6 +101,11 @@ export function ConnectionDialog({
       database: db.defaults.database,
       username: db.defaults.username,
     }));
+    if (type === "sqlite") {
+      setMode("file");
+    } else if (mode === "file") {
+      setMode("params");
+    }
     setTested(false);
     setErrors({});
   };
@@ -109,6 +124,10 @@ export function ConnectionDialog({
       const port = parseInt(formData.port, 10);
       if (isNaN(port) || port < 1 || port > 65535) {
         newErrors.port = "Invalid";
+      }
+    } else if (mode === "file") {
+      if (!formData.connectionString.trim()) {
+        newErrors.connectionString = "File path is required";
       }
     } else {
       if (!formData.connectionString.trim()) {
@@ -216,6 +235,9 @@ export function ConnectionDialog({
     if (dbType === "libsql") {
       return "libsql://your-database.turso.io?authToken=your-token";
     }
+    if (dbType === "sqlite") {
+      return "C:\\path\\to\\database.db";
+    }
     return "postgresql://user:password@localhost:5432/database";
   };
 
@@ -295,19 +317,21 @@ export function ConnectionDialog({
                 </select>
               </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="mode">Connection Method</Label>
-                <select
-                  id="mode"
-                  value={mode}
-                  onChange={(e) => setMode(e.target.value as ConnectionMode)}
-                  disabled={!canSave}
-                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <option value="params">Parameters</option>
-                  <option value="string">Connection URL</option>
-                </select>
-              </div>
+              {dbType !== "sqlite" && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="mode">Connection Method</Label>
+                  <select
+                    id="mode"
+                    value={mode}
+                    onChange={(e) => setMode(e.target.value as ConnectionMode)}
+                    disabled={!canSave}
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option value="params">Parameters</option>
+                    <option value="string">Connection URL</option>
+                  </select>
+                </div>
+              )}
             </div>
 
             {mode === "params" ? (
@@ -350,7 +374,7 @@ export function ConnectionDialog({
                   />
                 </div>
 
-                {dbType !== "libsql" ? (
+                {dbType !== "libsql" && dbType !== "sqlite" ? (
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
                       <Label htmlFor="username">Username</Label>
@@ -395,6 +419,26 @@ export function ConnectionDialog({
                     />
                   </div>
                 )}
+              </div>
+            ) : mode === "file" ? (
+              <div className="space-y-1.5">
+                <Label htmlFor="connectionString">Database File Path</Label>
+                <Input
+                  id="connectionString"
+                  placeholder={getConnectionStringPlaceholder()}
+                  value={formData.connectionString}
+                  onChange={(e) =>
+                    updateField("connectionString", e.target.value)
+                  }
+                  className={cn(
+                    "font-mono text-sm",
+                    errors.connectionString && "border-destructive",
+                  )}
+                  disabled={!canSave}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Enter the full path to your SQLite database file
+                </p>
               </div>
             ) : (
               <div className="space-y-1.5">

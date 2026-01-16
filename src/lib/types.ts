@@ -1,4 +1,4 @@
-export type DatabaseType = "postgres" | "mysql" | "libsql";
+export type DatabaseType = "postgres" | "mysql" | "libsql" | "sqlite";
 
 export type ConnectionParams =
   | { connection_string: string }

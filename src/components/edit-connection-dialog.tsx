@@ -39,6 +39,7 @@ const DATABASE_CONFIGS: Record<
   postgres: { port: "5432", database: "postgres", username: "postgres" },
   mysql: { port: "3306", database: "mysql", username: "root" },
   libsql: { port: "443", database: "default", username: "" },
+  sqlite: { port: "0", database: "", username: "" },
 };
 
 export function EditConnectionDialog({
@@ -47,7 +48,7 @@ export function EditConnectionDialog({
   onOpenChange,
 }: EditConnectionDialogProps) {
   const [testing, setTesting] = useState(false);
-  const [mode, setMode] = useState<"params" | "string">("params");
+  const [mode, setMode] = useState<"params" | "string" | "file">("params");
   const [dbType, setDbType] = useState<DatabaseType>("postgres");
   const [formData, setFormData] = useState({
     name: "",
@@ -104,6 +105,11 @@ export function EditConnectionDialog({
       database: defaults.database,
       username: defaults.username,
     }));
+    if (newType === "sqlite") {
+      setMode("file");
+    } else if (mode === "file") {
+      setMode("params");
+    }
   };
 
   const validateParams = () => {
@@ -133,8 +139,21 @@ export function EditConnectionDialog({
     return Object.keys(newErrors).length === 0;
   };
 
-  const validate = () =>
-    mode === "params" ? validateParams() : validateString();
+  const validateFile = () => {
+    const newErrors: Record<string, string> = {};
+    if (!formData.name.trim()) newErrors.name = "Name is required";
+    if (!formData.connectionString.trim()) {
+      newErrors.connectionString = "File path is required";
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const validate = () => {
+    if (mode === "params") return validateParams();
+    if (mode === "file") return validateFile();
+    return validateString();
+  };
 
   const getSavedConfig = () => {
     if (mode === "string") {
@@ -216,6 +235,9 @@ export function EditConnectionDialog({
     if (dbType === "libsql") {
       return "libsql://your-database.turso.io?authToken=your-token";
     }
+    if (dbType === "sqlite") {
+      return "C:\\path\\to\\database.db";
+    }
     return "postgresql://user:password@localhost:5432/database";
   };
 
@@ -226,12 +248,16 @@ export function EditConnectionDialog({
     if (dbType === "libsql") {
       return "Turso URL with auth token: libsql://db.turso.io?authToken=token";
     }
+    if (dbType === "sqlite") {
+      return "Full path to your SQLite database file";
+    }
     return "Supports PostgreSQL connection URI or key-value format";
   };
 
   const getDbTypeLabel = () => {
     if (dbType === "mysql") return "MySQL";
     if (dbType === "libsql") return "libSQL/Turso";
+    if (dbType === "sqlite") return "SQLite";
     return "PostgreSQL";
   };
 
@@ -286,124 +312,30 @@ export function EditConnectionDialog({
                     libSQL / Turso
                   </div>
                 </SelectItem>
+                <SelectItem value="sqlite">
+                  <div className="flex items-center gap-2">
+                    <span className="text-cyan-500 font-semibold">S</span>
+                    SQLite
+                  </div>
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          <Tabs
-            value={mode}
-            onValueChange={(v) => setMode(v as "params" | "string")}
-          >
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="params">Parameters</TabsTrigger>
-              <TabsTrigger value="string">Connection String</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="params" className="mt-4 space-y-4">
-              <div className="grid grid-cols-3 gap-3">
-                <div className="col-span-2 space-y-2">
-                  <Label htmlFor="edit-host">
-                    {dbType === "libsql" ? "Turso Host" : "Host"}
-                  </Label>
-                  <Input
-                    id="edit-host"
-                    placeholder={dbType === "libsql" ? "turso.io" : "localhost"}
-                    value={formData.host}
-                    onChange={(e) => updateField("host", e.target.value)}
-                  />
-                  {errors.host && (
-                    <p className="text-xs text-red-500">{errors.host}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-port">Port</Label>
-                  <Input
-                    id="edit-port"
-                    type="number"
-                    placeholder={DATABASE_CONFIGS[dbType].port}
-                    value={formData.port}
-                    onChange={(e) => updateField("port", e.target.value)}
-                  />
-                  {errors.port && (
-                    <p className="text-xs text-red-500">{errors.port}</p>
-                  )}
-                </div>
-              </div>
-
+          {dbType === "sqlite" ? (
+            <div className="space-y-4 mt-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-database">
-                  {dbType === "libsql" ? "Database Name" : "Database"}
+                <Label htmlFor="edit-connectionString">
+                  Database File Path
                 </Label>
                 <Input
-                  id="edit-database"
-                  placeholder={DATABASE_CONFIGS[dbType].database}
-                  value={formData.database}
-                  onChange={(e) => updateField("database", e.target.value)}
-                />
-                {errors.database && (
-                  <p className="text-xs text-red-500">{errors.database}</p>
-                )}
-              </div>
-
-              {dbType !== "libsql" && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-username">Username</Label>
-                    <Input
-                      id="edit-username"
-                      placeholder={DATABASE_CONFIGS[dbType].username}
-                      value={formData.username}
-                      onChange={(e) => updateField("username", e.target.value)}
-                    />
-                    {errors.username && (
-                      <p className="text-xs text-red-500">{errors.username}</p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-password">Password</Label>
-                    <Input
-                      id="edit-password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={formData.password}
-                      onChange={(e) => updateField("password", e.target.value)}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Required for testing
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {dbType === "libsql" && (
-                <div className="space-y-2">
-                  <Label htmlFor="edit-password">Auth Token (optional)</Label>
-                  <Input
-                    id="edit-password"
-                    type="password"
-                    placeholder="Your Turso auth token"
-                    value={formData.password}
-                    onChange={(e) => updateField("password", e.target.value)}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Optional for local instances. Get your token from the Turso
-                    dashboard or CLI for cloud databases.
-                  </p>
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="string" className="mt-4 space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-connectionString">Connection String</Label>
-                <Textarea
                   id="edit-connectionString"
                   placeholder={getConnectionStringPlaceholder()}
                   value={formData.connectionString}
                   onChange={(e) =>
                     updateField("connectionString", e.target.value)
                   }
-                  className="min-h-[80px] font-mono text-sm"
+                  className="font-mono text-sm"
                 />
                 {errors.connectionString && (
                   <p className="text-xs text-red-500">
@@ -414,8 +346,145 @@ export function EditConnectionDialog({
                   {getConnectionStringHelp()}
                 </p>
               </div>
-            </TabsContent>
-          </Tabs>
+            </div>
+          ) : (
+            <Tabs
+              value={mode}
+              onValueChange={(v) => setMode(v as "params" | "string")}
+            >
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="params">Parameters</TabsTrigger>
+                <TabsTrigger value="string">Connection String</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="params" className="mt-4 space-y-4">
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="col-span-2 space-y-2">
+                    <Label htmlFor="edit-host">
+                      {dbType === "libsql" ? "Turso Host" : "Host"}
+                    </Label>
+                    <Input
+                      id="edit-host"
+                      placeholder={
+                        dbType === "libsql" ? "turso.io" : "localhost"
+                      }
+                      value={formData.host}
+                      onChange={(e) => updateField("host", e.target.value)}
+                    />
+                    {errors.host && (
+                      <p className="text-xs text-red-500">{errors.host}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-port">Port</Label>
+                    <Input
+                      id="edit-port"
+                      type="number"
+                      placeholder={DATABASE_CONFIGS[dbType].port}
+                      value={formData.port}
+                      onChange={(e) => updateField("port", e.target.value)}
+                    />
+                    {errors.port && (
+                      <p className="text-xs text-red-500">{errors.port}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-database">
+                    {dbType === "libsql" ? "Database Name" : "Database"}
+                  </Label>
+                  <Input
+                    id="edit-database"
+                    placeholder={DATABASE_CONFIGS[dbType].database}
+                    value={formData.database}
+                    onChange={(e) => updateField("database", e.target.value)}
+                  />
+                  {errors.database && (
+                    <p className="text-xs text-red-500">{errors.database}</p>
+                  )}
+                </div>
+
+                {dbType !== "libsql" && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-username">Username</Label>
+                      <Input
+                        id="edit-username"
+                        placeholder={DATABASE_CONFIGS[dbType].username}
+                        value={formData.username}
+                        onChange={(e) =>
+                          updateField("username", e.target.value)
+                        }
+                      />
+                      {errors.username && (
+                        <p className="text-xs text-red-500">
+                          {errors.username}
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-password">Password</Label>
+                      <Input
+                        id="edit-password"
+                        type="password"
+                        placeholder="••••••••"
+                        value={formData.password}
+                        onChange={(e) =>
+                          updateField("password", e.target.value)
+                        }
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Required for testing
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {dbType === "libsql" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-password">Auth Token (optional)</Label>
+                    <Input
+                      id="edit-password"
+                      type="password"
+                      placeholder="Your Turso auth token"
+                      value={formData.password}
+                      onChange={(e) => updateField("password", e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Optional for local instances. Get your token from the
+                      Turso dashboard or CLI for cloud databases.
+                    </p>
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="string" className="mt-4 space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-connectionString">
+                    Connection String
+                  </Label>
+                  <Textarea
+                    id="edit-connectionString"
+                    placeholder={getConnectionStringPlaceholder()}
+                    value={formData.connectionString}
+                    onChange={(e) =>
+                      updateField("connectionString", e.target.value)
+                    }
+                    className="min-h-[80px] font-mono text-sm"
+                  />
+                  {errors.connectionString && (
+                    <p className="text-xs text-red-500">
+                      {errors.connectionString}
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    {getConnectionStringHelp()}
+                  </p>
+                </div>
+              </TabsContent>
+            </Tabs>
+          )}
 
           <div className="flex justify-between pt-4">
             <Button
