@@ -126,6 +126,9 @@ export function QueryEditor({ tabId, paneId }: QueryEditorProps) {
   const executeQueryMutation = useExecuteQuery(connectionId);
 
   // Load query content and results from tab when tab changes
+  // Note: allPanes is intentionally NOT in the dependency array to prevent
+  // circular updates that cause backwards typing. This effect should only
+  // run when switching tabs (tabId/paneId change), not on every content change.
   useEffect(() => {
     if (connectionId && paneId) {
       const pane = allPanes[paneId];
@@ -143,7 +146,8 @@ export function QueryEditor({ tabId, paneId }: QueryEditorProps) {
         setExecutionTime(currentTab.queryResults.executionTime ?? null);
       }
     }
-  }, [connectionId, tabId, paneId, allPanes]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [connectionId, tabId, paneId]);
 
   // Save query content to tab when it changes (debounced via effect)
   useEffect(() => {

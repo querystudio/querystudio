@@ -115,7 +115,11 @@ interface LayoutState {
   ) => void;
 
   closePane: (connectionId: string, paneId: string) => void;
-  resizePane: (connectionId: string, splitPaneId: string, ratio: number) => void;
+  resizePane: (
+    connectionId: string,
+    splitPaneId: string,
+    ratio: number,
+  ) => void;
 
   // Open or focus a data tab for a specific table
   openDataTab: (connectionId: string, schema: string, name: string) => string;
@@ -127,25 +131,13 @@ interface LayoutState {
   clearLayout: (connectionId: string) => void;
 }
 
-const createDefaultLeafPane = (dbType?: string): LeafPane => {
-  const isRedis = dbType === "redis";
-  const dataTab: Tab = {
-    id: generateId(),
-    type: "data",
-    title: isRedis ? "Keys" : "Data",
-  };
-  const queryTab: Tab = {
-    id: generateId(),
-    type: "query",
-    title: isRedis ? "Console" : "Query",
-    queryContent: "",
-  };
-
+const createDefaultLeafPane = (_dbType?: string): LeafPane => {
+  // Create an empty pane with no tabs by default
   return {
     type: "leaf",
     id: generateId(),
-    tabs: [dataTab, queryTab],
-    activeTabId: dataTab.id,
+    tabs: [],
+    activeTabId: null as unknown as string,
   };
 };
 
@@ -282,8 +274,32 @@ export const useLayoutStore = create<LayoutState>()(
 
         const newTabs = pane.tabs.filter((t) => t.id !== tabId);
 
-        // If no tabs left, close the pane
+        // If no tabs left, try to close the pane, but if it's the only pane,
+        // just leave it empty instead of preventing the close
         if (newTabs.length === 0) {
+          const rootId = state.rootPaneId[connectionId];
+          const isOnlyPane =
+            paneId === rootId && Object.keys(panes).length === 1;
+
+          if (isOnlyPane) {
+            // Keep the pane but with no tabs
+            set((state) => ({
+              panes: {
+                ...state.panes,
+                [connectionId]: {
+                  ...state.panes[connectionId],
+                  [paneId]: {
+                    ...pane,
+                    tabs: [],
+                    activeTabId: null as unknown as string,
+                  },
+                },
+              },
+            }));
+            return;
+          }
+
+          // Otherwise close the pane
           get().closePane(connectionId, paneId);
           return;
         }
@@ -410,17 +426,12 @@ export const useLayoutStore = create<LayoutState>()(
                   : pane.activeTabId,
             };
           } else {
-            // Create empty new pane with a default tab
-            const defaultTab: Tab = {
-              id: generateId(),
-              type: "data",
-              title: "Data",
-            };
+            // Create empty new pane with no tabs
             newPane = {
               type: "leaf",
               id: newPaneId,
-              tabs: [defaultTab],
-              activeTabId: defaultTab.id,
+              tabs: [],
+              activeTabId: null as unknown as string,
             };
           }
 
@@ -440,7 +451,10 @@ export const useLayoutStore = create<LayoutState>()(
           const newPanes = { ...panes };
 
           // Find and update parent split that references this pane
-          const updateParentReference = (oldPaneId: string, newPaneId: string) => {
+          const updateParentReference = (
+            oldPaneId: string,
+            newPaneId: string,
+          ) => {
             for (const [id, p] of Object.entries(newPanes)) {
               if (p.type === "split") {
                 if (p.first === oldPaneId) {
