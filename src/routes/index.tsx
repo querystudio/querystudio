@@ -17,7 +17,6 @@ import type { SavedConnection } from "@/lib/types";
 import { FpsCounter } from "@/components/fps-counter";
 import {
   Bot,
-  X,
   PanelRightClose,
   PanelRight,
   PanelLeftClose,
@@ -208,12 +207,79 @@ function App() {
 
   return (
     <div className="flex h-screen flex-col bg-background text-foreground">
-      {/* Titlebar drag region - empty div for window dragging */}
-      <div
-        data-tauri-drag-region
-        className="h-7 w-full shrink-0 bg-background"
-        style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
-      />
+      {/* Titlebar with drag region and controls */}
+      <div className="relative h-8 w-full shrink-0 bg-background">
+        {/* Drag region - full width behind everything */}
+        <div
+          data-tauri-drag-region
+          className="absolute inset-0"
+          style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
+        />
+
+        {/* Left side controls - aligned with traffic lights */}
+        <div
+          className="absolute left-[70px] top-0 bottom-0 flex items-center"
+          style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+        >
+          {/* Sidebar Toggle Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+            onClick={toggleSidebar}
+            title="Toggle sidebar (⌘B)"
+          >
+            {sidebarCollapsed ? (
+              <PanelLeft className="h-4 w-4" />
+            ) : (
+              <PanelLeftClose className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
+
+        {/* Right side controls */}
+        <div
+          className="absolute right-2 top-0 bottom-0 flex items-center gap-1"
+          style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+        >
+          {/* Settings Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+            onClick={() => navigate({ to: "/settings" })}
+            title="Settings"
+          >
+            <Settings className="h-4 w-4" />
+          </Button>
+
+          {/* AI Panel Toggle Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+            onClick={toggleAiPanel}
+            title="Toggle Querybuddy (⌥⌘B)"
+          >
+            {aiPanelOpen ? (
+              <PanelRightClose className="h-4 w-4" />
+            ) : (
+              <PanelRight className="h-4 w-4" />
+            )}
+          </Button>
+
+          {/* Querybuddy Icon */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+            onClick={toggleAiPanel}
+            title="Querybuddy"
+          >
+            <Bot className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
 
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
@@ -222,58 +288,8 @@ function App() {
         <div className="flex flex-1 overflow-hidden">
           {/* Main content area with split panes */}
           <main className="flex flex-1 flex-col overflow-hidden">
-            {/* Header with controls */}
-            <div className="flex h-10 items-center justify-between border-b border-border px-2">
-              <div className="flex items-center">
-                {/* Sidebar Toggle Button */}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                  onClick={toggleSidebar}
-                  title="Toggle sidebar (⌘B)"
-                >
-                  {sidebarCollapsed ? (
-                    <PanelLeft className="h-4 w-4" />
-                  ) : (
-                    <PanelLeftClose className="h-4 w-4" />
-                  )}
-                </Button>
-
-                <div className="mx-2 h-4 w-px bg-border" />
-              </div>
-
-              <div className="flex items-center gap-1">
-                {/* Settings Button */}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                  onClick={() => navigate({ to: "/settings" })}
-                  title="Settings"
-                >
-                  <Settings className="h-4 w-4" />
-                </Button>
-
-                {/* AI Panel Toggle Button */}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                  onClick={toggleAiPanel}
-                  title="Toggle Querybuddy (⌥⌘B)"
-                >
-                  {aiPanelOpen ? (
-                    <PanelRightClose className="h-4 w-4" />
-                  ) : (
-                    <PanelRight className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-            </div>
-
             {/* Split pane container */}
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 overflow-hidden h-full">
               <PaneContainer
                 connectionId={connectionId}
                 dbType={connection?.db_type}
@@ -298,25 +314,6 @@ function App() {
                 onMouseDown={handleResizeStart}
                 className="absolute left-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-primary/30 active:bg-primary/40 z-10 -ml-1"
               />
-
-              {/* AI Panel Header */}
-              <div className="flex items-center justify-between border-b border-border px-3 py-2 shrink-0">
-                <div className="flex items-center gap-2">
-                  <Bot className="h-4 w-4 text-primary" />
-                  <span className="font-medium text-sm">Querybuddy</span>
-                  <kbd className="hidden sm:inline-flex h-5 items-center gap-1 rounded border border-border bg-muted px-1.5 text-[10px] font-medium text-muted-foreground">
-                    <span className="text-xs">⌥⌘</span>B
-                  </kbd>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
-                  onClick={() => setAiPanelOpen(false)}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
 
               <div className="flex-1 overflow-hidden">
                 <AIChat />

@@ -11,6 +11,7 @@ use crate::database::ConnectionManager;
 use crate::providers::DatabaseType;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use std::time::Instant;
 use tokio::sync::mpsc;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -165,33 +166,50 @@ impl Agent {
         mut self,
         user_message: String,
     ) -> Result<mpsc::Receiver<AgentEvent>, AIProviderError> {
+        let total_start = Instant::now();
         println!("[Agent] chat_stream called with message: {}", user_message);
         let (tx, rx) = mpsc::channel(100);
 
         self.messages.push(ChatMessage::user(user_message.clone()));
         println!(
-            "[Agent] Added user message to history, total messages: {}",
-            self.messages.len()
+            "[Agent] Added user message to history, total messages: {} (elapsed: {:?})",
+            self.messages.len(),
+            total_start.elapsed()
         );
 
         let tools = get_tool_definitions(self.db_type);
         println!(
-            "[Agent] Got {} tool definitions for {:?}",
+            "[Agent] Got {} tool definitions for {:?} (elapsed: {:?})",
             tools.len(),
-            self.db_type
+            self.db_type,
+            total_start.elapsed()
         );
 
-        println!("[Agent] Spawning background task for streaming...");
+        println!(
+            "[Agent] Spawning background task for streaming... (elapsed: {:?})",
+            total_start.elapsed()
+        );
         tokio::spawn(async move {
+            let task_start = Instant::now();
             println!("[Agent] Background task started");
             if let Err(e) = self.stream_with_tools(tx.clone(), tools).await {
-                println!("[Agent] stream_with_tools error: {}", e);
+                println!(
+                    "[Agent] stream_with_tools error: {} (elapsed: {:?})",
+                    e,
+                    task_start.elapsed()
+                );
                 let _ = tx.send(AgentEvent::Error(e.to_string())).await;
             }
-            println!("[Agent] Background task finished");
+            println!(
+                "[Agent] Background task finished (total task time: {:?})",
+                task_start.elapsed()
+            );
         });
 
-        println!("[Agent] Returning receiver");
+        println!(
+            "[Agent] Returning receiver (elapsed: {:?})",
+            total_start.elapsed()
+        );
         Ok(rx)
     }
 
@@ -200,20 +218,31 @@ impl Agent {
         tx: mpsc::Sender<AgentEvent>,
         tools: Vec<super::providers::ToolDefinition>,
     ) -> Result<(), AIProviderError> {
+        let stream_start = Instant::now();
         println!("[Agent] stream_with_tools called");
         let mut continue_loop = true;
         let mut full_content = String::new();
+        let mut loop_iteration = 0;
 
         while continue_loop {
+            loop_iteration += 1;
+            let loop_start = Instant::now();
             println!(
-                "[Agent] Calling provider.chat_stream with model: {:?}",
-                self.model
+                "[Agent] Loop iteration #{} - Calling provider.chat_stream with model: {:?} (total elapsed: {:?})",
+                loop_iteration,
+                self.model,
+                stream_start.elapsed()
             );
+            let api_call_start = Instant::now();
             let mut stream = self
                 .provider
                 .chat_stream(&self.model, self.messages.clone(), &tools)
                 .await?;
-            println!("[Agent] Got stream from provider");
+            println!(
+                "[Agent] Got stream from provider (API call took: {:?}, total elapsed: {:?})",
+                api_call_start.elapsed(),
+                stream_start.elapsed()
+            );
 
             let mut current_content = String::new();
             let mut tool_calls: Vec<ToolCall> = Vec::new();
@@ -278,8 +307,9 @@ impl Agent {
                             }
                             FinishReason::ToolCalls => {
                                 println!(
-                                    "[Agent] FinishReason::ToolCalls - executing {} tools",
-                                    tool_calls.len()
+                                    "[Agent] FinishReason::ToolCalls - executing {} tools (loop iteration took: {:?})",
+                                    tool_calls.len(),
+                                    loop_start.elapsed()
                                 );
                                 self.messages.push(ChatMessage::assistant_with_tool_calls(
                                     if current_content.is_empty() {
@@ -291,7 +321,18 @@ impl Agent {
                                 ));
 
                                 for tool_call in &tool_calls {
+                                    let tool_start = Instant::now();
+                                    println!(
+                                        "[Agent] Executing tool: {} (total elapsed: {:?})",
+                                        tool_call.name,
+                                        stream_start.elapsed()
+                                    );
                                     let result = self.execute_tool(tool_call).await;
+                                    println!(
+                                        "[Agent] Tool {} completed in {:?}",
+                                        tool_call.name,
+                                        tool_start.elapsed()
+                                    );
                                     let result_str = serde_json::to_string_pretty(&result)
                                         .unwrap_or_else(|_| "Error serializing result".to_string());
 
@@ -308,11 +349,14 @@ impl Agent {
                                 }
 
                                 println!(
-                                    "[Agent] Tool calls executed, breaking inner loop to make new API call"
+                                    "[Agent] Tool calls executed, breaking inner loop to make new API call (loop iteration #{} took: {:?})",
+                                    loop_iteration,
+                                    loop_start.elapsed()
                                 );
                                 println!(
-                                    "[Agent] Message history now has {} messages",
-                                    self.messages.len()
+                                    "[Agent] Message history now has {} messages (total elapsed: {:?})",
+                                    self.messages.len(),
+                                    stream_start.elapsed()
                                 );
                                 tool_calls.clear();
                                 current_content.clear();
@@ -337,11 +381,16 @@ impl Agent {
             }
         }
 
+        println!(
+            "[Agent] stream_with_tools completed (total time: {:?})",
+            stream_start.elapsed()
+        );
         Ok(())
     }
 
     async fn execute_tool(&self, tool_call: &ToolCall) -> ToolResult {
-        match tool_call.name.as_str() {
+        let tool_start = Instant::now();
+        let result = match tool_call.name.as_str() {
             "list_tables" => self.execute_list_tables().await,
             "get_table_columns" => {
                 match serde_json::from_str::<GetTableColumnsArgs>(&tool_call.arguments) {
@@ -370,7 +419,13 @@ impl Agent {
             _ => ToolResult::Error(ToolError {
                 error: format!("Unknown tool: {}", tool_call.name),
             }),
-        }
+        };
+        println!(
+            "[Agent] execute_tool '{}' took {:?}",
+            tool_call.name,
+            tool_start.elapsed()
+        );
+        result
     }
 
     async fn execute_list_tables(&self) -> ToolResult {

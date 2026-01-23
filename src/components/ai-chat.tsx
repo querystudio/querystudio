@@ -263,7 +263,7 @@ const MessageBubble = memo(function MessageBubble({
                 ))}
               </div>
             )}
-            <div className="prose prose-sm prose-invert max-w-none prose-p:my-0.5 prose-ul:my-0.5 prose-ol:my-0.5 prose-li:my-0 prose-table:my-1.5 prose-headings:my-1">
+            <div className="prose prose-sm prose-invert max-w-none prose-p:my-0.5 prose-ul:my-0.5 prose-ol:my-0.5 prose-li:my-0 prose-table:my-1.5 prose-headings:my-1 prose-hr:hidden">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 components={{
@@ -326,7 +326,7 @@ const MessageBubble = memo(function MessageBubble({
               </div>
             )}
             {message.content ? (
-              <div className="prose prose-sm prose-invert max-w-none prose-p:my-0.5 prose-ul:my-0.5 prose-ol:my-0.5 prose-li:my-0 prose-table:my-1.5 prose-headings:my-1">
+              <div className="prose prose-sm prose-invert max-w-none prose-p:my-0.5 prose-ul:my-0.5 prose-ol:my-0.5 prose-li:my-0 prose-table:my-1.5 prose-headings:my-1 prose-hr:hidden">
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   components={{
@@ -413,6 +413,14 @@ export const AIChat = memo(function AIChat() {
     }
     return "gpt-5";
   });
+
+  // Clean up invalid model from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(SELECTED_MODEL_KEY);
+    if (saved && !AI_MODELS.some((m) => m.id === saved)) {
+      localStorage.removeItem(SELECTED_MODEL_KEY);
+    }
+  }, []);
 
   const agentRef = useRef<AIAgent | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -530,10 +538,17 @@ export const AIChat = memo(function AIChat() {
 
     setCurrentSessionId(sessionId);
     setMessages(session.messages);
-    setSelectedModel(session.model as ModelId);
+
+    // Migrate old model values to gpt-5
+    const validModel = AI_MODELS.some((m) => m.id === session.model)
+      ? (session.model as ModelId)
+      : "gpt-5";
+    setSelectedModel(validModel);
 
     if (agentRef.current) {
       agentRef.current.loadFromSession(session);
+      // Ensure agent uses the valid model
+      agentRef.current.setModel(validModel);
     }
   };
 
@@ -888,100 +903,106 @@ export const AIChat = memo(function AIChat() {
 
   return (
     <div className="flex h-full flex-col">
-      {/* Action Bar */}
-      <div className="flex items-center justify-end gap-1 px-2 py-1.5 border-b border-border/50">
-        {/* Chat History Dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7"
-              title="Chat History"
-            >
-              <History className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-72">
-            <div className="px-2 py-1.5">
-              <p className="text-xs font-medium text-muted-foreground">
-                Recent Chats
-              </p>
-            </div>
-            <DropdownMenuSeparator />
-            <ScrollArea className="max-h-64">
-              {connectionSessions.length === 0 ? (
-                <div className="px-2 py-4 text-center text-xs text-muted-foreground">
-                  No chat history yet
-                </div>
-              ) : (
-                connectionSessions
-                  .sort((a, b) => b.updatedAt - a.updatedAt)
-                  .slice(0, 20)
-                  .map((session) => (
-                    <DropdownMenuItem
-                      key={session.id}
-                      className="flex items-center justify-between gap-2 cursor-pointer"
-                      onClick={() => handleSelectSession(session.id)}
-                    >
-                      <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <MessageSquare className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                        <span className="truncate text-sm">
-                          {session.title}
-                        </span>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0 shrink-0 opacity-50 hover:opacity-100"
-                        onClick={(e) => handleDeleteSession(session.id, e)}
+      {/* Header */}
+      <div className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0">
+        <div className="flex items-center gap-2">
+          <Bot className="h-4 w-4 text-primary" />
+          <span className="font-medium text-sm">Querybuddy</span>
+        </div>
+        <div className="flex items-center gap-0.5">
+          {/* Chat History Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                title="Chat History"
+              >
+                <History className="h-3.5 w-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-72">
+              <div className="px-2 py-1.5">
+                <p className="text-xs font-medium text-muted-foreground">
+                  Recent Chats
+                </p>
+              </div>
+              <DropdownMenuSeparator />
+              <ScrollArea className="max-h-64">
+                {connectionSessions.length === 0 ? (
+                  <div className="px-2 py-4 text-center text-xs text-muted-foreground">
+                    No chat history yet
+                  </div>
+                ) : (
+                  connectionSessions
+                    .sort((a, b) => b.updatedAt - a.updatedAt)
+                    .slice(0, 20)
+                    .map((session) => (
+                      <DropdownMenuItem
+                        key={session.id}
+                        className="flex items-center justify-between gap-2 cursor-pointer"
+                        onClick={() => handleSelectSession(session.id)}
                       >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </DropdownMenuItem>
-                  ))
-              )}
-            </ScrollArea>
-          </DropdownMenuContent>
-        </DropdownMenu>
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <MessageSquare className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                          <span className="truncate text-sm">
+                            {session.title}
+                          </span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 shrink-0 opacity-50 hover:opacity-100"
+                          onClick={(e) => handleDeleteSession(session.id, e)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </DropdownMenuItem>
+                    ))
+                )}
+              </ScrollArea>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-        {/* New Chat */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7"
-          onClick={handleNewChat}
-          title="New Chat"
-        >
-          <Plus className="h-4 w-4" />
-        </Button>
+          {/* New Chat */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            onClick={handleNewChat}
+            title="New Chat"
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </Button>
 
-        {/* Clear Chat */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7"
-          onClick={handleClearChat}
-          disabled={messages.length === 0}
-          title="Clear Chat"
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
+          {/* Clear Chat */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            onClick={handleClearChat}
+            disabled={messages.length === 0}
+            title="Clear Chat"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
 
-        {/* Settings */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7"
-          onClick={() => {
-            setTempOpenaiKey(openaiApiKey);
-            setTempAnthropicKey(anthropicApiKey);
-            setTempGoogleKey(googleApiKey);
-            setShowSettings(true);
-          }}
-        >
-          <Settings className="h-4 w-4" />
-        </Button>
+          {/* Settings */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            onClick={() => {
+              setTempOpenaiKey(openaiApiKey);
+              setTempAnthropicKey(anthropicApiKey);
+              setTempGoogleKey(googleApiKey);
+              setShowSettings(true);
+            }}
+          >
+            <Settings className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       </div>
 
       {/* Messages */}
@@ -1084,7 +1105,7 @@ export const AIChat = memo(function AIChat() {
 
           <div className="flex items-center justify-between">
             <Select value={selectedModel} onValueChange={handleModelChange}>
-              <SelectTrigger className="h-8 w-48 text-xs">
+              <SelectTrigger className="h-8 w-48 text-xs rounded-xl">
                 <SelectValue placeholder="GPT-5" />
               </SelectTrigger>
               <SelectContent>

@@ -23,7 +23,7 @@
     "accent": "oklch(0.32 0.005 285)",
     "accentForeground": "oklch(0.93 0 0)",
     "destructive": "oklch(0.65 0.2 25)",
-    "border": "oklch(0.35 0.005 285)",
+    "border": "oklch(0.28 0.005 285)",
     "input": "oklch(0.3 0.005 285)",
     "ring": "oklch(0.55 0.01 285)",
     "chart1": "oklch(0.55 0.2 250)",
@@ -37,7 +37,7 @@
     "sidebarPrimaryForeground": "oklch(0.93 0 0)",
     "sidebarAccent": "oklch(0.3 0.005 285)",
     "sidebarAccentForeground": "oklch(0.93 0 0)",
-    "sidebarBorder": "oklch(0.35 0.005 285)",
+    "sidebarBorder": "oklch(0.28 0.005 285)",
     "sidebarRing": "oklch(0.55 0.01 285)"
   }
 }

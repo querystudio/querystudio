@@ -272,7 +272,7 @@ export const Sidebar = memo(function Sidebar() {
         />
 
         {/* Header - traffic lights are above this in the titlebar */}
-        <div className="flex items-center justify-between border-b border-border p-3">
+        <div className="flex items-center justify-between p-3">
           <div className="flex items-center gap-2 overflow-hidden min-w-0 flex-1">
             <DatabaseIcon type={connection.db_type || "postgres"} />
             <div className="flex flex-col overflow-hidden min-w-0">

@@ -31,12 +31,6 @@ export type ModelId = AIModelId;
 export function getModelProvider(
   modelId: ModelId,
 ): "openai" | "anthropic" | "google" {
-  if (modelId.startsWith("claude")) {
-    return "anthropic";
-  }
-  if (modelId.startsWith("gemini")) {
-    return "google";
-  }
   return "openai";
 }
 
