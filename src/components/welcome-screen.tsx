@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { Plus, Pencil, Key } from "lucide-react";
+import { Plus, Pencil, Key, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useSavedConnections, useCanSaveConnection } from "@/lib/hooks";
+import {
+  useSavedConnections,
+  useCanSaveConnection,
+  useDeleteSavedConnection,
+} from "@/lib/hooks";
 import {
   getLastConnectionId,
   useLicenseStore,
@@ -10,18 +14,7 @@ import {
 import type { SavedConnection } from "@/lib/types";
 import { LicenseSettings } from "@/components/license-settings";
 import { api } from "@/lib/api";
-import { Badge } from "@/components/ui/badge";
 import { DatabaseIcon } from "./sidebar";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 
 interface WelcomeScreenProps {
   onNewConnection: () => void;
@@ -40,6 +33,12 @@ export function WelcomeScreen({
   const { setStatus } = useLicenseStore();
   const { canSave, currentSaved, maxSaved, isPro } = useCanSaveConnection();
   const autoReconnect = useAIQueryStore((s) => s.autoReconnect);
+  const deleteConnection = useDeleteSavedConnection();
+
+  const handleDelete = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    deleteConnection.mutate(id);
+  };
 
   // Load license status on mount
   useEffect(() => {
@@ -79,7 +78,7 @@ export function WelcomeScreen({
             ? "PostgreSQL"
             : connection.db_type === "sqlite"
               ? "SQLite"
-              : "Unkown";
+              : "Unknown";
 
     if ("connection_string" in connection.config) {
       return `${dbLabel} · Connection string`;
@@ -89,7 +88,7 @@ export function WelcomeScreen({
   };
 
   return (
-    <div className="flex h-screen w-full flex-col bg-muted/10">
+    <div className="flex h-screen w-full flex-col">
       <div
         data-tauri-drag-region
         className="h-7 w-full shrink-0"
@@ -97,92 +96,89 @@ export function WelcomeScreen({
       />
 
       <div className="flex flex-1 items-center justify-center p-4">
-        <Card className="w-full max-w-105 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-            <div className="flex flex-col gap-1">
-              <CardTitle className="text-xl">QueryStudio</CardTitle>
-              <CardDescription>Manage your connections</CardDescription>
-            </div>
+        <div className="w-full max-w-sm">
+          <div className="mb-6 flex items-center justify-between">
+            <h1 className="text-lg font-medium">Connections</h1>
             <div className="flex items-center gap-2">
-              <Badge
-                variant={isPro ? "default" : "secondary"}
-                className="text-xs"
-              >
+              <span className="text-xs text-muted-foreground">
                 {isPro ? "Pro" : `${currentSaved}/${maxSaved}`}
-              </Badge>
+              </span>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setLicenseSettingsOpen(true)}
                 title="License Settings"
-                className="h-8 w-8"
+                className="h-7 w-7"
               >
-                <Key className="h-4 w-4 text-muted-foreground" />
+                <Key className="h-3.5 w-3.5 text-muted-foreground" />
               </Button>
             </div>
-          </CardHeader>
-          <Separator />
-          <CardContent className="p-0">
+          </div>
+
+          <div className="mb-4">
             {!isLoading && savedConnections && savedConnections.length > 0 ? (
-              <ScrollArea className="h-75 w-full p-4">
-                <div className="flex flex-col gap-1">
-                  {savedConnections.map((connection) => (
-                    <div
-                      key={connection.id}
-                      className="group flex w-full cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-left transition-colors hover:bg-accent hover:text-accent-foreground"
-                      onClick={() => onSelectConnection(connection)}
-                    >
-                      <DatabaseIcon type={connection.db_type || "postgres"} />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium leading-none">
-                          {connection.name}
-                        </p>
-                        <p className="mt-1 truncate text-xs text-muted-foreground">
-                          {getConnectionDescription(connection)}
-                        </p>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onEditConnection(connection);
-                        }}
-                        className="h-7 w-7 opacity-0 transition-opacity group-hover:opacity-100"
-                        title="Edit connection"
-                      >
-                        <Pencil className="h-3 w-3 text-muted-foreground" />
-                      </Button>
+              <div className="flex max-h-72 flex-col gap-0.5 overflow-y-auto">
+                {savedConnections.map((connection) => (
+                  <div
+                    key={connection.id}
+                    className="group flex w-full cursor-pointer items-center gap-3 rounded px-2 py-2 text-left transition-colors hover:bg-muted"
+                    onClick={() => onSelectConnection(connection)}
+                  >
+                    <DatabaseIcon type={connection.db_type || "postgres"} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm">{connection.name}</p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {getConnectionDescription(connection)}
+                      </p>
                     </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            ) : (
-              <div className="flex h-50 items-center justify-center p-4 text-center text-sm text-muted-foreground">
-                No connections saved yet.
-                <br />
-                Create one to get started.
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEditConnection(connection);
+                      }}
+                      className="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100"
+                      title="Edit connection"
+                    >
+                      <Pencil className="h-3 w-3 text-muted-foreground" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={(e) => handleDelete(e, connection.id)}
+                      className="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100"
+                      title="Delete connection"
+                    >
+                      <Trash2 className="h-3 w-3 text-muted-foreground" />
+                    </Button>
+                  </div>
+                ))}
               </div>
+            ) : (
+              <p className="py-8 text-center text-sm text-muted-foreground">
+                No connections yet
+              </p>
             )}
-          </CardContent>
-          <Separator />
-          <CardFooter className="flex-col gap-3 bg-muted/5 p-4">
-            <Button
-              onClick={onNewConnection}
-              className="w-full"
-              disabled={!canSave}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              New Connection
-            </Button>
-            <p className="text-center text-xs text-muted-foreground">
-              <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
-                ⌘K
-              </kbd>{" "}
-              to open command palette
-            </p>
-          </CardFooter>
-        </Card>
+          </div>
+
+          <Button
+            onClick={onNewConnection}
+            variant="outline"
+            className="w-full"
+            disabled={!canSave}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            New Connection
+          </Button>
+
+          <p className="mt-4 text-center text-xs text-muted-foreground">
+            <kbd className="rounded border px-1.5 py-0.5 font-mono text-[10px]">
+              ⌘K
+            </kbd>{" "}
+            command palette
+          </p>
+        </div>
       </div>
 
       <LicenseSettings
