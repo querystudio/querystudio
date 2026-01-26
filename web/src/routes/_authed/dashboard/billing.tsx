@@ -68,7 +68,6 @@ function BillingPage() {
               <li>Unlimited connections</li>
               <p>Commercial use allowed</p>
               <li>Priority support</li>
-              <li>2 devices</li>
               <li>Lifetime updates</li>
             </ul>
           </div>
@@ -88,9 +87,7 @@ function BillingPage() {
               <ul className='mt-3 space-y-1 text-sm text-muted-foreground'>
                 <li>Unlimited connections</li>
                 <p>Commercial use allowed</p>
-
                 <li>Priority support</li>
-                <li>2 devices</li>
                 <li>Lifetime updates</li>
               </ul>
             </div>
