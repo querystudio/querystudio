@@ -12,5 +12,6 @@ pg_restore \
   ./db_dump.bak \
   && echo "-complete-"
 
+postgresql://postgres:HmGaoVKfNXbwRcMSHdXwtWpkFISMpuiT@caboose.proxy.rlwy.net:28809/railway
 
-postgresql://postgres.h91jdv1nofpr:pscale_pw_JinihLfkIbm6NHVc1RhADFUeElDURYY2@gcp-europe-west1-1.pg.psdb.cloud:6432/postgres?sslmode=require
+postgresql://postgres.ev29lg5a30rn:pscale_pw_ushqnnvAzds0rK3um0zJyfjow9Y4tDpE@gcp-europe-west1-1.pg.psdb.cloud:5432/postgres?sslmode=require
