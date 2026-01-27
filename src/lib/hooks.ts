@@ -176,6 +176,81 @@ export function useDeleteRow(connectionId: string) {
   });
 }
 
+// MongoDB document operations
+export function useInsertDocument(connectionId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      collection,
+      document,
+    }: {
+      schema: string;
+      collection: string;
+      document: string;
+    }) => {
+      return api.insertDocument(connectionId, collection, document);
+    },
+    onSuccess: (_, { schema, collection }) => {
+      queryClient.invalidateQueries({
+        queryKey: ["tableData", connectionId, schema, collection],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["tableCount", connectionId, schema, collection],
+      });
+    },
+  });
+}
+
+export function useUpdateDocument(connectionId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      collection,
+      filter,
+      update,
+    }: {
+      schema: string;
+      collection: string;
+      filter: string;
+      update: string;
+    }) => {
+      return api.updateDocument(connectionId, collection, filter, update);
+    },
+    onSuccess: (_, { schema, collection }) => {
+      queryClient.invalidateQueries({
+        queryKey: ["tableData", connectionId, schema, collection],
+      });
+    },
+  });
+}
+
+export function useDeleteDocument(connectionId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      collection,
+      filter,
+    }: {
+      schema: string;
+      collection: string;
+      filter: string;
+    }) => {
+      return api.deleteDocument(connectionId, collection, filter);
+    },
+    onSuccess: (_, { schema, collection }) => {
+      queryClient.invalidateQueries({
+        queryKey: ["tableData", connectionId, schema, collection],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["tableCount", connectionId, schema, collection],
+      });
+    },
+  });
+}
+
 export function useSavedConnections() {
   return useQuery({
     queryKey: ["savedConnections"],

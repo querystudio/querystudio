@@ -13,6 +13,7 @@ import {
   Braces,
 } from "lucide-react";
 import Editor, { OnMount } from "@monaco-editor/react";
+import { RedisConsole } from "@/components/redis-console";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -658,6 +659,12 @@ export const QueryEditor = memo(function QueryEditor({
           collections.
         </p>
       </div>
+    );
+  }
+
+  if (isRedis) {
+    return (
+      <RedisConsole tabId={tabId} paneId={paneId} connectionId={connectionId} />
     );
   }
 

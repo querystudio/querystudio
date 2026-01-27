@@ -40,6 +40,7 @@ const DATABASE_CONFIGS: Record<
   mysql: { port: "3306", database: "mysql", username: "root" },
   sqlite: { port: "0", database: "", username: "" },
   redis: { port: "6379", database: "0", username: "" },
+  mongodb: { port: "27017", database: "test", username: "" },
 };
 
 export function EditConnectionDialog({

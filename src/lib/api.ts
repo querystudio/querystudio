@@ -53,6 +53,30 @@ export const api = {
   getTableCount: (connectionId: string, schema: string, table: string) =>
     invoke<number>("get_table_count", { connectionId, schema, table }),
 
+  // MongoDB document operations
+  insertDocument: (
+    connectionId: string,
+    collection: string,
+    document: string,
+  ) =>
+    invoke<string>("insert_document", { connectionId, collection, document }),
+
+  updateDocument: (
+    connectionId: string,
+    collection: string,
+    filter: string,
+    update: string,
+  ) =>
+    invoke<number>("update_document", {
+      connectionId,
+      collection,
+      filter,
+      update,
+    }),
+
+  deleteDocument: (connectionId: string, collection: string, filter: string) =>
+    invoke<number>("delete_document", { connectionId, collection, filter }),
+
   // Storage operations - now using SQLite via storage module
   getSavedConnections: () => storage.getSavedConnections(),
 

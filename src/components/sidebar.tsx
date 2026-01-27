@@ -221,11 +221,13 @@ export const Sidebar = memo(function Sidebar() {
                     schema: table.schema,
                     name: table.name,
                   });
+                }}
+                onDoubleClick={() => {
                   if (connection?.id) {
                     openDataTab(connection.id, table.schema, table.name);
                   }
                 }}
-                title={`${table.schema}.${table.name}`}
+                title={`${table.schema}.${table.name} (double-click to open)`}
               >
                 <Table className="h-3 w-3" />
               </Button>
@@ -363,6 +365,8 @@ export const Sidebar = memo(function Sidebar() {
                                     schema: table.schema,
                                     name: table.name,
                                   });
+                                }}
+                                onDoubleClick={() => {
                                   if (connection?.id) {
                                     openDataTab(
                                       connection.id,
@@ -371,6 +375,7 @@ export const Sidebar = memo(function Sidebar() {
                                     );
                                   }
                                 }}
+                                title="Double-click to open in tab"
                               >
                                 <Table className="h-3 w-3 shrink-0" />
                                 <span className="truncate">{table.name}</span>

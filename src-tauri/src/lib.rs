@@ -17,11 +17,11 @@ use license::{
 use providers::{ColumnInfo, QueryResult, TableInfo};
 use std::sync::Arc;
 use storage::CONNECTIONS_DB;
-use tauri_plugin_sql::{Migration, MigrationKind};
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem, Submenu},
     Emitter, Manager, State,
 };
+use tauri_plugin_sql::{Migration, MigrationKind};
 use terminal::{
     terminal_close, terminal_create, terminal_resize, terminal_write, TerminalManager,
     TerminalState,
@@ -125,6 +125,43 @@ async fn get_table_count(
 }
 
 #[tauri::command]
+async fn insert_document(
+    state: State<'_, DbState>,
+    connection_id: String,
+    collection: String,
+    document: String,
+) -> Result<String, String> {
+    state
+        .insert_document(&connection_id, &collection, &document)
+        .await
+}
+
+#[tauri::command]
+async fn update_document(
+    state: State<'_, DbState>,
+    connection_id: String,
+    collection: String,
+    filter: String,
+    update: String,
+) -> Result<u64, String> {
+    state
+        .update_document(&connection_id, &collection, &filter, &update)
+        .await
+}
+
+#[tauri::command]
+async fn delete_document(
+    state: State<'_, DbState>,
+    connection_id: String,
+    collection: String,
+    filter: String,
+) -> Result<u64, String> {
+    state
+        .delete_document(&connection_id, &collection, &filter)
+        .await
+}
+
+#[tauri::command]
 fn get_connection_count(state: State<'_, DbState>) -> usize {
     state.connection_count()
 }
@@ -141,11 +178,10 @@ pub fn run() {
     let debug_state = Arc::new(DebugState::new());
 
     // Define SQLite migrations for connections storage
-    let migrations = vec![
-        Migration {
-            version: 1,
-            description: "create_connections_table",
-            sql: r#"
+    let migrations = vec![Migration {
+        version: 1,
+        description: "create_connections_table",
+        sql: r#"
                 CREATE TABLE IF NOT EXISTS connections (
                     id TEXT PRIMARY KEY NOT NULL,
                     name TEXT NOT NULL,
@@ -158,9 +194,8 @@ pub fn run() {
                     username TEXT
                 );
             "#,
-            kind: MigrationKind::Up,
-        },
-    ];
+        kind: MigrationKind::Up,
+    }];
 
     tauri::Builder::default()
         .plugin(
@@ -346,6 +381,10 @@ pub fn run() {
             execute_query,
             get_table_count,
             get_connection_count,
+            // MongoDB document commands
+            insert_document,
+            update_document,
+            delete_document,
             // AI commands
             ai_get_models,
             ai_validate_key,

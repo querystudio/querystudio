@@ -3,7 +3,7 @@ use super::{
     QueryResult, TableInfo,
 };
 use mongodb::{
-    bson::{doc, Bson, Document},
+    bson::{doc, oid::ObjectId, Bson, Document},
     options::ClientOptions,
     Client, Collection,
 };
@@ -394,5 +394,105 @@ impl DatabaseProvider for MongoDbProvider {
 
     async fn get_table_count(&self, _schema: &str, table: &str) -> Result<i64, ProviderError> {
         self.get_collection_count(table).await
+    }
+
+    async fn insert_document(
+        &self,
+        collection: &str,
+        document: &str,
+    ) -> Result<String, ProviderError> {
+        let db = self.get_database();
+        let coll: Collection<Document> = db.collection(collection);
+
+        // Parse the JSON document
+        let doc: Document = serde_json::from_str(document)
+            .map_err(|e| ProviderError::new(format!("Invalid JSON document: {}", e)))?;
+
+        // Insert the document
+        let result = coll
+            .insert_one(doc)
+            .await
+            .map_err(|e| ProviderError::new(format!("Failed to insert document: {}", e)))?;
+
+        // Return the inserted ID as a string
+        let id = match result.inserted_id {
+            Bson::ObjectId(oid) => oid.to_hex(),
+            other => Self::bson_to_json(&other).to_string(),
+        };
+
+        Ok(id)
+    }
+
+    async fn update_document(
+        &self,
+        collection: &str,
+        filter: &str,
+        update: &str,
+    ) -> Result<u64, ProviderError> {
+        let db = self.get_database();
+        let coll: Collection<Document> = db.collection(collection);
+
+        // Parse the filter JSON
+        let filter_doc: Document = serde_json::from_str(filter)
+            .map_err(|e| ProviderError::new(format!("Invalid filter JSON: {}", e)))?;
+
+        // Convert _id string to ObjectId if present
+        let filter_doc = Self::convert_id_field(filter_doc)?;
+
+        // Parse the update JSON
+        let update_doc: Document = serde_json::from_str(update)
+            .map_err(|e| ProviderError::new(format!("Invalid update JSON: {}", e)))?;
+
+        // Wrap in $set if not already using update operators
+        let update_doc = if update_doc.keys().any(|k| k.starts_with('$')) {
+            update_doc
+        } else {
+            doc! { "$set": update_doc }
+        };
+
+        // Update the document
+        let result = coll
+            .update_one(filter_doc, update_doc)
+            .await
+            .map_err(|e| ProviderError::new(format!("Failed to update document: {}", e)))?;
+
+        Ok(result.modified_count)
+    }
+
+    async fn delete_document(&self, collection: &str, filter: &str) -> Result<u64, ProviderError> {
+        let db = self.get_database();
+        let coll: Collection<Document> = db.collection(collection);
+
+        // Parse the filter JSON
+        let filter_doc: Document = serde_json::from_str(filter)
+            .map_err(|e| ProviderError::new(format!("Invalid filter JSON: {}", e)))?;
+
+        // Convert _id string to ObjectId if present
+        let filter_doc = Self::convert_id_field(filter_doc)?;
+
+        // Delete the document
+        let result = coll
+            .delete_one(filter_doc)
+            .await
+            .map_err(|e| ProviderError::new(format!("Failed to delete document: {}", e)))?;
+
+        Ok(result.deleted_count)
+    }
+}
+
+impl MongoDbProvider {
+    /// Convert _id field from string to ObjectId if it looks like a valid ObjectId
+    fn convert_id_field(mut doc: Document) -> Result<Document, ProviderError> {
+        if let Some(id_value) = doc.get("_id") {
+            if let Bson::String(id_str) = id_value {
+                // Try to parse as ObjectId (24 hex characters)
+                if id_str.len() == 24 {
+                    if let Ok(oid) = ObjectId::parse_str(id_str) {
+                        doc.insert("_id", Bson::ObjectId(oid));
+                    }
+                }
+            }
+        }
+        Ok(doc)
     }
 }

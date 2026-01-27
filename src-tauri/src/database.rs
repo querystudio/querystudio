@@ -112,6 +112,46 @@ impl ConnectionManager {
             .await
             .map_err(|e| e.to_string())
     }
+
+    pub async fn insert_document(
+        &self,
+        connection_id: &str,
+        collection: &str,
+        document: &str,
+    ) -> Result<String, String> {
+        let provider = self.get_provider(connection_id)?;
+        provider
+            .insert_document(collection, document)
+            .await
+            .map_err(|e| e.to_string())
+    }
+
+    pub async fn update_document(
+        &self,
+        connection_id: &str,
+        collection: &str,
+        filter: &str,
+        update: &str,
+    ) -> Result<u64, String> {
+        let provider = self.get_provider(connection_id)?;
+        provider
+            .update_document(collection, filter, update)
+            .await
+            .map_err(|e| e.to_string())
+    }
+
+    pub async fn delete_document(
+        &self,
+        connection_id: &str,
+        collection: &str,
+        filter: &str,
+    ) -> Result<u64, String> {
+        let provider = self.get_provider(connection_id)?;
+        provider
+            .delete_document(collection, filter)
+            .await
+            .map_err(|e| e.to_string())
+    }
 }
 
 pub async fn test_connection(config: ConnectionConfig) -> Result<(), String> {

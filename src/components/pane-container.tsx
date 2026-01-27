@@ -17,6 +17,7 @@ import {
 } from "@/lib/layout-store";
 import { useShallow } from "zustand/react/shallow";
 import { tabRegistry } from "@/lib/tab-sdk";
+import { PaneWelcomeScreen } from "@/components/pane-welcome-screen";
 
 // Context to track global drag state
 interface DragContextType {
@@ -233,7 +234,21 @@ const LeafPaneRenderer = memo(function LeafPaneRenderer({
     [dragOverZone, moveTabToPane, connectionId, pane.id],
   );
 
+  // Check if pane has no tabs at all
+  const hasTabs = pane.tabs.length > 0;
+
   const tabContent = useMemo(() => {
+    // Show welcome screen when there are no tabs
+    if (!hasTabs) {
+      return (
+        <PaneWelcomeScreen
+          connectionId={connectionId}
+          paneId={pane.id}
+          dbType={dbType}
+        />
+      );
+    }
+
     if (!activeTab) {
       return (
         <div className="flex h-full items-center justify-center text-muted-foreground">
@@ -268,7 +283,7 @@ const LeafPaneRenderer = memo(function LeafPaneRenderer({
         </div>
       </div>
     );
-  }, [activeTab, pane.id, connectionId]);
+  }, [activeTab, pane.id, connectionId, hasTabs, dbType]);
 
   return (
     <div

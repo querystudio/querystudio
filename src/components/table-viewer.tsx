@@ -48,6 +48,7 @@ import {
   useTableColumns,
   useTableCount,
   useDeleteRow,
+  useDeleteDocument,
 } from "@/lib/hooks";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -127,6 +128,9 @@ export const TableViewer = memo(function TableViewer({
   );
 
   const deleteRow = useDeleteRow(connectionId ?? "");
+  const deleteDocument = useDeleteDocument(connectionId ?? "");
+
+  const isMongoDB = connection?.db_type === "mongodb";
 
   if (!selectedTable) {
     return (
@@ -218,6 +222,32 @@ export const TableViewer = memo(function TableViewer({
 
   const handleDeleteConfirm = async () => {
     if (!deleteRowData || !columns || !connectionId) return;
+
+    // MongoDB uses document-based deletion
+    if (isMongoDB) {
+      const docId = deleteRowData["_id"];
+      if (!docId) {
+        toast.error("Cannot delete: document has no _id");
+        setDeleteDialogOpen(false);
+        return;
+      }
+
+      const filter = JSON.stringify({ _id: docId });
+
+      try {
+        await deleteDocument.mutateAsync({
+          schema: selectedTable.schema,
+          collection: selectedTable.name,
+          filter,
+        });
+        toast.success("Document deleted successfully");
+        setDeleteDialogOpen(false);
+        setDeleteRowData(null);
+      } catch (error) {
+        toast.error(`Delete failed: ${error}`);
+      }
+      return;
+    }
 
     const pkColumns = columns.filter((c) => c.is_primary_key);
     if (pkColumns.length === 0) {
@@ -486,10 +516,13 @@ export const TableViewer = memo(function TableViewer({
           >
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Delete Row</AlertDialogTitle>
+                <AlertDialogTitle>
+                  Delete {isMongoDB ? "Document" : "Row"}
+                </AlertDialogTitle>
                 <AlertDialogDescription>
-                  Are you sure you want to delete this row? This action cannot
-                  be undone.
+                  Are you sure you want to delete this{" "}
+                  {isMongoDB ? "document" : "row"}? This action cannot be
+                  undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -498,7 +531,9 @@ export const TableViewer = memo(function TableViewer({
                   onClick={handleDeleteConfirm}
                   className="bg-red-600 hover:bg-red-700"
                 >
-                  {deleteRow.isPending ? "Deleting..." : "Delete"}
+                  {deleteRow.isPending || deleteDocument.isPending
+                    ? "Deleting..."
+                    : "Delete"}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

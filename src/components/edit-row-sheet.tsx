@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 
 import { Badge } from "@/components/ui/badge";
-import { useUpdateRow } from "@/lib/hooks";
+import { useUpdateRow, useUpdateDocument } from "@/lib/hooks";
 import { toast } from "sonner";
 import { cn, quoteIdentifier, quoteTableRef } from "@/lib/utils";
 import type { ColumnInfo, DatabaseType } from "@/lib/types";
@@ -46,11 +46,20 @@ export function EditRowSheet({
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [nullFields, setNullFields] = useState<Set<string>>(new Set());
   const [originalData, setOriginalData] = useState<Record<string, unknown>>({});
+  const [mongoDocument, setMongoDocument] = useState<string>("{}");
   const updateRow = useUpdateRow(connectionId);
+  const updateDocument = useUpdateDocument(connectionId);
+
+  const isMongoDB = dbType === "mongodb";
 
   // Initialize form with row data when sheet opens
   useEffect(() => {
     if (open && rowData) {
+      // For MongoDB, set the document as JSON
+      if (isMongoDB) {
+        setMongoDocument(JSON.stringify(rowData, null, 2));
+      }
+
       const initial: Record<string, string> = {};
       const initialNulls = new Set<string>();
 
@@ -76,6 +85,44 @@ export function EditRowSheet({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // MongoDB uses a different update flow
+    if (isMongoDB) {
+      try {
+        // Validate JSON
+        const newDoc = JSON.parse(mongoDocument);
+
+        // Get the _id from the original data for the filter
+        const docId = originalData["_id"];
+        if (!docId) {
+          toast.error("Cannot update: document has no _id");
+          return;
+        }
+
+        const filter = JSON.stringify({ _id: docId });
+
+        // Remove _id from update to avoid trying to modify it
+        const { _id: _, ...updateFields } = newDoc;
+        const update = JSON.stringify(updateFields);
+
+        await updateDocument.mutateAsync({
+          schema,
+          collection: table,
+          filter,
+          update,
+        });
+        toast.success("Document updated successfully");
+        onOpenChange(false);
+        onSuccess?.();
+      } catch (error) {
+        if (error instanceof SyntaxError) {
+          toast.error("Invalid JSON document");
+        } else {
+          toast.error(`Update failed: ${error}`);
+        }
+      }
+      return;
+    }
 
     // Find primary key columns for WHERE clause
     const pkColumns = columns.filter((c) => c.is_primary_key);
@@ -269,9 +316,9 @@ export function EditRowSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-lg flex flex-col">
         <SheetHeader>
-          <SheetTitle>Edit Row</SheetTitle>
+          <SheetTitle>Edit {isMongoDB ? "Document" : "Row"}</SheetTitle>
           <SheetDescription>
-            Update row in {schema}.{table}
+            Update {isMongoDB ? "document" : "row"} in {schema}.{table}
           </SheetDescription>
         </SheetHeader>
 
@@ -280,105 +327,123 @@ export function EditRowSheet({
           className="flex flex-1 flex-col overflow-hidden min-h-0"
         >
           <div className="flex-1 overflow-y-auto min-h-0">
-            <div className="space-y-4 py-4 px-1">
-              {columns.map((col) => {
-                const isNull = nullFields.has(col.name);
-                const inputType = getInputType(col.data_type);
-                const useTextarea = shouldUseTextarea(col.data_type);
+            {isMongoDB ? (
+              <div className="space-y-4 py-4 px-1">
+                <div className="space-y-2">
+                  <Label htmlFor="mongo-document">JSON Document</Label>
+                  <Textarea
+                    id="mongo-document"
+                    value={mongoDocument}
+                    onChange={(e) => setMongoDocument(e.target.value)}
+                    placeholder='{"field": "value"}'
+                    className="min-h-[300px] font-mono text-sm"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Edit the JSON document. The _id field cannot be modified.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4 py-4 px-1">
+                {columns.map((col) => {
+                  const isNull = nullFields.has(col.name);
+                  const inputType = getInputType(col.data_type);
+                  const useTextarea = shouldUseTextarea(col.data_type);
 
-                return (
-                  <div key={col.name} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label
-                        htmlFor={col.name}
-                        className="flex items-center gap-2"
-                      >
-                        {col.name}
-                        <Badge
-                          variant="outline"
-                          className="text-[10px] font-normal"
+                  return (
+                    <div key={col.name} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label
+                          htmlFor={col.name}
+                          className="flex items-center gap-2"
                         >
-                          {col.data_type}
-                        </Badge>
-                        {col.is_primary_key && (
-                          <Badge variant="secondary" className="text-[10px]">
-                            PK
+                          {col.name}
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] font-normal"
+                          >
+                            {col.data_type}
                           </Badge>
+                          {col.is_primary_key && (
+                            <Badge variant="secondary" className="text-[10px]">
+                              PK
+                            </Badge>
+                          )}
+                        </Label>
+                        {col.is_nullable && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">
+                              NULL
+                            </span>
+                            <Switch
+                              checked={isNull}
+                              onCheckedChange={(checked) =>
+                                toggleNull(col.name, checked)
+                              }
+                            />
+                          </div>
                         )}
-                      </Label>
-                      {col.is_nullable && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground">
-                            NULL
-                          </span>
-                          <Switch
-                            checked={isNull}
-                            onCheckedChange={(checked) =>
-                              toggleNull(col.name, checked)
+                      </div>
+                      {useTextarea ? (
+                        <div className="group/input relative">
+                          <Textarea
+                            id={col.name}
+                            value={isNull ? "" : formData[col.name] || ""}
+                            onChange={(e) =>
+                              updateField(col.name, e.target.value)
                             }
+                            disabled={isNull}
+                            placeholder={
+                              isNull ? "NULL" : `Enter ${col.data_type}`
+                            }
+                            className="min-h-20 font-mono text-sm pr-8"
                           />
+                          <button
+                            type="button"
+                            onClick={() => handleCopy(formData[col.name] || "")}
+                            className={cn(
+                              "absolute right-2 top-2 p-1 rounded text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors opacity-0 group-hover/input:opacity-100",
+                              isNull && "hidden",
+                            )}
+                            title="Copy to clipboard"
+                          >
+                            <Copy className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="group/input relative">
+                          <Input
+                            id={col.name}
+                            type={inputType}
+                            value={isNull ? "" : formData[col.name] || ""}
+                            onChange={(e) =>
+                              updateField(col.name, e.target.value)
+                            }
+                            disabled={isNull}
+                            placeholder={
+                              isNull ? "NULL" : `Enter ${col.data_type}`
+                            }
+                            step={inputType === "number" ? "any" : undefined}
+                            className="pr-8"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleCopy(formData[col.name] || "")}
+                            className={cn(
+                              "absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors opacity-0 group-hover/input:opacity-100",
+                              isNull && "hidden",
+                            )}
+                            title="Copy to clipboard"
+                          >
+                            <Copy className="h-3 w-3" />
+                          </button>
                         </div>
                       )}
                     </div>
-                    {useTextarea ? (
-                      <div className="group/input relative">
-                        <Textarea
-                          id={col.name}
-                          value={isNull ? "" : formData[col.name] || ""}
-                          onChange={(e) =>
-                            updateField(col.name, e.target.value)
-                          }
-                          disabled={isNull}
-                          placeholder={
-                            isNull ? "NULL" : `Enter ${col.data_type}`
-                          }
-                          className="min-h-20 font-mono text-sm pr-8"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleCopy(formData[col.name] || "")}
-                          className={cn(
-                            "absolute right-2 top-2 p-1 rounded text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors opacity-0 group-hover/input:opacity-100",
-                            isNull && "hidden",
-                          )}
-                          title="Copy to clipboard"
-                        >
-                          <Copy className="h-3 w-3" />
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="group/input relative">
-                        <Input
-                          id={col.name}
-                          type={inputType}
-                          value={isNull ? "" : formData[col.name] || ""}
-                          onChange={(e) =>
-                            updateField(col.name, e.target.value)
-                          }
-                          disabled={isNull}
-                          placeholder={
-                            isNull ? "NULL" : `Enter ${col.data_type}`
-                          }
-                          step={inputType === "number" ? "any" : undefined}
-                          className="pr-8"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleCopy(formData[col.name] || "")}
-                          className={cn(
-                            "absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors opacity-0 group-hover/input:opacity-100",
-                            isNull && "hidden",
-                          )}
-                          title="Copy to clipboard"
-                        >
-                          <Copy className="h-3 w-3" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <SheetFooter className="shrink-0">
@@ -389,8 +454,11 @@ export function EditRowSheet({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={updateRow.isPending}>
-              {updateRow.isPending && (
+            <Button
+              type="submit"
+              disabled={updateRow.isPending || updateDocument.isPending}
+            >
+              {(updateRow.isPending || updateDocument.isPending) && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
               Save Changes

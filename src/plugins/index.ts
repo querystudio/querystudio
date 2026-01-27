@@ -13,13 +13,26 @@
 import type { LocalPluginModule } from "@/lib/local-plugins";
 
 // Import local plugins
-import testTabPlugin from "./test-tab";
+import sqlFormatterPlugin from "./sql-formatter";
+import mockDataGeneratorPlugin from "./mock-data-generator";
+import themeGeneratorPlugin from "./theme-generator";
+import dataExportPlugin from "./data-export";
 
 // ============================================================================
 // All Local Plugins
 // ============================================================================
 
-export const localPlugins: LocalPluginModule[] = [testTabPlugin];
+export const localPlugins: LocalPluginModule[] = [
+  sqlFormatterPlugin,
+  mockDataGeneratorPlugin,
+  themeGeneratorPlugin,
+  dataExportPlugin,
+];
 
-export { testTabPlugin };
+export {
+  sqlFormatterPlugin,
+  mockDataGeneratorPlugin,
+  themeGeneratorPlugin,
+  dataExportPlugin,
+};
 export const pluginCount = localPlugins.length;

@@ -198,6 +198,46 @@ pub trait DatabaseProvider: Send + Sync {
     ) -> Result<QueryResult, ProviderError>;
     async fn execute_query(&self, query: &str) -> Result<QueryResult, ProviderError>;
     async fn get_table_count(&self, schema: &str, table: &str) -> Result<i64, ProviderError>;
+
+    /// Insert a document into a collection (primarily for MongoDB)
+    /// The document is a JSON object as a string
+    async fn insert_document(
+        &self,
+        _collection: &str,
+        _document: &str,
+    ) -> Result<String, ProviderError> {
+        Err(
+            ProviderError::new("insert_document is not supported for this database type")
+                .with_hint("Use SQL INSERT statements via execute_query instead."),
+        )
+    }
+
+    /// Update a document in a collection (primarily for MongoDB)
+    /// filter and update are JSON objects as strings
+    async fn update_document(
+        &self,
+        _collection: &str,
+        _filter: &str,
+        _update: &str,
+    ) -> Result<u64, ProviderError> {
+        Err(
+            ProviderError::new("update_document is not supported for this database type")
+                .with_hint("Use SQL UPDATE statements via execute_query instead."),
+        )
+    }
+
+    /// Delete a document from a collection (primarily for MongoDB)
+    /// filter is a JSON object as a string
+    async fn delete_document(
+        &self,
+        _collection: &str,
+        _filter: &str,
+    ) -> Result<u64, ProviderError> {
+        Err(
+            ProviderError::new("delete_document is not supported for this database type")
+                .with_hint("Use SQL DELETE statements via execute_query instead."),
+        )
+    }
 }
 
 pub async fn create_provider(

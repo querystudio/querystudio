@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { useInsertRow } from "@/lib/hooks";
+import { useInsertRow, useInsertDocument } from "@/lib/hooks";
 import { toast } from "sonner";
 import { quoteIdentifier, quoteTableRef } from "@/lib/utils";
 import type { ColumnInfo, DatabaseType } from "@/lib/types";
@@ -42,7 +42,11 @@ export function AddRowSheet({
 }: AddRowSheetProps) {
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [nullFields, setNullFields] = useState<Set<string>>(new Set());
+  const [mongoDocument, setMongoDocument] = useState<string>("{\n  \n}");
   const insertRow = useInsertRow(connectionId);
+  const insertDocument = useInsertDocument(connectionId);
+
+  const isMongoDB = dbType === "mongodb";
 
   // Reset form when sheet opens/closes or columns change
   useEffect(() => {
@@ -58,11 +62,37 @@ export function AddRowSheet({
       });
       setFormData(initial);
       setNullFields(initialDefaults);
+      setMongoDocument("{\n  \n}");
     }
   }, [open, columns]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // MongoDB uses a different insert flow
+    if (isMongoDB) {
+      try {
+        // Validate JSON
+        JSON.parse(mongoDocument);
+      } catch {
+        toast.error("Invalid JSON document");
+        return;
+      }
+
+      try {
+        await insertDocument.mutateAsync({
+          schema,
+          collection: table,
+          document: mongoDocument,
+        });
+        toast.success("Document inserted successfully");
+        onOpenChange(false);
+        onSuccess?.();
+      } catch (error) {
+        toast.error(`Insert failed: ${error}`);
+      }
+      return;
+    }
 
     // Validate non-nullable timestamp/date/time fields
     for (const col of columns) {
@@ -232,13 +262,15 @@ export function AddRowSheet({
     );
   };
 
+  const isPending = insertRow.isPending || insertDocument.isPending;
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-lg flex flex-col">
         <SheetHeader>
-          <SheetTitle>Add New Row</SheetTitle>
+          <SheetTitle>Add New {isMongoDB ? "Document" : "Row"}</SheetTitle>
           <SheetDescription>
-            Insert a new row into {schema}.{table}
+            Insert a new {isMongoDB ? "document" : "row"} into {schema}.{table}
           </SheetDescription>
         </SheetHeader>
 
@@ -247,91 +279,114 @@ export function AddRowSheet({
           className="flex flex-1 flex-col overflow-hidden min-h-0"
         >
           <div className="flex-1 overflow-y-auto min-h-0">
-            <div className="space-y-4 py-4 px-1">
-              {columns.map((col) => {
-                const useDefault = nullFields.has(col.name);
-                const inputType = getInputType(col.data_type);
-                const useTextarea = shouldUseTextarea(col.data_type);
-                const canUseDefault = col.has_default || col.is_nullable;
+            {isMongoDB ? (
+              <div className="space-y-4 py-4 px-1">
+                <div className="space-y-2">
+                  <Label htmlFor="mongo-document">JSON Document</Label>
+                  <Textarea
+                    id="mongo-document"
+                    value={mongoDocument}
+                    onChange={(e) => setMongoDocument(e.target.value)}
+                    placeholder='{"field": "value"}'
+                    className="min-h-[300px] font-mono text-sm"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Enter a valid JSON document. The _id field will be
+                    auto-generated if not provided.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4 py-4 px-1">
+                {columns.map((col) => {
+                  const useDefault = nullFields.has(col.name);
+                  const inputType = getInputType(col.data_type);
+                  const useTextarea = shouldUseTextarea(col.data_type);
+                  const canUseDefault = col.has_default || col.is_nullable;
 
-                return (
-                  <div key={col.name} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label
-                        htmlFor={col.name}
-                        className="flex items-center gap-2"
-                      >
-                        {col.name}
-                        <Badge
-                          variant="outline"
-                          className="text-[10px] font-normal"
+                  return (
+                    <div key={col.name} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label
+                          htmlFor={col.name}
+                          className="flex items-center gap-2"
                         >
-                          {col.data_type}
-                        </Badge>
-                        {col.is_primary_key && (
-                          <Badge variant="secondary" className="text-[10px]">
-                            PK
-                          </Badge>
-                        )}
-                        {col.has_default && (
+                          {col.name}
                           <Badge
                             variant="outline"
-                            className="text-[10px] text-blue-400 border-blue-400/50"
+                            className="text-[10px] font-normal"
                           >
-                            auto
+                            {col.data_type}
                           </Badge>
+                          {col.is_primary_key && (
+                            <Badge variant="secondary" className="text-[10px]">
+                              PK
+                            </Badge>
+                          )}
+                          {col.has_default && (
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] text-blue-400 border-blue-400/50"
+                            >
+                              auto
+                            </Badge>
+                          )}
+                        </Label>
+                        {canUseDefault && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">
+                              {col.has_default ? "DEFAULT" : "NULL"}
+                            </span>
+                            <Switch
+                              checked={useDefault}
+                              onCheckedChange={(checked) =>
+                                toggleNull(col.name, checked)
+                              }
+                            />
+                          </div>
                         )}
-                      </Label>
-                      {canUseDefault && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground">
-                            {col.has_default ? "DEFAULT" : "NULL"}
-                          </span>
-                          <Switch
-                            checked={useDefault}
-                            onCheckedChange={(checked) =>
-                              toggleNull(col.name, checked)
-                            }
-                          />
-                        </div>
+                      </div>
+                      {useTextarea ? (
+                        <Textarea
+                          id={col.name}
+                          value={useDefault ? "" : formData[col.name] || ""}
+                          onChange={(e) =>
+                            updateField(col.name, e.target.value)
+                          }
+                          disabled={useDefault}
+                          placeholder={
+                            useDefault
+                              ? col.has_default
+                                ? "DEFAULT"
+                                : "NULL"
+                              : `Enter ${col.data_type}`
+                          }
+                          className="min-h-[80px] font-mono text-sm"
+                        />
+                      ) : (
+                        <Input
+                          id={col.name}
+                          type={inputType}
+                          value={useDefault ? "" : formData[col.name] || ""}
+                          onChange={(e) =>
+                            updateField(col.name, e.target.value)
+                          }
+                          disabled={useDefault}
+                          placeholder={
+                            useDefault
+                              ? col.has_default
+                                ? "DEFAULT"
+                                : "NULL"
+                              : `Enter ${col.data_type}`
+                          }
+                          step={inputType === "number" ? "any" : undefined}
+                        />
                       )}
                     </div>
-                    {useTextarea ? (
-                      <Textarea
-                        id={col.name}
-                        value={useDefault ? "" : formData[col.name] || ""}
-                        onChange={(e) => updateField(col.name, e.target.value)}
-                        disabled={useDefault}
-                        placeholder={
-                          useDefault
-                            ? col.has_default
-                              ? "DEFAULT"
-                              : "NULL"
-                            : `Enter ${col.data_type}`
-                        }
-                        className="min-h-[80px] font-mono text-sm"
-                      />
-                    ) : (
-                      <Input
-                        id={col.name}
-                        type={inputType}
-                        value={useDefault ? "" : formData[col.name] || ""}
-                        onChange={(e) => updateField(col.name, e.target.value)}
-                        disabled={useDefault}
-                        placeholder={
-                          useDefault
-                            ? col.has_default
-                              ? "DEFAULT"
-                              : "NULL"
-                            : `Enter ${col.data_type}`
-                        }
-                        step={inputType === "number" ? "any" : undefined}
-                      />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <SheetFooter className="flex-shrink-0">
@@ -342,11 +397,9 @@ export function AddRowSheet({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={insertRow.isPending}>
-              {insertRow.isPending && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}
-              Insert Row
+            <Button type="submit" disabled={isPending}>
+              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Insert {isMongoDB ? "Document" : "Row"}
             </Button>
           </SheetFooter>
         </form>
