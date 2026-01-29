@@ -2,7 +2,7 @@ import { createAuthClient } from "better-auth/react";
 import { isTauri } from "@tauri-apps/api/core";
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import { platform } from "@tauri-apps/plugin-os";
-import {  openUrl } from "@tauri-apps/plugin-opener";
+import { openUrl } from "@tauri-apps/plugin-opener";
 
 const AUTH_URL = "https://querystudio.dev";
 const DEEP_LINK_CALLBACK = "querystudio://auth/callback";

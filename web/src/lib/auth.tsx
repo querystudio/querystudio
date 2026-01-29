@@ -1,5 +1,5 @@
 import { betterAuth } from 'better-auth'
-import { captcha } from 'better-auth/plugins'
+import { captcha, oAuthProxy } from 'better-auth/plugins'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { waitlist } from 'better-auth-waitlist'
 import { db } from 'drizzle'
@@ -79,9 +79,11 @@ export const auth = betterAuth({
     github: {
       clientId: env.GITHUB_CLIENT_ID,
       clientSecret: env.GITHUB_CLIENT_SECRET,
+      redirectURI: 'https://querystudio.dev/api/auth/callback/github',
     },
   },
   plugins: [
+    oAuthProxy(),
     captcha({
       provider: 'cloudflare-turnstile',
       secretKey: env.TURNSTILE_SECRET_KEY,
