@@ -62,6 +62,9 @@ export const auth = betterAuth({
     database: {
       generateId: () => zeroId({ randomLength: 32 }),
     },
+    // Disable CSRF check to allow desktop apps (Tauri) that don't send Origin headers
+    // Security is maintained through the one-time token mechanism which is single-use and time-limited
+    disableCSRFCheck: true,
   },
   emailAndPassword: { enabled: true, requireEmailVerification: true },
   emailVerification: {
@@ -114,26 +117,5 @@ export const auth = betterAuth({
       },
     }),
   ],
-  trustedOrigins: async (request) => {
-    // Static list of trusted origins
-    const origins = ['http://localhost:3000', 'https://querystudio.dev', 'tauri://localhost', 'http://tauri.localhost', 'http://localhost:1420', 'querystudio://**']
-
-    // If no request (during initialization), return the static list
-    if (!request) {
-      return origins
-    }
-
-    // Get the origin header
-    const origin = request.headers.get('origin')
-
-    // Allow requests with null or missing origin
-    // This is needed for desktop apps (Tauri) that don't send Origin headers
-    // Security is maintained through the one-time token mechanism which is single-use and time-limited
-    // We add a wildcard '*' to allow any origin when none is provided
-    if (!origin || origin === 'null') {
-      return [...origins, '*']
-    }
-
-    return origins
-  },
+  trustedOrigins: ['http://localhost:3000', 'https://querystudio.dev', 'tauri://localhost', 'http://tauri.localhost', 'http://localhost:1420', 'querystudio://**'],
 })
