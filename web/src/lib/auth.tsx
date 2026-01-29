@@ -129,8 +129,9 @@ export const auth = betterAuth({
     // Allow requests with null or missing origin
     // This is needed for desktop apps (Tauri) that don't send Origin headers
     // Security is maintained through the one-time token mechanism which is single-use and time-limited
+    // We add a wildcard '*' to allow any origin when none is provided
     if (!origin || origin === 'null') {
-      return true
+      return [...origins, '*']
     }
 
     return origins
