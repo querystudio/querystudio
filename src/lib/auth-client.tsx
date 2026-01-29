@@ -1,14 +1,17 @@
 import { createAuthClient } from "better-auth/react";
+import { oneTimeTokenClient } from "better-auth/client/plugins";
 import { isTauri } from "@tauri-apps/api/core";
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import { platform } from "@tauri-apps/plugin-os";
 import { openUrl } from "@tauri-apps/plugin-opener";
 
 const AUTH_URL = "https://querystudio.dev";
-const DEEP_LINK_CALLBACK = "querystudio://auth/callback";
+const DESKTOP_AUTH_PATH = "/auth/desktop";
+const DEEP_LINK_CALLBACK_PATH = "auth/callback";
 
 export const authClient = createAuthClient({
   baseURL: AUTH_URL,
+  plugins: [oneTimeTokenClient()],
   fetchOptions: {
     customFetchImpl: (...params) =>
       isTauri() &&
@@ -21,25 +24,16 @@ export const authClient = createAuthClient({
 
 /**
  * Sign in with GitHub using OAuth flow.
- * For Tauri desktop apps, this opens the browser and uses deep-link callback.
+ * For Tauri desktop apps, this opens the web-based auth page in the system browser.
+ * The web page handles the OAuth flow and redirects back via deep-link.
  */
 export async function signInWithGithub(): Promise<void> {
   if (isTauri()) {
-    // For Tauri apps, get the redirect URL and open in external browser
-    const result = await authClient.signIn.social({
-      provider: "github",
-      callbackURL: DEEP_LINK_CALLBACK,
-      disableRedirect: true,
-    });
-
-    if (result.data?.url) {
-      // Open the OAuth URL in the system browser
-      await openUrl(result.data.url);
-    } else if (result.error) {
-      throw new Error(
-        result.error.message || "Failed to initiate GitHub sign-in",
-      );
-    }
+    // For Tauri apps, open the desktop auth page in the system browser
+    // This page handles the OAuth flow entirely in the browser context,
+    // avoiding cookie/state mismatch issues between Tauri and the browser
+    const authUrl = `${AUTH_URL}${DESKTOP_AUTH_PATH}?callback=${encodeURIComponent(DEEP_LINK_CALLBACK_PATH)}`;
+    await openUrl(authUrl);
   } else {
     // For web, use regular redirect flow
     await authClient.signIn.social({

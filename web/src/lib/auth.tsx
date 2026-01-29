@@ -1,5 +1,5 @@
 import { betterAuth } from 'better-auth'
-import { captcha, oAuthProxy } from 'better-auth/plugins'
+import { captcha, oAuthProxy, oneTimeToken } from 'better-auth/plugins'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { waitlist } from 'better-auth-waitlist'
 import { db } from 'drizzle'
@@ -84,6 +84,7 @@ export const auth = betterAuth({
   },
   plugins: [
     oAuthProxy(),
+    oneTimeToken(),
     captcha({
       provider: 'cloudflare-turnstile',
       secretKey: env.TURNSTILE_SECRET_KEY,
