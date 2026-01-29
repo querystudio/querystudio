@@ -9,16 +9,49 @@ const AUTH_URL = "https://querystudio.dev";
 const DESKTOP_AUTH_PATH = "/auth/desktop";
 const DEEP_LINK_CALLBACK_PATH = "auth/callback";
 
+/**
+ * Custom fetch implementation for Tauri that ensures Origin header is set
+ */
+async function tauriFetchWithOrigin(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+): Promise<Response> {
+  const headers = new Headers(init?.headers);
+
+  // Set Origin header if not already present
+  if (!headers.has("Origin")) {
+    headers.set("Origin", "tauri://localhost");
+  }
+
+  return tauriFetch(input, {
+    ...init,
+    headers,
+  });
+}
+
+/**
+ * Custom fetch implementation that uses Tauri's HTTP plugin on macOS
+ * and regular fetch elsewhere
+ */
+function customFetch(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+): Promise<Response> {
+  if (
+    isTauri() &&
+    platform() === "macos" &&
+    window.location.protocol === "tauri:"
+  ) {
+    return tauriFetchWithOrigin(input, init);
+  }
+  return fetch(input, init);
+}
+
 export const authClient = createAuthClient({
   baseURL: AUTH_URL,
   plugins: [oneTimeTokenClient()],
   fetchOptions: {
-    customFetchImpl: (...params) =>
-      isTauri() &&
-      platform() === "macos" &&
-      window.location.protocol === "tauri:"
-        ? tauriFetch(...params)
-        : fetch(...params),
+    customFetchImpl: customFetch,
   },
 });
 

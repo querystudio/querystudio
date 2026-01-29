@@ -114,5 +114,5 @@ export const auth = betterAuth({
       },
     }),
   ],
-  trustedOrigins: ['http://localhost:3000', 'https://querystudio.dev', 'tauri://localhost', 'http://tauri.localhost', 'http://localhost:1420', 'querystudio://**'],
+  trustedOrigins: ['http://localhost:3000', 'https://querystudio.dev', 'tauri://localhost', 'http://tauri.localhost', 'http://localhost:1420', 'querystudio://**', 'null'],
 })
