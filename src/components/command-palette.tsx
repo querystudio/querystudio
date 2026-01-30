@@ -152,11 +152,7 @@ export function CommandPalette({
         }
       }}
     >
-      <CommandInput
-        placeholder="Search commands..."
-        value={search}
-        onValueChange={setSearch}
-      />
+      <CommandInput placeholder="Search commands..." value={search} onValueChange={setSearch} />
       <CommandList>
         <CommandEmpty>No results found.</CommandEmpty>
 
@@ -215,9 +211,7 @@ export function CommandPalette({
                       if (connectionId) {
                         const leafPanes = getAllLeafPanes(connectionId);
                         for (const pane of leafPanes) {
-                          const dataTab = pane.tabs.find(
-                            (t) => t.type === "data",
-                          );
+                          const dataTab = pane.tabs.find((t) => t.type === "data");
                           if (dataTab) {
                             setActiveTab(connectionId, pane.id, dataTab.id);
                             onOpenChange(false);
@@ -243,9 +237,7 @@ export function CommandPalette({
                       if (connectionId) {
                         const leafPanes = getAllLeafPanes(connectionId);
                         for (const pane of leafPanes) {
-                          const queryTab = pane.tabs.find(
-                            (t) => t.type === "query",
-                          );
+                          const queryTab = pane.tabs.find((t) => t.type === "query");
                           if (queryTab) {
                             setActiveTab(connectionId, pane.id, queryTab.id);
                             onOpenChange(false);
@@ -342,16 +334,10 @@ export function CommandPalette({
                 disabled={!canSave}
                 className={!canSave ? "opacity-50" : ""}
               >
-                {canSave ? (
-                  <Plus className="h-4 w-4" />
-                ) : (
-                  <Lock className="h-4 w-4" />
-                )}
+                {canSave ? <Plus className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
                 <span>New Connection</span>
                 {!canSave && (
-                  <span className="text-xs text-muted-foreground ml-auto">
-                    Limit: {maxSaved}
-                  </span>
+                  <span className="text-xs text-muted-foreground ml-auto">Limit: {maxSaved}</span>
                 )}
                 {canSave && <CommandShortcut>⌘N</CommandShortcut>}
               </CommandItem>

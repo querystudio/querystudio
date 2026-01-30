@@ -30,13 +30,7 @@ import { useConnectionStore } from "./store";
 import { useLayoutStore } from "./layout-store";
 import { api } from "./api";
 import { toast } from "sonner";
-import type {
-  Connection,
-  TableInfo,
-  ColumnInfo,
-  QueryResult,
-  ConnectionConfig,
-} from "./types";
+import type { Connection, TableInfo, ColumnInfo, QueryResult, ConnectionConfig } from "./types";
 
 // ============================================================================
 // Types
@@ -104,10 +98,7 @@ export interface PluginUtils {
     /** Format a number with locale formatting */
     number: (value: number, options?: Intl.NumberFormatOptions) => string;
     /** Format a date */
-    date: (
-      value: Date | string | number,
-      options?: Intl.DateTimeFormatOptions,
-    ) => string;
+    date: (value: Date | string | number, options?: Intl.DateTimeFormatOptions) => string;
     /** Format bytes to human readable string */
     bytes: (bytes: number, decimals?: number) => string;
     /** Format a duration in milliseconds to human readable */
@@ -248,11 +239,7 @@ function formatSQL(sql: string): string {
  * @param paneId - The pane ID from TabContentProps
  * @returns The Plugin SDK instance
  */
-export function usePluginSDK(
-  connectionId: string,
-  tabId: string,
-  paneId: string,
-): PluginSDK {
+export function usePluginSDK(connectionId: string, tabId: string, paneId: string): PluginSDK {
   // Get connection state
   const connection = useConnectionStore((s) => s.connection);
   const tables = useConnectionStore((s) => s.tables);
@@ -274,8 +261,7 @@ export function usePluginSDK(
       databaseType: connection?.db_type ?? null,
       tables,
       selectedTable,
-      selectTable: (schema: string, name: string) =>
-        setSelectedTable({ schema, name }),
+      selectTable: (schema: string, name: string) => setSelectedTable({ schema, name }),
       clearSelection: () => setSelectedTable(null),
     }),
     [connection, tables, selectedTable, setSelectedTable],
@@ -331,10 +317,7 @@ export function usePluginSDK(
       format: {
         number: (value: number, options?: Intl.NumberFormatOptions) =>
           new Intl.NumberFormat(undefined, options).format(value),
-        date: (
-          value: Date | string | number,
-          options?: Intl.DateTimeFormatOptions,
-        ) =>
+        date: (value: Date | string | number, options?: Intl.DateTimeFormatOptions) =>
           new Intl.DateTimeFormat(undefined, options).format(new Date(value)),
         bytes: formatBytes,
         duration: formatDuration,

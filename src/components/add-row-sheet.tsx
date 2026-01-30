@@ -100,20 +100,10 @@ export function AddRowSheet({
       const value = formData[col.name];
       const lowerType = col.data_type.toLowerCase();
       const isTimestampType =
-        lowerType.includes("timestamp") ||
-        lowerType.includes("date") ||
-        lowerType.includes("time");
+        lowerType.includes("timestamp") || lowerType.includes("date") || lowerType.includes("time");
 
-      if (
-        isTimestampType &&
-        !col.is_nullable &&
-        !col.has_default &&
-        !isNull &&
-        value === ""
-      ) {
-        toast.error(
-          `Column "${col.name}" cannot be empty (NOT NULL constraint)`,
-        );
+      if (isTimestampType && !col.is_nullable && !col.has_default && !isNull && value === "") {
+        toast.error(`Column "${col.name}" cannot be empty (NOT NULL constraint)`);
         return;
       }
     }
@@ -135,9 +125,7 @@ export function AddRowSheet({
       }
 
       insertColumns.push(quoteIdentifier(col.name, dbType));
-      insertValues.push(
-        formatValueForSQL(value, col.data_type, col.is_nullable),
-      );
+      insertValues.push(formatValueForSQL(value, col.data_type, col.is_nullable));
     });
 
     if (insertColumns.length === 0) {
@@ -157,11 +145,7 @@ export function AddRowSheet({
     }
   };
 
-  const formatValueForSQL = (
-    value: string,
-    dataType: string,
-    isNullable: boolean,
-  ): string => {
+  const formatValueForSQL = (value: string, dataType: string, isNullable: boolean): string => {
     const lowerType = dataType.toLowerCase();
 
     // Numeric types - no quotes
@@ -274,10 +258,7 @@ export function AddRowSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <form
-          onSubmit={handleSubmit}
-          className="flex flex-1 flex-col overflow-hidden min-h-0"
-        >
+        <form onSubmit={handleSubmit} className="flex flex-1 flex-col overflow-hidden min-h-0">
           <div className="flex-1 overflow-y-auto min-h-0">
             {isMongoDB ? (
               <div className="space-y-4 py-4 px-1">
@@ -291,8 +272,8 @@ export function AddRowSheet({
                     className="min-h-[300px] font-mono text-sm"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Enter a valid JSON document. The _id field will be
-                    auto-generated if not provided.
+                    Enter a valid JSON document. The _id field will be auto-generated if not
+                    provided.
                   </p>
                 </div>
               </div>
@@ -307,15 +288,9 @@ export function AddRowSheet({
                   return (
                     <div key={col.name} className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <Label
-                          htmlFor={col.name}
-                          className="flex items-center gap-2"
-                        >
+                        <Label htmlFor={col.name} className="flex items-center gap-2">
                           {col.name}
-                          <Badge
-                            variant="outline"
-                            className="text-[10px] font-normal"
-                          >
+                          <Badge variant="outline" className="text-[10px] font-normal">
                             {col.data_type}
                           </Badge>
                           {col.is_primary_key && (
@@ -339,9 +314,7 @@ export function AddRowSheet({
                             </span>
                             <Switch
                               checked={useDefault}
-                              onCheckedChange={(checked) =>
-                                toggleNull(col.name, checked)
-                              }
+                              onCheckedChange={(checked) => toggleNull(col.name, checked)}
                             />
                           </div>
                         )}
@@ -350,9 +323,7 @@ export function AddRowSheet({
                         <Textarea
                           id={col.name}
                           value={useDefault ? "" : formData[col.name] || ""}
-                          onChange={(e) =>
-                            updateField(col.name, e.target.value)
-                          }
+                          onChange={(e) => updateField(col.name, e.target.value)}
                           disabled={useDefault}
                           placeholder={
                             useDefault
@@ -368,9 +339,7 @@ export function AddRowSheet({
                           id={col.name}
                           type={inputType}
                           value={useDefault ? "" : formData[col.name] || ""}
-                          onChange={(e) =>
-                            updateField(col.name, e.target.value)
-                          }
+                          onChange={(e) => updateField(col.name, e.target.value)}
                           disabled={useDefault}
                           placeholder={
                             useDefault
@@ -390,11 +359,7 @@ export function AddRowSheet({
           </div>
 
           <SheetFooter className="flex-shrink-0">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
             <Button type="submit" disabled={isPending}>

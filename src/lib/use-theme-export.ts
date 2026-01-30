@@ -7,7 +7,7 @@ export function useThemeExport() {
   const exportCurrentTheme = () => {
     const activeTheme = getActiveTheme();
     const themeJson = exportTheme(activeTheme.id);
-    
+
     if (themeJson) {
       downloadThemeFile(themeJson, `${activeTheme.name}.json`);
       toast.success(`Theme "${activeTheme.displayName || activeTheme.name}" exported!`);
@@ -18,7 +18,7 @@ export function useThemeExport() {
 
   const exportThemeById = (themeId: string) => {
     const themeJson = exportTheme(themeId);
-    
+
     if (themeJson) {
       const theme = getTheme(themeId);
       if (theme) {
@@ -36,7 +36,7 @@ export function useThemeExport() {
       exportedAt: new Date().toISOString(),
       themes: themes,
     };
-    
+
     const themesJson = JSON.stringify(themesData, null, 2);
     downloadThemeFile(themesJson, "all-themes.json");
     toast.success("All themes exported!");
@@ -45,14 +45,14 @@ export function useThemeExport() {
   const downloadThemeFile = (content: string, filename: string) => {
     const blob = new Blob([content], { type: "application/json" });
     const url = URL.createObjectURL(blob);
-    
+
     const a = document.createElement("a");
     a.href = url;
     a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    
+
     URL.revokeObjectURL(url);
   };
 

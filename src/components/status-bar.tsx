@@ -16,12 +16,7 @@ import { useLayoutStore } from "@/lib/layout-store";
 import { cn } from "@/lib/utils";
 import type { DatabaseType } from "@/lib/types";
 import { create } from "zustand";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // Store for status bar state
 interface StatusBarState {
@@ -33,9 +28,7 @@ interface StatusBarState {
   setLastQueryTime: (time: number | null) => void;
   setLastRowCount: (count: number | null) => void;
   setLastQueryStatus: (status: "success" | "error" | null) => void;
-  setCursorPosition: (
-    position: { line: number; column: number } | null,
-  ) => void;
+  setCursorPosition: (position: { line: number; column: number } | null) => void;
   setQueryResult: (time: number, rowCount: number, success: boolean) => void;
 }
 
@@ -57,13 +50,7 @@ export const useStatusBarStore = create<StatusBarState>()((set) => ({
     }),
 }));
 
-function DatabaseTypeIcon({
-  type,
-  className,
-}: {
-  type: DatabaseType;
-  className?: string;
-}) {
+function DatabaseTypeIcon({ type, className }: { type: DatabaseType; className?: string }) {
   if (type === "mysql") {
     return (
       <span
@@ -156,8 +143,7 @@ export function StatusBar() {
   // Count terminal tabs across all panes
   const terminalTabCount = connectionId
     ? getAllLeafPanes(connectionId).reduce(
-        (count, pane) =>
-          count + pane.tabs.filter((t) => t.type === "terminal").length,
+        (count, pane) => count + pane.tabs.filter((t) => t.type === "terminal").length,
         0,
       )
     : 0;
@@ -255,13 +241,7 @@ export function StatusBar() {
             ) : (
               <XCircle className="h-3 w-3 text-red-500" />
             )}
-            <span
-              className={cn(
-                lastQueryStatus === "success"
-                  ? "text-green-500"
-                  : "text-red-500",
-              )}
-            >
+            <span className={cn(lastQueryStatus === "success" ? "text-green-500" : "text-red-500")}>
               {lastQueryStatus === "success" ? "Success" : "Error"}
             </span>
           </div>

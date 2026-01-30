@@ -8,12 +8,12 @@ export function useThemeImport() {
   const importThemeFromFile = (file: File) => {
     return new Promise<boolean>((resolve) => {
       const reader = new FileReader();
-      
+
       reader.onload = (e) => {
         try {
           const content = e.target?.result as string;
           const result = importTheme(content);
-          
+
           if (result.success) {
             toast.success("Theme imported successfully!");
             resolve(true);
@@ -26,19 +26,19 @@ export function useThemeImport() {
           resolve(false);
         }
       };
-      
+
       reader.onerror = () => {
         toast.error("Failed to read theme file");
         resolve(false);
       };
-      
+
       reader.readAsText(file);
     });
   };
 
   const importThemeFromJson = (jsonString: string) => {
     const result = importTheme(jsonString);
-    
+
     if (result.success) {
       toast.success("Theme imported successfully!");
       return true;
@@ -51,12 +51,12 @@ export function useThemeImport() {
   const importAndApplyTheme = (file: File) => {
     return new Promise<boolean>((resolve) => {
       const reader = new FileReader();
-      
+
       reader.onload = (e) => {
         try {
           const content = e.target?.result as string;
           const result = importTheme(content);
-          
+
           if (result.success) {
             const theme: Theme = JSON.parse(content);
             setActiveTheme(theme.id);
@@ -71,12 +71,12 @@ export function useThemeImport() {
           resolve(false);
         }
       };
-      
+
       reader.onerror = () => {
         toast.error("Failed to read theme file");
         resolve(false);
       };
-      
+
       reader.readAsText(file);
     });
   };

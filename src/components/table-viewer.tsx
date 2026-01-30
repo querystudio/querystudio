@@ -74,8 +74,7 @@ export const TableViewer = memo(function TableViewer({
 
   // Get tableInfo from the tab's state in the layout store
   const pane = useLayoutStore((s) => s.panes[connectionId]?.[paneId]);
-  const tab =
-    pane?.type === "leaf" ? pane.tabs.find((t) => t.id === tabId) : null;
+  const tab = pane?.type === "leaf" ? pane.tabs.find((t) => t.id === tabId) : null;
   const tableInfo = tab?.tableInfo;
 
   // Use tableInfo from tab if provided (for dedicated table tabs), otherwise use global selection
@@ -88,26 +87,16 @@ export const TableViewer = memo(function TableViewer({
   }, [selectedTable?.schema, selectedTable?.name]);
   const [addRowOpen, setAddRowOpen] = useState(false);
   const [editRowOpen, setEditRowOpen] = useState(false);
-  const [editRowData, setEditRowData] = useState<Record<
-    string,
-    unknown
-  > | null>(null);
+  const [editRowData, setEditRowData] = useState<Record<string, unknown> | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deleteRowData, setDeleteRowData] = useState<Record<
-    string,
-    unknown
-  > | null>(null);
+  const [deleteRowData, setDeleteRowData] = useState<Record<string, unknown> | null>(null);
   const queryClient = useQueryClient();
 
   const {
     data: columns,
     isLoading: columnsLoading,
     isFetching: columnsFetching,
-  } = useTableColumns(
-    connectionId,
-    selectedTable?.schema ?? null,
-    selectedTable?.name ?? null,
-  );
+  } = useTableColumns(connectionId, selectedTable?.schema ?? null, selectedTable?.name ?? null);
 
   const {
     data: tableData,
@@ -137,9 +126,7 @@ export const TableViewer = memo(function TableViewer({
       <div className="flex h-full items-center justify-center text-muted-foreground">
         <div className="text-center">
           <p className="text-lg">Select a table to view its data</p>
-          <p className="text-sm text-muted-foreground">
-            Choose a table from the sidebar
-          </p>
+          <p className="text-sm text-muted-foreground">Choose a table from the sidebar</p>
         </div>
       </div>
     );
@@ -154,28 +141,13 @@ export const TableViewer = memo(function TableViewer({
 
     // Invalidate all queries for this table
     queryClient.invalidateQueries({
-      queryKey: [
-        "columns",
-        connectionId,
-        selectedTable.schema,
-        selectedTable.name,
-      ],
+      queryKey: ["columns", connectionId, selectedTable.schema, selectedTable.name],
     });
     queryClient.invalidateQueries({
-      queryKey: [
-        "tableData",
-        connectionId,
-        selectedTable.schema,
-        selectedTable.name,
-      ],
+      queryKey: ["tableData", connectionId, selectedTable.schema, selectedTable.name],
     });
     queryClient.invalidateQueries({
-      queryKey: [
-        "tableCount",
-        connectionId,
-        selectedTable.schema,
-        selectedTable.name,
-      ],
+      queryKey: ["tableCount", connectionId, selectedTable.schema, selectedTable.name],
     });
   };
 
@@ -185,10 +157,7 @@ export const TableViewer = memo(function TableViewer({
     return String(value);
   };
 
-  const rowToRecord = (
-    row: unknown[],
-    cols: ColumnInfo[],
-  ): Record<string, unknown> => {
+  const rowToRecord = (row: unknown[], cols: ColumnInfo[]): Record<string, unknown> => {
     const record: Record<string, unknown> = {};
     cols.forEach((col, i) => {
       record[col.name] = row[i];
@@ -316,24 +285,13 @@ export const TableViewer = memo(function TableViewer({
           )}
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-          >
-            <RefreshCw
-              className={cn("mr-1 h-4 w-4", isRefreshing && "animate-spin")}
-            />
+          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
+            <RefreshCw className={cn("mr-1 h-4 w-4", isRefreshing && "animate-spin")} />
             Refresh
           </Button>
           {connection?.db_type !== "redis" && (
             <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setAddRowOpen(true)}
-              >
+              <Button variant="outline" size="sm" onClick={() => setAddRowOpen(true)}>
                 <Plus className="mr-1 h-4 w-4" />
                 Add Row
               </Button>
@@ -379,13 +337,9 @@ export const TableViewer = memo(function TableViewer({
                     className="whitespace-nowrap border-r border-border last:border-r-0"
                   >
                     <div className="flex items-center gap-2">
-                      {col.is_primary_key && (
-                        <Key className="h-3 w-3 text-yellow-500" />
-                      )}
+                      {col.is_primary_key && <Key className="h-3 w-3 text-yellow-500" />}
                       <span>{col.name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {col.data_type}
-                      </span>
+                      <span className="text-xs text-muted-foreground">{col.data_type}</span>
                     </div>
                   </TableHead>
                 ))}
@@ -395,16 +349,11 @@ export const TableViewer = memo(function TableViewer({
               {isLoading ? (
                 Array.from({ length: 10 }).map((_, i) => (
                   <TableRow key={i} className="border-border">
-                    {Array.from({ length: columns?.length || 5 }).map(
-                      (_, j) => (
-                        <TableCell
-                          key={j}
-                          className="border-r border-border last:border-r-0"
-                        >
-                          <Skeleton className="h-4 w-full" />
-                        </TableCell>
-                      ),
-                    )}
+                    {Array.from({ length: columns?.length || 5 }).map((_, j) => (
+                      <TableCell key={j} className="border-r border-border last:border-r-0">
+                        <Skeleton className="h-4 w-full" />
+                      </TableCell>
+                    ))}
                   </TableRow>
                 ))
               ) : tableData?.rows.length === 0 ? (
@@ -424,9 +373,7 @@ export const TableViewer = memo(function TableViewer({
                       "border-border hover:bg-card/50",
                       connection?.db_type !== "redis" && "cursor-pointer",
                     )}
-                    onClick={() =>
-                      connection?.db_type !== "redis" && handleEditRow(row)
-                    }
+                    onClick={() => connection?.db_type !== "redis" && handleEditRow(row)}
                   >
                     {row.map((cell, j) => {
                       const isNull = cell === null;
@@ -510,19 +457,13 @@ export const TableViewer = memo(function TableViewer({
             columns={columns}
             rowData={editRowData ?? {}}
           />
-          <AlertDialog
-            open={deleteDialogOpen}
-            onOpenChange={setDeleteDialogOpen}
-          >
+          <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>
-                  Delete {isMongoDB ? "Document" : "Row"}
-                </AlertDialogTitle>
+                <AlertDialogTitle>Delete {isMongoDB ? "Document" : "Row"}</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Are you sure you want to delete this{" "}
-                  {isMongoDB ? "document" : "row"}? This action cannot be
-                  undone.
+                  Are you sure you want to delete this {isMongoDB ? "document" : "row"}? This action
+                  cannot be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -531,9 +472,7 @@ export const TableViewer = memo(function TableViewer({
                   onClick={handleDeleteConfirm}
                   className="bg-red-600 hover:bg-red-700"
                 >
-                  {deleteRow.isPending || deleteDocument.isPending
-                    ? "Deleting..."
-                    : "Delete"}
+                  {deleteRow.isPending || deleteDocument.isPending ? "Deleting..." : "Delete"}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

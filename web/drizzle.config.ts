@@ -1,10 +1,10 @@
-import { env } from '@/lib/env'
-import { defineConfig } from 'drizzle-kit'
+import { env } from "@/lib/env";
+import { defineConfig } from "drizzle-kit";
 
 export default defineConfig({
-  schema: 'drizzle/schema',
-  out: 'drizzle/migrations',
-  dialect: 'postgresql',
+  schema: "drizzle/schema",
+  out: "drizzle/migrations",
+  dialect: "postgresql",
   dbCredentials: { url: env.DATABASE_DIRECT_URL },
-  tablesFilter: ['querystudio_*'],
-})
+  tablesFilter: ["querystudio_*"],
+});

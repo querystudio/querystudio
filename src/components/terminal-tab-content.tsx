@@ -10,17 +10,12 @@ interface TerminalTabContentProps extends TabContentProps {}
 const creatingTerminals = new Set<string>();
 const createdTerminals = new Set<string>();
 
-export function TerminalTabContent({
-  tabId,
-  paneId,
-  connectionId,
-}: TerminalTabContentProps) {
+export function TerminalTabContent({ tabId, paneId, connectionId }: TerminalTabContentProps) {
   const pane = useLayoutStore((s) => s.panes[connectionId]?.[paneId]);
   const updateTab = useLayoutStore((s) => s.updateTab);
   const closeTab = useLayoutStore((s) => s.closeTab);
 
-  const tab =
-    pane?.type === "leaf" ? pane.tabs.find((t) => t.id === tabId) : null;
+  const tab = pane?.type === "leaf" ? pane.tabs.find((t) => t.id === tabId) : null;
 
   const terminalId = tab?.terminalId;
   const terminalIdRef = useRef<string | undefined>(terminalId);
@@ -100,7 +95,5 @@ export function TerminalTabContent({
     );
   }
 
-  return (
-    <Terminal terminalId={terminalId} isVisible={true} onClose={handleClose} />
-  );
+  return <Terminal terminalId={terminalId} isVisible={true} onClose={handleClose} />;
 }

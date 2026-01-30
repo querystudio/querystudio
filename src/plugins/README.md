@@ -98,14 +98,14 @@ import type { LocalPluginModule } from "@/lib/local-plugins";
 
 // Plugin Definition
 export const plugin: TabPluginRegistration = {
-  type: "my-custom-tab",           // Unique identifier
-  displayName: "My Custom Tab",    // Shown in UI
-  icon: Smile,                     // Lucide icon
+  type: "my-custom-tab", // Unique identifier
+  displayName: "My Custom Tab", // Shown in UI
+  icon: Smile, // Lucide icon
   getDefaultTitle: (index) => `My Tab ${index}`,
-  canCreate: true,                 // Show in "New Tab" menu
-  allowMultiple: true,             // Allow multiple instances
-  priority: 50,                    // Menu ordering (higher = first)
-  experimental: false,             // Require experimental flag?
+  canCreate: true, // Show in "New Tab" menu
+  allowMultiple: true, // Allow multiple instances
+  priority: 50, // Menu ordering (higher = first)
+  experimental: false, // Require experimental flag?
 };
 
 // Tab Component - receives tab context props
@@ -131,7 +131,7 @@ import myPlugin from "./my-plugin";
 
 export const localPlugins: LocalPluginModule[] = [
   testTabPlugin,
-  myPlugin,  // Add your plugin here
+  myPlugin, // Add your plugin here
 ];
 ```
 
@@ -143,27 +143,27 @@ Your new tab type will appear in the "+" menu in the tab bar and in Settings > P
 
 ### TabPluginRegistration
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `type` | `string` | Yes | Unique identifier for the tab type |
-| `displayName` | `string` | Yes | Human-readable name shown in UI |
-| `icon` | `LucideIcon` | Yes | Icon component from lucide-react |
-| `getDefaultTitle` | `(index, metadata?) => string` | Yes | Generate default tab title |
-| `canCreate` | `boolean` | No | Show in creation menu (default: true) |
-| `allowMultiple` | `boolean` | No | Allow multiple instances (default: true) |
-| `priority` | `number` | No | Menu order, higher = first (default: 0) |
-| `experimental` | `boolean` | No | Require experimental flag (default: false) |
-| `createShortcut` | `string` | No | Keyboard shortcut hint (e.g., "⌘T") |
-| `lifecycle` | `TabLifecycleHooks` | No | Lifecycle callbacks |
+| Property          | Type                           | Required | Description                                |
+| ----------------- | ------------------------------ | -------- | ------------------------------------------ |
+| `type`            | `string`                       | Yes      | Unique identifier for the tab type         |
+| `displayName`     | `string`                       | Yes      | Human-readable name shown in UI            |
+| `icon`            | `LucideIcon`                   | Yes      | Icon component from lucide-react           |
+| `getDefaultTitle` | `(index, metadata?) => string` | Yes      | Generate default tab title                 |
+| `canCreate`       | `boolean`                      | No       | Show in creation menu (default: true)      |
+| `allowMultiple`   | `boolean`                      | No       | Allow multiple instances (default: true)   |
+| `priority`        | `number`                       | No       | Menu order, higher = first (default: 0)    |
+| `experimental`    | `boolean`                      | No       | Require experimental flag (default: false) |
+| `createShortcut`  | `string`                       | No       | Keyboard shortcut hint (e.g., "⌘T")        |
+| `lifecycle`       | `TabLifecycleHooks`            | No       | Lifecycle callbacks                        |
 
 ### TabContentProps
 
 Props passed to your Component:
 
-| Prop | Type | Description |
-|------|------|-------------|
-| `tabId` | `string` | Unique ID of this tab instance |
-| `paneId` | `string` | ID of the pane containing this tab |
+| Prop           | Type     | Description                           |
+| -------------- | -------- | ------------------------------------- |
+| `tabId`        | `string` | Unique ID of this tab instance        |
+| `paneId`       | `string` | ID of the pane containing this tab    |
 | `connectionId` | `string` | ID of the current database connection |
 
 ### TabLifecycleHooks
@@ -184,23 +184,23 @@ lifecycle: {
 
 When adding a user plugin through Settings, you can choose from these icons:
 
-| Icon Name | Description |
-|-----------|-------------|
-| `puzzle` | Default plugin icon |
-| `flask` | For experimental/test plugins |
-| `sparkles` | For AI/magic features |
-| `zap` | For performance/quick actions |
-| `star` | For favorites/highlights |
-| `heart` | For social features |
-| `rocket` | For deployment/launch features |
-| `globe` | For web/network features |
-| `code` | For code-related plugins |
-| `terminal` | For CLI/terminal plugins |
-| `file` | For file/document plugins |
-| `database` | For data plugins |
-| `settings` | For configuration plugins |
-| `layout` | For layout/UI plugins |
-| `box` | Generic container |
+| Icon Name  | Description                    |
+| ---------- | ------------------------------ |
+| `puzzle`   | Default plugin icon            |
+| `flask`    | For experimental/test plugins  |
+| `sparkles` | For AI/magic features          |
+| `zap`      | For performance/quick actions  |
+| `star`     | For favorites/highlights       |
+| `heart`    | For social features            |
+| `rocket`   | For deployment/launch features |
+| `globe`    | For web/network features       |
+| `code`     | For code-related plugins       |
+| `terminal` | For CLI/terminal plugins       |
+| `file`     | For file/document plugins      |
+| `database` | For data plugins               |
+| `settings` | For configuration plugins      |
+| `layout`   | For layout/UI plugins          |
+| `box`      | Generic container              |
 
 ## Plugin SDK
 
@@ -211,7 +211,7 @@ import { usePluginSDK } from "@/lib/plugin-sdk";
 
 export function Component({ tabId, paneId, connectionId }: TabContentProps) {
   const sdk = usePluginSDK(connectionId, tabId, paneId);
-  
+
   // Now you have access to:
   // - sdk.connection - Connection info and operations
   // - sdk.api - Database API functions
@@ -224,49 +224,49 @@ export function Component({ tabId, paneId, connectionId }: TabContentProps) {
 
 Access to current database connection:
 
-| Property/Method | Description |
-|----------------|-------------|
-| `isConnected` | Whether there's an active connection |
-| `connection` | The connection object (or null) |
-| `databaseType` | Database type (postgres, mysql, sqlite, etc.) |
-| `tables` | Array of tables in the database |
-| `selectedTable` | Currently selected table `{ schema, name }` |
-| `selectTable(schema, name)` | Select a table |
-| `clearSelection()` | Clear table selection |
+| Property/Method             | Description                                   |
+| --------------------------- | --------------------------------------------- |
+| `isConnected`               | Whether there's an active connection          |
+| `connection`                | The connection object (or null)               |
+| `databaseType`              | Database type (postgres, mysql, sqlite, etc.) |
+| `tables`                    | Array of tables in the database               |
+| `selectedTable`             | Currently selected table `{ schema, name }`   |
+| `selectTable(schema, name)` | Select a table                                |
+| `clearSelection()`          | Clear table selection                         |
 
 ### sdk.api
 
 Database operations:
 
-| Method | Description |
-|--------|-------------|
-| `executeQuery(sql)` | Execute a SQL query and return results |
-| `listTables()` | Get list of all tables |
-| `getTableColumns(schema, table)` | Get columns for a table |
-| `getTableData(schema, table, limit?, offset?)` | Get table data with pagination |
-| `getTableCount(schema, table)` | Get row count for a table |
+| Method                                         | Description                            |
+| ---------------------------------------------- | -------------------------------------- |
+| `executeQuery(sql)`                            | Execute a SQL query and return results |
+| `listTables()`                                 | Get list of all tables                 |
+| `getTableColumns(schema, table)`               | Get columns for a table                |
+| `getTableData(schema, table, limit?, offset?)` | Get table data with pagination         |
+| `getTableCount(schema, table)`                 | Get row count for a table              |
 
 ### sdk.utils
 
 Utility functions:
 
-| Category | Methods |
-|----------|---------|
-| `toast` | `success()`, `error()`, `info()`, `warning()`, `loading()`, `dismiss()` |
-| `clipboard` | `copy(text)`, `read()` |
-| `format` | `number()`, `date()`, `bytes()`, `duration()` |
-| `sql` | `escapeString()`, `escapeIdentifier()`, `format()` |
+| Category    | Methods                                                                 |
+| ----------- | ----------------------------------------------------------------------- |
+| `toast`     | `success()`, `error()`, `info()`, `warning()`, `loading()`, `dismiss()` |
+| `clipboard` | `copy(text)`, `read()`                                                  |
+| `format`    | `number()`, `date()`, `bytes()`, `duration()`                           |
+| `sql`       | `escapeString()`, `escapeIdentifier()`, `format()`                      |
 
 ### sdk.layout
 
 Tab operations:
 
-| Method | Description |
-|--------|-------------|
-| `createTab(type, options?)` | Create a new tab |
-| `closeCurrentTab()` | Close the current tab |
-| `updateTitle(title)` | Update the current tab's title |
-| `getTabs()` | Get all tabs in the current pane |
+| Method                      | Description                      |
+| --------------------------- | -------------------------------- |
+| `createTab(type, options?)` | Create a new tab                 |
+| `closeCurrentTab()`         | Close the current tab            |
+| `updateTitle(title)`        | Update the current tab's title   |
+| `getTabs()`                 | Get all tabs in the current pane |
 
 ### Example: Query and Display Results
 
@@ -276,7 +276,7 @@ const runQuery = async () => {
     sdk.utils.toast.error("Not connected");
     return;
   }
-  
+
   try {
     const result = await sdk.api.executeQuery("SELECT * FROM users LIMIT 10");
     sdk.utils.toast.success(`Found ${result.results[0].row_count} rows`);
@@ -289,6 +289,7 @@ const runQuery = async () => {
 ## Examples
 
 See `test-tab.tsx` for a complete example with:
+
 - Using the Plugin SDK to access connection data
 - Executing queries through the API
 - Using utility functions (toast, clipboard, formatting)
@@ -299,6 +300,7 @@ See `test-tab.tsx` for a complete example with:
 ## Security Warning
 
 ⚠️ **Only install plugins from sources you trust.** Plugins have access to:
+
 - The React component tree
 - localStorage and sessionStorage
 - Network requests

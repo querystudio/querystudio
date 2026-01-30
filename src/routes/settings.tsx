@@ -27,13 +27,7 @@ export const Route = createFileRoute("/settings")({
   component: SettingsPage,
 });
 
-type SettingsTab =
-  | "general"
-  | "account"
-  | "appearance"
-  | "shortcuts"
-  | "plugins"
-  | "experimental";
+type SettingsTab = "general" | "account" | "appearance" | "shortcuts" | "plugins" | "experimental";
 
 function SettingsPage() {
   const navigate = useNavigate();
@@ -173,9 +167,7 @@ function AccountSettings() {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold tracking-tight">Account</h2>
-        <p className="text-muted-foreground">
-          Manage your account settings and preferences.
-        </p>
+        <p className="text-muted-foreground">Manage your account settings and preferences.</p>
       </div>
       <Separator />
 
@@ -245,9 +237,7 @@ function GeneralSettings() {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold tracking-tight">General</h2>
-        <p className="text-muted-foreground">
-          Manage general behavior and application settings.
-        </p>
+        <p className="text-muted-foreground">Manage general behavior and application settings.</p>
       </div>
       <Separator />
 
@@ -257,8 +247,7 @@ function GeneralSettings() {
           <div className="space-y-0.5">
             <Label className="text-base">Auto-reconnect</Label>
             <p className="text-sm text-muted-foreground">
-              Automatically connect to the last used database when the
-              application starts
+              Automatically connect to the last used database when the application starts
             </p>
           </div>
           <Switch checked={autoReconnect} onCheckedChange={setAutoReconnect} />
@@ -274,10 +263,7 @@ function GeneralSettings() {
               Start with the sidebar collapsed to show only icons
             </p>
           </div>
-          <Switch
-            checked={sidebarCollapsed}
-            onCheckedChange={setSidebarCollapsed}
-          />
+          <Switch checked={sidebarCollapsed} onCheckedChange={setSidebarCollapsed} />
         </div>
       </div>
 
@@ -305,9 +291,7 @@ function AppearanceSettings() {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold tracking-tight">Appearance</h2>
-        <p className="text-muted-foreground">
-          Customize the look and feel of the application.
-        </p>
+        <p className="text-muted-foreground">Customize the look and feel of the application.</p>
       </div>
       <Separator />
 
@@ -324,14 +308,10 @@ function AppearanceSettings() {
           <div className="space-y-0.5">
             <Label className="text-base">Status Bar</Label>
             <p className="text-sm text-muted-foreground">
-              Show connection status, query times, and cursor position at the
-              bottom
+              Show connection status, query times, and cursor position at the bottom
             </p>
           </div>
-          <Switch
-            checked={statusBarVisible}
-            onCheckedChange={setStatusBarVisible}
-          />
+          <Switch checked={statusBarVisible} onCheckedChange={setStatusBarVisible} />
         </div>
       </div>
     </div>
@@ -355,9 +335,7 @@ function ShortcutsSettings() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">
-          Keyboard Shortcuts
-        </h2>
+        <h2 className="text-2xl font-bold tracking-tight">Keyboard Shortcuts</h2>
         <p className="text-muted-foreground">
           View keyboard shortcuts for quick navigation and actions.
         </p>
@@ -390,21 +368,16 @@ function ShortcutsSettings() {
 
 function ExperimentalSettings() {
   const experimentalTerminal = useAIQueryStore((s) => s.experimentalTerminal);
-  const setExperimentalTerminal = useAIQueryStore(
-    (s) => s.setExperimentalTerminal,
-  );
+  const setExperimentalTerminal = useAIQueryStore((s) => s.setExperimentalTerminal);
   const experimentalPlugins = useAIQueryStore((s) => s.experimentalPlugins);
-  const setExperimentalPlugins = useAIQueryStore(
-    (s) => s.setExperimentalPlugins,
-  );
+  const setExperimentalPlugins = useAIQueryStore((s) => s.setExperimentalPlugins);
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold tracking-tight">Experimental</h2>
         <p className="text-muted-foreground">
-          Try out experimental features. These features may be unstable or
-          change in future updates.
+          Try out experimental features. These features may be unstable or change in future updates.
         </p>
       </div>
       <Separator />
@@ -415,35 +388,29 @@ function ExperimentalSettings() {
           <div className="space-y-0.5">
             <Label className="text-base">Integrated Terminal</Label>
             <p className="text-sm text-muted-foreground">
-              Enable an integrated terminal panel for running shell commands
-              directly within the application
+              Enable an integrated terminal panel for running shell commands directly within the
+              application
             </p>
           </div>
-          <Switch
-            checked={experimentalTerminal}
-            onCheckedChange={setExperimentalTerminal}
-          />
+          <Switch checked={experimentalTerminal} onCheckedChange={setExperimentalTerminal} />
         </div>
 
         <div className="flex items-center justify-between rounded-lg border p-4">
           <div className="space-y-0.5">
             <Label className="text-base">Plugin System</Label>
             <p className="text-sm text-muted-foreground">
-              Enable the plugin system to install and manage custom tab plugins.
-              Adds a Plugins tab to settings.
+              Enable the plugin system to install and manage custom tab plugins. Adds a Plugins tab
+              to settings.
             </p>
           </div>
-          <Switch
-            checked={experimentalPlugins}
-            onCheckedChange={setExperimentalPlugins}
-          />
+          <Switch checked={experimentalPlugins} onCheckedChange={setExperimentalPlugins} />
         </div>
       </div>
 
       <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/10 p-4">
         <p className="text-sm text-yellow-600 dark:text-yellow-400">
-          Experimental features are provided as-is and may contain bugs or
-          undergo significant changes. Use at your own discretion.
+          Experimental features are provided as-is and may contain bugs or undergo significant
+          changes. Use at your own discretion.
         </p>
       </div>
     </div>

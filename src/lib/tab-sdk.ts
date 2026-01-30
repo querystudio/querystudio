@@ -93,20 +93,11 @@ export interface CreateTabOptions {
 // Tab lifecycle hooks
 export interface TabLifecycleHooks {
   // Called when tab is created
-  onCreate?: (
-    tabId: string,
-    metadata: Record<string, unknown>,
-  ) => Promise<void> | void;
+  onCreate?: (tabId: string, metadata: Record<string, unknown>) => Promise<void> | void;
   // Called when tab is about to be closed - return false to prevent close
-  onBeforeClose?: (
-    tabId: string,
-    metadata: Record<string, unknown>,
-  ) => Promise<boolean> | boolean;
+  onBeforeClose?: (tabId: string, metadata: Record<string, unknown>) => Promise<boolean> | boolean;
   // Called after tab is closed
-  onClose?: (
-    tabId: string,
-    metadata: Record<string, unknown>,
-  ) => Promise<void> | void;
+  onClose?: (tabId: string, metadata: Record<string, unknown>) => Promise<void> | void;
   // Called when tab becomes active
   onActivate?: (tabId: string, metadata: Record<string, unknown>) => void;
   // Called when tab becomes inactive
@@ -125,10 +116,7 @@ export interface TabPlugin {
   icon: LucideIcon;
 
   // Generate default title for new tabs
-  getDefaultTitle: (
-    index: number,
-    metadata?: Record<string, unknown>,
-  ) => string;
+  getDefaultTitle: (index: number, metadata?: Record<string, unknown>) => string;
 
   // React component to render when tab is active
   // Set to null initially, will be set by registerTabComponent
@@ -156,14 +144,10 @@ export interface TabPlugin {
   validateMetadata?: (metadata: Record<string, unknown>) => boolean;
 
   // Serialize metadata for persistence
-  serializeMetadata?: (
-    metadata: Record<string, unknown>,
-  ) => Record<string, unknown>;
+  serializeMetadata?: (metadata: Record<string, unknown>) => Record<string, unknown>;
 
   // Deserialize metadata after loading from persistence
-  deserializeMetadata?: (
-    data: Record<string, unknown>,
-  ) => Record<string, unknown>;
+  deserializeMetadata?: (data: Record<string, unknown>) => Record<string, unknown>;
 }
 
 // Partial plugin for registration (some fields have defaults)
@@ -197,18 +181,13 @@ class TabPluginRegistry {
   }
 
   // Register or update the component for a tab type
-  registerComponent(
-    type: string,
-    component: ComponentType<TabContentProps>,
-  ): void {
+  registerComponent(type: string, component: ComponentType<TabContentProps>): void {
     const plugin = this.plugins.get(type);
     if (plugin) {
       plugin.component = component;
       this.notifyListeners();
     } else {
-      console.warn(
-        `[TabSDK] Cannot register component for unknown tab type: ${type}`,
-      );
+      console.warn(`[TabSDK] Cannot register component for unknown tab type: ${type}`);
     }
   }
 
@@ -396,9 +375,7 @@ export function useTabPlugins(): TabPlugin[] {
 }
 
 // Hook to get creatable plugins
-export function useCreatableTabPlugins(
-  includeExperimental = false,
-): TabPlugin[] {
+export function useCreatableTabPlugins(includeExperimental = false): TabPlugin[] {
   return useSyncExternalStore(
     (callback) => tabRegistry.subscribe(callback),
     () => tabRegistry.getCreatable(includeExperimental),
@@ -416,9 +393,7 @@ export function useTabPlugin(type: string): TabPlugin | undefined {
 }
 
 // Hook to get the component for a tab type
-export function useTabComponent(
-  type: string,
-): ComponentType<TabContentProps> | null {
+export function useTabComponent(type: string): ComponentType<TabContentProps> | null {
   return useSyncExternalStore(
     (callback) => tabRegistry.subscribe(callback),
     () => tabRegistry.getComponent(type),

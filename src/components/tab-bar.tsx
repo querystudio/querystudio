@@ -19,12 +19,7 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { cn } from "@/lib/utils";
-import {
-  useLayoutStore,
-  type Tab,
-  type TabType,
-  type DropZone,
-} from "@/lib/layout-store";
+import { useLayoutStore, type Tab, type TabType, type DropZone } from "@/lib/layout-store";
 import { useShallow } from "zustand/react/shallow";
 
 interface TabBarProps {
@@ -33,11 +28,7 @@ interface TabBarProps {
   paneId: string;
 }
 
-export const TabBar = memo(function TabBar({
-  connectionId,
-  dbType,
-  paneId,
-}: TabBarProps) {
+export const TabBar = memo(function TabBar({ connectionId, dbType, paneId }: TabBarProps) {
   const isRedis = dbType === "redis";
 
   // Use shallow comparison for better performance - only re-render when relevant data changes
@@ -68,9 +59,7 @@ export const TabBar = memo(function TabBar({
   const [editingTitle, setEditingTitle] = useState("");
   const [draggingTabId, setDraggingTabId] = useState<string | null>(null);
   const [dragOverTabId, setDragOverTabId] = useState<string | null>(null);
-  const [dragOverPosition, setDragOverPosition] = useState<
-    "before" | "after" | null
-  >(null);
+  const [dragOverPosition, setDragOverPosition] = useState<"before" | "after" | null>(null);
   const [dragOverZone, setDragOverZone] = useState<DropZone | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -130,14 +119,7 @@ export const TabBar = memo(function TabBar({
 
   const handleCreateTab = useCallback(
     (type: TabType) => {
-      const title =
-        type === "query"
-          ? isRedis
-            ? "Console"
-            : "Query"
-          : isRedis
-            ? "Keys"
-            : "Data";
+      const title = type === "query" ? (isRedis ? "Console" : "Query") : isRedis ? "Keys" : "Data";
       createTab(connectionId, paneId, type, { title });
     },
     [isRedis, createTab, connectionId, paneId],
@@ -199,9 +181,7 @@ export const TabBar = memo(function TabBar({
 
     // Filter out plugins that are disabled in the plugin store
     return allCreatable.filter((plugin) => {
-      const installedPlugin = installedPlugins.find(
-        (p) => p.type === plugin.type,
-      );
+      const installedPlugin = installedPlugins.find((p) => p.type === plugin.type);
       return !installedPlugin || installedPlugin.enabled;
     });
   }, [experimentalTerminal, installedPlugins]);
@@ -372,41 +352,31 @@ export const TabBar = memo(function TabBar({
       <div
         className={cn(
           "absolute left-0 top-0 bottom-0 w-1/2 bg-primary/20 border-2 border-primary/50 border-r-0 z-20 pointer-events-none transition-opacity duration-150",
-          dragOverZone === "left" && !dragOverTabId
-            ? "opacity-100"
-            : "opacity-0",
+          dragOverZone === "left" && !dragOverTabId ? "opacity-100" : "opacity-0",
         )}
       />
       <div
         className={cn(
           "absolute right-0 top-0 bottom-0 w-1/2 bg-primary/20 border-2 border-primary/50 border-l-0 z-20 pointer-events-none transition-opacity duration-150",
-          dragOverZone === "right" && !dragOverTabId
-            ? "opacity-100"
-            : "opacity-0",
+          dragOverZone === "right" && !dragOverTabId ? "opacity-100" : "opacity-0",
         )}
       />
       <div
         className={cn(
           "absolute left-0 right-0 top-0 h-1/2 bg-primary/20 border-2 border-primary/50 border-b-0 z-20 pointer-events-none transition-opacity duration-150",
-          dragOverZone === "top" && !dragOverTabId
-            ? "opacity-100"
-            : "opacity-0",
+          dragOverZone === "top" && !dragOverTabId ? "opacity-100" : "opacity-0",
         )}
       />
       <div
         className={cn(
           "absolute left-0 right-0 bottom-0 h-1/2 bg-primary/20 border-2 border-primary/50 border-t-0 z-20 pointer-events-none transition-opacity duration-150",
-          dragOverZone === "bottom" && !dragOverTabId
-            ? "opacity-100"
-            : "opacity-0",
+          dragOverZone === "bottom" && !dragOverTabId ? "opacity-100" : "opacity-0",
         )}
       />
       <div
         className={cn(
           "absolute inset-0 bg-primary/10 border-2 border-primary/50 z-20 pointer-events-none transition-opacity duration-150",
-          dragOverZone === "center" && !dragOverTabId
-            ? "opacity-100"
-            : "opacity-0",
+          dragOverZone === "center" && !dragOverTabId ? "opacity-100" : "opacity-0",
         )}
       />
 
@@ -514,24 +484,17 @@ export const TabBar = memo(function TabBar({
                       Split Down
                     </ContextMenuItem>
                     <ContextMenuSeparator />
-                    <ContextMenuItem
-                      onClick={() => closeTab(connectionId, paneId, tab.id)}
-                    >
+                    <ContextMenuItem onClick={() => closeTab(connectionId, paneId, tab.id)}>
                       Close Tab
                     </ContextMenuItem>
                     {tabs.length > 1 && (
                       <>
-                        <ContextMenuItem
-                          onClick={() => handleCloseOtherTabs(tab.id)}
-                        >
+                        <ContextMenuItem onClick={() => handleCloseOtherTabs(tab.id)}>
                           Close Other Tabs
                         </ContextMenuItem>
                         <ContextMenuItem
                           onClick={() => handleCloseTabsToRight(tab.id)}
-                          disabled={
-                            tabs.findIndex((t) => t.id === tab.id) ===
-                            tabs.length - 1
-                          }
+                          disabled={tabs.findIndex((t) => t.id === tab.id) === tabs.length - 1}
                         >
                           Close Tabs to the Right
                         </ContextMenuItem>

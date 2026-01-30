@@ -16,9 +16,7 @@ interface TerminalProps {
 
 // Get computed color from CSS variable and convert to hex
 function getCssVarAsHex(varName: string): string {
-  const value = getComputedStyle(document.documentElement)
-    .getPropertyValue(varName)
-    .trim();
+  const value = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
 
   if (!value) {
     return "#1a1b26"; // fallback
@@ -33,9 +31,7 @@ function getCssVarAsHex(varName: string): string {
   document.body.removeChild(temp);
 
   // Parse rgb(r, g, b) or rgba(r, g, b, a)
-  const match = computedColor.match(
-    /rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/
-  );
+  const match = computedColor.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
   if (match) {
     const r = parseInt(match[1], 10);
     const g = parseInt(match[2], 10);
@@ -147,9 +143,7 @@ export function Terminal({ terminalId, isVisible, onClose }: TerminalProps) {
 
     // Handle resize
     terminal.onResize(({ rows, cols }) => {
-      invoke("terminal_resize", { id: terminalId, rows, cols }).catch(
-        console.error
-      );
+      invoke("terminal_resize", { id: terminalId, rows, cols }).catch(console.error);
     });
 
     // Listen for terminal output from backend
@@ -157,12 +151,9 @@ export function Terminal({ terminalId, isVisible, onClose }: TerminalProps) {
     let unlistenClosed: UnlistenFn | null = null;
 
     const setupListeners = async () => {
-      unlistenOutput = await listen<string>(
-        `terminal-output-${terminalId}`,
-        (event) => {
-          terminal.write(event.payload);
-        }
-      );
+      unlistenOutput = await listen<string>(`terminal-output-${terminalId}`, (event) => {
+        terminal.write(event.payload);
+      });
 
       unlistenClosed = await listen(`terminal-closed-${terminalId}`, () => {
         terminal.write("\r\n\x1b[31mTerminal session ended.\x1b[0m\r\n");
@@ -227,11 +218,5 @@ export function Terminal({ terminalId, isVisible, onClose }: TerminalProps) {
     }
   }, [activeThemeId]);
 
-  return (
-    <div
-      ref={containerRef}
-      className="h-full w-full"
-      style={{ padding: "8px" }}
-    />
-  );
+  return <div ref={containerRef} className="h-full w-full" style={{ padding: "8px" }} />;
 }

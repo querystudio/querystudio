@@ -11,10 +11,7 @@ export function cn(...inputs: ClassValue[]) {
  * - PostgreSQL/SQLite uses double quotes: "identifier"
  * - MySQL uses backticks: `identifier`
  */
-export function quoteIdentifier(
-  identifier: string,
-  dbType: DatabaseType,
-): string {
+export function quoteIdentifier(identifier: string, dbType: DatabaseType): string {
   if (dbType === "mysql") {
     return `\`${identifier}\``;
   }
@@ -25,10 +22,6 @@ export function quoteIdentifier(
 /**
  * Quote a schema.table reference based on database type.
  */
-export function quoteTableRef(
-  schema: string,
-  table: string,
-  dbType: DatabaseType,
-): string {
+export function quoteTableRef(schema: string, table: string, dbType: DatabaseType): string {
   return `${quoteIdentifier(schema, dbType)}.${quoteIdentifier(table, dbType)}`;
 }

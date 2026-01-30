@@ -1,4 +1,4 @@
-import { z } from 'zod/v4'
+import { z } from "zod/v4";
 
 const envSchema = z.object({
   DATABASE_URL: z.url(),
@@ -21,6 +21,6 @@ const envSchema = z.object({
   //DATABASE_NAME: z.string().min(1),
   //DATABASE_USERNAME: z.string().min(1),
   //DATABASE_PASSWORD: z.string().min(1),
-})
+});
 
-export const env = envSchema.parse(process.env)
+export const env = envSchema.parse(process.env);

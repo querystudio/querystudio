@@ -2,6 +2,16 @@
   "name": "web",
   "version": "0.0.0",
   "type": "module",
+  "scripts": {
+    "cf-tunnel": "cloudflared tunnel run lasse-local-tunnel",
+    "start": "bun run .output/server/index.mjs",
+    "test": "vitest run",
+    "build": "vite build",
+    "gen-auth": "bun --bun better-auth generate --config src/lib/auth.tsx",
+    "dev": "vite dev",
+    "bauth": "bun --bun better-auth",
+    "bauth:gen": "bun bauth generate --output drizzle/schema/auth.ts --config src/lib/auth.tsx"
+  },
   "dependencies": {
     "@hono/zod-validator": "^0.7.6",
     "@hookform/resolvers": "^5.2.2",
@@ -95,15 +105,5 @@
     "vite": "npm:rolldown-vite@latest",
     "vitest": "^4.0.16",
     "web-vitals": "^5.1.0"
-  },
-  "scripts": {
-    "cf-tunnel": "cloudflared tunnel run lasse-local-tunnel",
-    "start": "bun run .output/server/index.mjs",
-    "test": "vitest run",
-    "build": "vite build",
-    "gen-auth": "bun --bun better-auth generate --config src/lib/auth.tsx",
-    "dev": "vite dev",
-    "bauth": "bun --bun better-auth",
-    "bauth:gen": "bun bauth generate --output drizzle/schema/auth.ts --config src/lib/auth.tsx"
   }
 }

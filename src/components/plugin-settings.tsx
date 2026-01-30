@@ -8,15 +8,7 @@
 // ============================================================================
 
 import { useState, useRef } from "react";
-import {
-  Puzzle,
-  Plus,
-  Trash2,
-  Info,
-  Upload,
-  FileCode,
-  AlertTriangle,
-} from "lucide-react";
+import { Puzzle, Plus, Trash2, Info, Upload, FileCode, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -57,9 +49,7 @@ export function PluginSettings() {
   const hasPluginType = usePluginStore((s) => s.hasPluginType);
 
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(
-    null,
-  );
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [addMode, setAddMode] = useState<"manual" | "import">("manual");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -130,9 +120,7 @@ export function PluginSettings() {
     const validExtensions = [".tsx", ".ts", ".jsx", ".js"];
     const ext = file.name.substring(file.name.lastIndexOf("."));
     if (!validExtensions.includes(ext)) {
-      setParseError(
-        `Invalid file type. Please select a ${validExtensions.join(", ")} file.`,
-      );
+      setParseError(`Invalid file type. Please select a ${validExtensions.join(", ")} file.`);
       return;
     }
 
@@ -171,14 +159,10 @@ export function PluginSettings() {
     }
   };
 
-  const extractPluginMetadata = (
-    content: string,
-  ): Partial<typeof newPlugin> | null => {
+  const extractPluginMetadata = (content: string): Partial<typeof newPlugin> | null => {
     try {
       // Try to find @plugin comment block
-      const pluginCommentMatch = content.match(
-        /\/\*\s*@plugin\s*(\{[\s\S]*?\})\s*\*\//,
-      );
+      const pluginCommentMatch = content.match(/\/\*\s*@plugin\s*(\{[\s\S]*?\})\s*\*\//);
       if (pluginCommentMatch) {
         const json = JSON.parse(pluginCommentMatch[1]);
         return {
@@ -274,9 +258,8 @@ export function PluginSettings() {
           <div className="text-sm text-yellow-600 dark:text-yellow-400">
             <p className="font-medium mb-1">Experimental Feature</p>
             <p>
-              The plugin system is experimental. Only install plugins from
-              sources you trust. Malicious plugins could potentially access your
-              data.
+              The plugin system is experimental. Only install plugins from sources you trust.
+              Malicious plugins could potentially access your data.
             </p>
           </div>
         </div>
@@ -321,8 +304,7 @@ export function PluginSettings() {
         <div className="space-y-4">
           <h3 className="text-lg font-medium">Built-in Plugins</h3>
           <p className="text-sm text-muted-foreground">
-            These plugins are bundled with QueryStudio and cannot be
-            uninstalled.
+            These plugins are bundled with QueryStudio and cannot be uninstalled.
           </p>
           <div className="space-y-3">
             {bundledPlugins.map((plugin) => (
@@ -344,9 +326,8 @@ export function PluginSettings() {
           <div className="text-sm text-blue-600 dark:text-blue-400">
             <p className="font-medium mb-1">About Plugins</p>
             <p>
-              Plugins add new tab types to QueryStudio. After installing or
-              changing plugin settings, restart the application for changes to
-              take effect.
+              Plugins add new tab types to QueryStudio. After installing or changing plugin
+              settings, restart the application for changes to take effect.
             </p>
           </div>
         </div>
@@ -373,15 +354,11 @@ export function PluginSettings() {
           <DialogHeader>
             <DialogTitle>Add Plugin</DialogTitle>
             <DialogDescription>
-              Register a new tab plugin by importing a file or entering details
-              manually.
+              Register a new tab plugin by importing a file or entering details manually.
             </DialogDescription>
           </DialogHeader>
 
-          <Tabs
-            value={addMode}
-            onValueChange={(v) => setAddMode(v as "manual" | "import")}
-          >
+          <Tabs value={addMode} onValueChange={(v) => setAddMode(v as "manual" | "import")}>
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="manual" className="gap-2">
                 <Puzzle className="h-4 w-4" />
@@ -441,20 +418,13 @@ export function PluginSettings() {
                   <p className="text-sm text-muted-foreground">
                     Review and complete the plugin details:
                   </p>
-                  <PluginFormFields
-                    newPlugin={newPlugin}
-                    setNewPlugin={setNewPlugin}
-                  />
+                  <PluginFormFields newPlugin={newPlugin} setNewPlugin={setNewPlugin} />
                 </div>
               )}
             </TabsContent>
 
             <TabsContent value="manual" className="space-y-4 pt-4">
-              <PluginFormFields
-                newPlugin={newPlugin}
-                setNewPlugin={setNewPlugin}
-                showCodeField
-              />
+              <PluginFormFields newPlugin={newPlugin} setNewPlugin={setNewPlugin} showCodeField />
             </TabsContent>
           </Tabs>
 
@@ -473,30 +443,21 @@ export function PluginSettings() {
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog
-        open={showDeleteConfirm !== null}
-        onOpenChange={() => setShowDeleteConfirm(null)}
-      >
+      <Dialog open={showDeleteConfirm !== null} onOpenChange={() => setShowDeleteConfirm(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Uninstall Plugin</DialogTitle>
             <DialogDescription>
-              Are you sure you want to uninstall this plugin? This action cannot
-              be undone.
+              Are you sure you want to uninstall this plugin? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowDeleteConfirm(null)}
-            >
+            <Button variant="outline" onClick={() => setShowDeleteConfirm(null)}>
               Cancel
             </Button>
             <Button
               variant="destructive"
-              onClick={() =>
-                showDeleteConfirm && handleUninstall(showDeleteConfirm)
-              }
+              onClick={() => showDeleteConfirm && handleUninstall(showDeleteConfirm)}
             >
               Uninstall
             </Button>
@@ -524,11 +485,7 @@ interface PluginFormFieldsProps {
   showCodeField?: boolean;
 }
 
-function PluginFormFields({
-  newPlugin,
-  setNewPlugin,
-  showCodeField,
-}: PluginFormFieldsProps) {
+function PluginFormFields({ newPlugin, setNewPlugin, showCodeField }: PluginFormFieldsProps) {
   return (
     <div className="space-y-4">
       <div className="space-y-2">
@@ -559,9 +516,7 @@ function PluginFormFields({
           id="plugin-name"
           placeholder="My Custom Tab"
           value={newPlugin.displayName}
-          onChange={(e) =>
-            setNewPlugin((p) => ({ ...p, displayName: e.target.value }))
-          }
+          onChange={(e) => setNewPlugin((p) => ({ ...p, displayName: e.target.value }))}
         />
       </div>
 
@@ -598,9 +553,7 @@ function PluginFormFields({
           id="plugin-description"
           placeholder="What does this plugin do?"
           value={newPlugin.description}
-          onChange={(e) =>
-            setNewPlugin((p) => ({ ...p, description: e.target.value }))
-          }
+          onChange={(e) => setNewPlugin((p) => ({ ...p, description: e.target.value }))}
         />
       </div>
 
@@ -611,9 +564,7 @@ function PluginFormFields({
             id="plugin-author"
             placeholder="Your name"
             value={newPlugin.author}
-            onChange={(e) =>
-              setNewPlugin((p) => ({ ...p, author: e.target.value }))
-            }
+            onChange={(e) => setNewPlugin((p) => ({ ...p, author: e.target.value }))}
           />
         </div>
         <div className="space-y-2">
@@ -622,9 +573,7 @@ function PluginFormFields({
             id="plugin-version"
             placeholder="1.0.0"
             value={newPlugin.version}
-            onChange={(e) =>
-              setNewPlugin((p) => ({ ...p, version: e.target.value }))
-            }
+            onChange={(e) => setNewPlugin((p) => ({ ...p, version: e.target.value }))}
           />
         </div>
       </div>
@@ -637,13 +586,11 @@ function PluginFormFields({
             placeholder="Paste your plugin component code here..."
             className="font-mono text-xs h-32"
             value={newPlugin.componentCode}
-            onChange={(e) =>
-              setNewPlugin((p) => ({ ...p, componentCode: e.target.value }))
-            }
+            onChange={(e) => setNewPlugin((p) => ({ ...p, componentCode: e.target.value }))}
           />
           <p className="text-xs text-muted-foreground">
-            The React component code for this plugin. This is stored for
-            reference but won't be executed automatically.
+            The React component code for this plugin. This is stored for reference but won't be
+            executed automatically.
           </p>
         </div>
       )}
@@ -659,12 +606,7 @@ interface PluginCardProps {
   isBundled?: boolean;
 }
 
-function PluginCard({
-  plugin,
-  onToggle,
-  onUninstall,
-  isBundled,
-}: PluginCardProps) {
+function PluginCard({ plugin, onToggle, onUninstall, isBundled }: PluginCardProps) {
   const Icon = getPluginIcon(plugin.iconName);
 
   return (
@@ -672,9 +614,7 @@ function PluginCard({
       <div className="flex items-center gap-4">
         <div
           className={`flex h-10 w-10 items-center justify-center rounded-lg ${
-            plugin.enabled
-              ? "bg-primary/10 text-primary"
-              : "bg-muted text-muted-foreground"
+            plugin.enabled ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
           }`}
         >
           <Icon className="h-5 w-5" />
@@ -682,9 +622,7 @@ function PluginCard({
         <div>
           <div className="flex items-center gap-2">
             <h4 className="font-medium">{plugin.displayName}</h4>
-            <span className="text-xs text-muted-foreground">
-              v{plugin.version}
-            </span>
+            <span className="text-xs text-muted-foreground">v{plugin.version}</span>
             {isBundled && (
               <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
                 BUNDLED

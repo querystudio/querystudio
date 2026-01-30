@@ -64,28 +64,28 @@ export function FpsCounter() {
   return (
     <div
       className={cn(
-        "pointer-events-none fixed right-2 top-2 z-50 flex flex-col items-end gap-1 rounded bg-black/50 p-2 text-xs font-mono text-white backdrop-blur-sm"
+        "pointer-events-none fixed right-2 top-2 z-50 flex flex-col items-end gap-1 rounded bg-black/50 p-2 text-xs font-mono text-white backdrop-blur-sm",
       )}
     >
       <div className="flex items-center gap-2">
-        <span className={cn(fps < 30 ? "text-red-400" : fps < 55 ? "text-yellow-400" : "text-green-400")}>
+        <span
+          className={cn(
+            fps < 30 ? "text-red-400" : fps < 55 ? "text-yellow-400" : "text-green-400",
+          )}
+        >
           {fps}
         </span>
         <span className="text-muted-foreground">FPS</span>
       </div>
-      
+
       {stats && (
         <>
           <div className="flex items-center gap-2">
-            <span className="text-blue-400">
-              {stats.cpu_usage.toFixed(1)}%
-            </span>
+            <span className="text-blue-400">{stats.cpu_usage.toFixed(1)}%</span>
             <span className="text-muted-foreground">CPU</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-purple-400">
-              {formatBytes(stats.memory_usage)}
-            </span>
+            <span className="text-purple-400">{formatBytes(stats.memory_usage)}</span>
             <span className="text-muted-foreground">MEM</span>
           </div>
         </>

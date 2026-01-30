@@ -174,17 +174,13 @@ export const usePluginStore = create<PluginStoreState>()(
 
       togglePlugin: (id, enabled) => {
         set((state) => ({
-          plugins: state.plugins.map((p) =>
-            p.id === id ? { ...p, enabled } : p
-          ),
+          plugins: state.plugins.map((p) => (p.id === id ? { ...p, enabled } : p)),
         }));
       },
 
       updatePlugin: (id, updates) => {
         set((state) => ({
-          plugins: state.plugins.map((p) =>
-            p.id === id ? { ...p, ...updates } : p
-          ),
+          plugins: state.plugins.map((p) => (p.id === id ? { ...p, ...updates } : p)),
         }));
       },
 
@@ -214,8 +210,8 @@ export const usePluginStore = create<PluginStoreState>()(
       partialize: (state) => ({
         plugins: state.plugins,
       }),
-    }
-  )
+    },
+  ),
 );
 
 // Helper to get the icon component for a plugin
@@ -224,9 +220,7 @@ export function getPluginIcon(iconName: PluginIconName): LucideIcon {
 }
 
 // Validate a plugin manifest
-export function validatePluginManifest(
-  manifest: unknown
-): manifest is PluginManifest {
+export function validatePluginManifest(manifest: unknown): manifest is PluginManifest {
   if (!manifest || typeof manifest !== "object") {
     return false;
   }
@@ -246,14 +240,12 @@ export function validatePluginManifest(
 
 // Parse a plugin file and extract manifest + component
 export function parsePluginFile(
-  fileContent: string
+  fileContent: string,
 ): { manifest: PluginManifest; componentCode: string } | null {
   try {
     // Look for a manifest comment block at the top of the file
     // Format: /* @plugin { "type": "...", "displayName": "..." } */
-    const manifestMatch = fileContent.match(
-      /\/\*\s*@plugin\s*(\{[\s\S]*?\})\s*\*\//
-    );
+    const manifestMatch = fileContent.match(/\/\*\s*@plugin\s*(\{[\s\S]*?\})\s*\*\//);
 
     if (manifestMatch) {
       const manifestJson = manifestMatch[1];
@@ -269,14 +261,12 @@ export function parsePluginFile(
 
     // Alternative: look for export const plugin = { ... }
     const exportMatch = fileContent.match(
-      /export\s+const\s+plugin\s*[:=]\s*(\{[\s\S]*?\})\s*(?:;|as)/
+      /export\s+const\s+plugin\s*[:=]\s*(\{[\s\S]*?\})\s*(?:;|as)/,
     );
 
     if (exportMatch) {
       // This is a simplified parser - in production you'd want something more robust
-      console.warn(
-        "[PluginStore] Export-style manifest detection is experimental"
-      );
+      console.warn("[PluginStore] Export-style manifest detection is experimental");
     }
 
     return null;

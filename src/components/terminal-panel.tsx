@@ -95,7 +95,7 @@ export function TerminalPanel() {
         removeTerminal(id);
       }
     },
-    [removeTerminal]
+    [removeTerminal],
   );
 
   if (terminals.length === 0) {
@@ -131,7 +131,7 @@ export function TerminalPanel() {
                 "flex items-center gap-1 rounded px-2 py-1 text-xs transition-colors",
                 activeTerminalId === terminal.id
                   ? "bg-accent text-accent-foreground"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
               )}
             >
               <span className="max-w-[100px] truncate">{terminal.title}</span>
@@ -146,21 +146,11 @@ export function TerminalPanel() {
               </button>
             </button>
           ))}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={createTerminal}
-          >
+          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={createTerminal}>
             <Plus className="h-3 w-3" />
           </Button>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-6 w-6"
-          onClick={toggleTerminalPanel}
-        >
+        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={toggleTerminalPanel}>
           {isTerminalPanelOpen ? (
             <ChevronDown className="h-3 w-3" />
           ) : (
@@ -179,8 +169,7 @@ export function TerminalPanel() {
             key={terminal.id}
             className="absolute inset-0"
             style={{
-              visibility:
-                activeTerminalId === terminal.id ? "visible" : "hidden",
+              visibility: activeTerminalId === terminal.id ? "visible" : "hidden",
               zIndex: activeTerminalId === terminal.id ? 1 : 0,
             }}
           >

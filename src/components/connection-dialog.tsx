@@ -1,27 +1,12 @@
 import { useState } from "react";
-import {
-  Loader2,
-  CheckCircle2,
-  AlertTriangle,
-  Key,
-  FolderOpen,
-} from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Loader2, CheckCircle2, AlertTriangle, Key, FolderOpen } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import {
-  useConnect,
-  useTestConnection,
-  useCanSaveConnection,
-} from "@/lib/hooks";
+import { useConnect, useTestConnection, useCanSaveConnection } from "@/lib/hooks";
 import { toast } from "sonner";
 import type { ConnectionConfig, DatabaseType } from "@/lib/types";
 import { LicenseSettings } from "@/components/license-settings";
@@ -92,10 +77,7 @@ const DATABASE_OPTIONS: DatabaseOption[] = [
 
 type ConnectionMode = "params" | "string" | "file";
 
-export function ConnectionDialog({
-  open,
-  onOpenChange,
-}: ConnectionDialogProps) {
+export function ConnectionDialog({ open, onOpenChange }: ConnectionDialogProps) {
   const [mode, setMode] = useState<ConnectionMode>("params");
   const [dbType, setDbType] = useState<DatabaseType>("postgres");
   const [tested, setTested] = useState(false);
@@ -144,8 +126,7 @@ export function ConnectionDialog({
     if (mode === "params") {
       if (!formData.host.trim()) newErrors.host = "Required";
       // Database is optional for Redis (defaults to 0)
-      if (dbType !== "redis" && !formData.database.trim())
-        newErrors.database = "Required";
+      if (dbType !== "redis" && !formData.database.trim()) newErrors.database = "Required";
       // Username is optional for Redis
       if (dbType !== "redis" && !formData.username.trim()) {
         newErrors.username = "Required";
@@ -202,9 +183,7 @@ export function ConnectionDialog({
     e.preventDefault();
 
     if (!canSave) {
-      toast.error(
-        `Saved connection limit reached. Free tier allows ${maxSaved} connections.`,
-      );
+      toast.error(`Saved connection limit reached. Free tier allows ${maxSaved} connections.`);
       return;
     }
 
@@ -335,9 +314,7 @@ export function ConnectionDialog({
                 <select
                   id="dbType"
                   value={dbType}
-                  onChange={(e) =>
-                    handleDbSelect(e.target.value as DatabaseType)
-                  }
+                  onChange={(e) => handleDbSelect(e.target.value as DatabaseType)}
                   disabled={!canSave}
                   className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                 >
@@ -416,8 +393,7 @@ export function ConnectionDialog({
                 {dbType === "redis" ? (
                   <div className="space-y-1.5">
                     <Label htmlFor="password">
-                      Password{" "}
-                      <span className="text-muted-foreground">(optional)</span>
+                      Password <span className="text-muted-foreground">(optional)</span>
                     </Label>
                     <Input
                       id="password"
@@ -436,9 +412,7 @@ export function ConnectionDialog({
                         id="username"
                         placeholder={selectedDb.defaults.username}
                         value={formData.username}
-                        onChange={(e) =>
-                          updateField("username", e.target.value)
-                        }
+                        onChange={(e) => updateField("username", e.target.value)}
                         className={cn(errors.username && "border-destructive")}
                         disabled={!canSave}
                       />
@@ -450,9 +424,7 @@ export function ConnectionDialog({
                         type="password"
                         placeholder="••••••••"
                         value={formData.password}
-                        onChange={(e) =>
-                          updateField("password", e.target.value)
-                        }
+                        onChange={(e) => updateField("password", e.target.value)}
                         disabled={!canSave}
                       />
                     </div>
@@ -467,9 +439,7 @@ export function ConnectionDialog({
                     id="connectionString"
                     placeholder="Select a SQLite database file..."
                     value={formData.connectionString}
-                    onChange={(e) =>
-                      updateField("connectionString", e.target.value)
-                    }
+                    onChange={(e) => updateField("connectionString", e.target.value)}
                     className={cn(
                       "font-mono text-sm flex-1",
                       errors.connectionString && "border-destructive",
@@ -497,9 +467,7 @@ export function ConnectionDialog({
                     type="button"
                     variant="outline"
                     size="icon"
-                    onClick={() =>
-                      document.getElementById("sqlite-file-input")?.click()
-                    }
+                    onClick={() => document.getElementById("sqlite-file-input")?.click()}
                     disabled={!canSave}
                   >
                     <FolderOpen className="h-4 w-4" />
@@ -516,9 +484,7 @@ export function ConnectionDialog({
                   id="connectionString"
                   placeholder={getConnectionStringPlaceholder()}
                   value={formData.connectionString}
-                  onChange={(e) =>
-                    updateField("connectionString", e.target.value)
-                  }
+                  onChange={(e) => updateField("connectionString", e.target.value)}
                   className={cn(
                     "min-h-[80px] font-mono text-sm",
                     errors.connectionString && "border-destructive",
@@ -543,9 +509,7 @@ export function ConnectionDialog({
                 Test
               </Button>
               <Button type="submit" disabled={connect.isPending || !canSave}>
-                {connect.isPending && (
-                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                )}
+                {connect.isPending && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
                 Connect
               </Button>
             </div>
@@ -553,10 +517,7 @@ export function ConnectionDialog({
         </DialogContent>
       </Dialog>
 
-      <LicenseSettings
-        open={licenseSettingsOpen}
-        onOpenChange={setLicenseSettingsOpen}
-      />
+      <LicenseSettings open={licenseSettingsOpen} onOpenChange={setLicenseSettingsOpen} />
     </>
   );
 }

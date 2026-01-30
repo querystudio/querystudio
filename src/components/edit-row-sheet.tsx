@@ -137,14 +137,10 @@ export function EditRowSheet({
       const newValue = formData[col.name];
       const lowerType = col.data_type.toLowerCase();
       const isTimestampType =
-        lowerType.includes("timestamp") ||
-        lowerType.includes("date") ||
-        lowerType.includes("time");
+        lowerType.includes("timestamp") || lowerType.includes("date") || lowerType.includes("time");
 
       if (isTimestampType && !col.is_nullable && !isNull && newValue === "") {
-        toast.error(
-          `Column "${col.name}" cannot be empty (NOT NULL constraint)`,
-        );
+        toast.error(`Column "${col.name}" cannot be empty (NOT NULL constraint)`);
         return;
       }
     }
@@ -203,11 +199,7 @@ export function EditRowSheet({
     }
   };
 
-  const formatValueForSQL = (
-    value: string,
-    dataType: string,
-    isNullable: boolean,
-  ): string => {
+  const formatValueForSQL = (value: string, dataType: string, isNullable: boolean): string => {
     const lowerType = dataType.toLowerCase();
 
     if (
@@ -322,10 +314,7 @@ export function EditRowSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <form
-          onSubmit={handleSubmit}
-          className="flex flex-1 flex-col overflow-hidden min-h-0"
-        >
+        <form onSubmit={handleSubmit} className="flex flex-1 flex-col overflow-hidden min-h-0">
           <div className="flex-1 overflow-y-auto min-h-0">
             {isMongoDB ? (
               <div className="space-y-4 py-4 px-1">
@@ -353,15 +342,9 @@ export function EditRowSheet({
                   return (
                     <div key={col.name} className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <Label
-                          htmlFor={col.name}
-                          className="flex items-center gap-2"
-                        >
+                        <Label htmlFor={col.name} className="flex items-center gap-2">
                           {col.name}
-                          <Badge
-                            variant="outline"
-                            className="text-[10px] font-normal"
-                          >
+                          <Badge variant="outline" className="text-[10px] font-normal">
                             {col.data_type}
                           </Badge>
                           {col.is_primary_key && (
@@ -372,14 +355,10 @@ export function EditRowSheet({
                         </Label>
                         {col.is_nullable && (
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-muted-foreground">
-                              NULL
-                            </span>
+                            <span className="text-xs text-muted-foreground">NULL</span>
                             <Switch
                               checked={isNull}
-                              onCheckedChange={(checked) =>
-                                toggleNull(col.name, checked)
-                              }
+                              onCheckedChange={(checked) => toggleNull(col.name, checked)}
                             />
                           </div>
                         )}
@@ -389,13 +368,9 @@ export function EditRowSheet({
                           <Textarea
                             id={col.name}
                             value={isNull ? "" : formData[col.name] || ""}
-                            onChange={(e) =>
-                              updateField(col.name, e.target.value)
-                            }
+                            onChange={(e) => updateField(col.name, e.target.value)}
                             disabled={isNull}
-                            placeholder={
-                              isNull ? "NULL" : `Enter ${col.data_type}`
-                            }
+                            placeholder={isNull ? "NULL" : `Enter ${col.data_type}`}
                             className="min-h-20 font-mono text-sm pr-8"
                           />
                           <button
@@ -416,13 +391,9 @@ export function EditRowSheet({
                             id={col.name}
                             type={inputType}
                             value={isNull ? "" : formData[col.name] || ""}
-                            onChange={(e) =>
-                              updateField(col.name, e.target.value)
-                            }
+                            onChange={(e) => updateField(col.name, e.target.value)}
                             disabled={isNull}
-                            placeholder={
-                              isNull ? "NULL" : `Enter ${col.data_type}`
-                            }
+                            placeholder={isNull ? "NULL" : `Enter ${col.data_type}`}
                             step={inputType === "number" ? "any" : undefined}
                             className="pr-8"
                           />
@@ -447,17 +418,10 @@ export function EditRowSheet({
           </div>
 
           <SheetFooter className="shrink-0">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button
-              type="submit"
-              disabled={updateRow.isPending || updateDocument.isPending}
-            >
+            <Button type="submit" disabled={updateRow.isPending || updateDocument.isPending}>
               {(updateRow.isPending || updateDocument.isPending) && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}

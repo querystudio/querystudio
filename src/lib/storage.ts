@@ -65,7 +65,7 @@ export const storage = {
   async getSavedConnections(): Promise<{ connections: SavedConnection[] }> {
     const database = await getDb();
     const rows = await database.select<ConnectionRow[]>(
-      "SELECT id, name, db_type, config_type, connection_string, host, port, database, username FROM connections ORDER BY name"
+      "SELECT id, name, db_type, config_type, connection_string, host, port, database, username FROM connections ORDER BY name",
     );
     return {
       connections: rows.map(rowToConnection),
@@ -97,7 +97,7 @@ export const storage = {
         isConnectionString ? null : config.port,
         isConnectionString ? null : config.database,
         isConnectionString ? null : config.username,
-      ]
+      ],
     );
   },
 
@@ -115,7 +115,7 @@ export const storage = {
   async getSavedConnectionCount(): Promise<number> {
     const database = await getDb();
     const result = await database.select<{ count: number }[]>(
-      "SELECT COUNT(*) as count FROM connections"
+      "SELECT COUNT(*) as count FROM connections",
     );
     return result[0]?.count ?? 0;
   },
@@ -127,7 +127,7 @@ export const storage = {
     const database = await getDb();
     const rows = await database.select<ConnectionRow[]>(
       "SELECT id, name, db_type, config_type, connection_string, host, port, database, username FROM connections WHERE id = $1",
-      [id]
+      [id],
     );
 
     if (rows.length === 0) {

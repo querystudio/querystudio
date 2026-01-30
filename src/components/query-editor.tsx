@@ -23,17 +23,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import {
-  useConnectionStore,
-  useAIQueryStore,
-  useQueryHistoryStore,
-} from "@/lib/store";
+import { useConnectionStore, useAIQueryStore, useQueryHistoryStore } from "@/lib/store";
 import { useLayoutStore } from "@/lib/layout-store";
 import { useShallow } from "zustand/react/shallow";
 import { useStatusBarStore } from "@/components/status-bar";
@@ -93,12 +85,8 @@ export const QueryEditor = memo(function QueryEditor({
   const clearHistory = useQueryHistoryStore((s) => s.clearHistory);
 
   const [query, setQuery] = useState(initialState.query);
-  const [results, setResults] = useState<QueryResult[]>(
-    initialState.results?.results ?? [],
-  );
-  const [error, setError] = useState<string | null>(
-    initialState.results?.error ?? null,
-  );
+  const [results, setResults] = useState<QueryResult[]>(initialState.results?.results ?? []);
+  const [error, setError] = useState<string | null>(initialState.results?.error ?? null);
   const [executionTime, setExecutionTime] = useState<number | null>(
     initialState.results?.executionTime ?? null,
   );
@@ -168,11 +156,7 @@ export const QueryEditor = memo(function QueryEditor({
   // Keyboard shortcut for history (Cmd+Shift+H / Ctrl+Shift+H)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (
-        (e.metaKey || e.ctrlKey) &&
-        e.shiftKey &&
-        e.key.toLowerCase() === "h"
-      ) {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "h") {
         e.preventDefault();
         setHistoryOpen((prev) => !prev);
       }
@@ -222,10 +206,7 @@ export const QueryEditor = memo(function QueryEditor({
       if (!containerRef.current) return;
       const containerRect = containerRef.current.getBoundingClientRect();
       const newHeight = e.clientY - containerRect.top;
-      const clampedHeight = Math.min(
-        MAX_EDITOR_HEIGHT,
-        Math.max(MIN_EDITOR_HEIGHT, newHeight),
-      );
+      const clampedHeight = Math.min(MAX_EDITOR_HEIGHT, Math.max(MIN_EDITOR_HEIGHT, newHeight));
       setEditorHeight(clampedHeight);
     };
 
@@ -258,9 +239,7 @@ export const QueryEditor = memo(function QueryEditor({
       return input
         .split("\n")
         .map((s) => s.trim())
-        .filter(
-          (s) => s.length > 0 && !s.startsWith("#") && !s.startsWith("//"),
-        );
+        .filter((s) => s.length > 0 && !s.startsWith("#") && !s.startsWith("//"));
     }
     return input
       .split(";")
@@ -278,11 +257,7 @@ export const QueryEditor = memo(function QueryEditor({
     const statements = splitQueries(query);
 
     if (statements.length === 0) {
-      setError(
-        isRedis
-          ? "No valid Redis commands found"
-          : "No valid SQL statements found",
-      );
+      setError(isRedis ? "No valid Redis commands found" : "No valid SQL statements found");
       return;
     }
 
@@ -388,252 +363,243 @@ export const QueryEditor = memo(function QueryEditor({
 
     // Configure language completions based on database type
     const language = isRedis ? "plaintext" : "sql";
-    completionProviderRef.current =
-      monaco.languages.registerCompletionItemProvider(language, {
-        provideCompletionItems: () => {
-          const keywords = isRedis
-            ? [
-                // String commands
-                "GET",
-                "SET",
-                "SETNX",
-                "SETEX",
-                "PSETEX",
-                "MGET",
-                "MSET",
-                "INCR",
-                "INCRBY",
-                "INCRBYFLOAT",
-                "DECR",
-                "DECRBY",
-                "APPEND",
-                "STRLEN",
-                "GETRANGE",
-                "SETRANGE",
-                // Key commands
-                "DEL",
-                "EXISTS",
-                "EXPIRE",
-                "EXPIREAT",
-                "PEXPIRE",
-                "TTL",
-                "PTTL",
-                "PERSIST",
-                "KEYS",
-                "SCAN",
-                "TYPE",
-                "RENAME",
-                "RENAMENX",
-                "RANDOMKEY",
-                "DBSIZE",
-                "FLUSHDB",
-                "FLUSHALL",
-                // Hash commands
-                "HGET",
-                "HSET",
-                "HSETNX",
-                "HMGET",
-                "HMSET",
-                "HGETALL",
-                "HDEL",
-                "HEXISTS",
-                "HKEYS",
-                "HVALS",
-                "HLEN",
-                "HINCRBY",
-                "HINCRBYFLOAT",
-                "HSCAN",
-                // List commands
-                "LPUSH",
-                "RPUSH",
-                "LPOP",
-                "RPOP",
-                "LRANGE",
-                "LLEN",
-                "LINDEX",
-                "LSET",
-                "LINSERT",
-                "LREM",
-                "LTRIM",
-                // Set commands
-                "SADD",
-                "SREM",
-                "SMEMBERS",
-                "SISMEMBER",
-                "SCARD",
-                "SPOP",
-                "SRANDMEMBER",
-                "SDIFF",
-                "SINTER",
-                "SUNION",
-                "SSCAN",
-                // Sorted Set commands
-                "ZADD",
-                "ZREM",
-                "ZRANGE",
-                "ZREVRANGE",
-                "ZRANGEBYSCORE",
-                "ZREVRANGEBYSCORE",
-                "ZRANK",
-                "ZREVRANK",
-                "ZSCORE",
-                "ZCARD",
-                "ZCOUNT",
-                "ZINCRBY",
-                "ZSCAN",
-                // Stream commands
-                "XADD",
-                "XREAD",
-                "XRANGE",
-                "XREVRANGE",
-                "XLEN",
-                "XINFO",
-                // Server commands
-                "PING",
-                "ECHO",
-                "INFO",
-                "CONFIG",
-                "CLIENT",
-                "SELECT",
-              ].map((keyword) => ({
-                label: keyword,
-                kind: monaco.languages.CompletionItemKind.Function,
-                insertText: keyword,
-              }))
-            : [
-                "SELECT",
-                "FROM",
-                "WHERE",
-                "AND",
-                "OR",
-                "INSERT",
-                "INTO",
-                "VALUES",
-                "UPDATE",
-                "SET",
-                "DELETE",
-                "CREATE",
-                "TABLE",
-                "DROP",
-                "ALTER",
-                "JOIN",
-                "LEFT",
-                "RIGHT",
-                "INNER",
-                "OUTER",
-                "ON",
-                "GROUP",
-                "BY",
-                "ORDER",
-                "ASC",
-                "DESC",
-                "LIMIT",
-                "OFFSET",
-                "HAVING",
-                "DISTINCT",
-                "COUNT",
-                "SUM",
-                "AVG",
-                "MIN",
-                "MAX",
-                "AS",
-                "NULL",
-                "NOT",
-                "IN",
-                "LIKE",
-                "BETWEEN",
-                "EXISTS",
-                "CASE",
-                "WHEN",
-                "THEN",
-                "ELSE",
-                "END",
-                "PRIMARY",
-                "KEY",
-                "FOREIGN",
-                "REFERENCES",
-                "UNIQUE",
-                "INDEX",
-                "BEGIN",
-                "COMMIT",
-                "ROLLBACK",
-                "TRANSACTION",
-              ].map((keyword) => ({
-                label: keyword,
-                kind: monaco.languages.CompletionItemKind.Keyword,
-                insertText: keyword,
-              }));
-
-          // Add table names from connection
-          const tableItems = tables.map((table) => ({
-            label: table.name,
-            kind: monaco.languages.CompletionItemKind.Class,
-            insertText:
-              table.schema === "public"
-                ? table.name
-                : `${table.schema}.${table.name}`,
-            detail: `${table.schema}.${table.name} (${table.row_count} rows)`,
-          }));
-
-          // Add schema.table format for non-public schemas
-          const schemaTableItems = tables
-            .filter((t) => t.schema !== "public")
-            .map((table) => ({
-              label: `${table.schema}.${table.name}`,
-              kind: monaco.languages.CompletionItemKind.Class,
-              insertText: `${table.schema}.${table.name}`,
-              detail: `${table.row_count} rows`,
+    completionProviderRef.current = monaco.languages.registerCompletionItemProvider(language, {
+      provideCompletionItems: () => {
+        const keywords = isRedis
+          ? [
+              // String commands
+              "GET",
+              "SET",
+              "SETNX",
+              "SETEX",
+              "PSETEX",
+              "MGET",
+              "MSET",
+              "INCR",
+              "INCRBY",
+              "INCRBYFLOAT",
+              "DECR",
+              "DECRBY",
+              "APPEND",
+              "STRLEN",
+              "GETRANGE",
+              "SETRANGE",
+              // Key commands
+              "DEL",
+              "EXISTS",
+              "EXPIRE",
+              "EXPIREAT",
+              "PEXPIRE",
+              "TTL",
+              "PTTL",
+              "PERSIST",
+              "KEYS",
+              "SCAN",
+              "TYPE",
+              "RENAME",
+              "RENAMENX",
+              "RANDOMKEY",
+              "DBSIZE",
+              "FLUSHDB",
+              "FLUSHALL",
+              // Hash commands
+              "HGET",
+              "HSET",
+              "HSETNX",
+              "HMGET",
+              "HMSET",
+              "HGETALL",
+              "HDEL",
+              "HEXISTS",
+              "HKEYS",
+              "HVALS",
+              "HLEN",
+              "HINCRBY",
+              "HINCRBYFLOAT",
+              "HSCAN",
+              // List commands
+              "LPUSH",
+              "RPUSH",
+              "LPOP",
+              "RPOP",
+              "LRANGE",
+              "LLEN",
+              "LINDEX",
+              "LSET",
+              "LINSERT",
+              "LREM",
+              "LTRIM",
+              // Set commands
+              "SADD",
+              "SREM",
+              "SMEMBERS",
+              "SISMEMBER",
+              "SCARD",
+              "SPOP",
+              "SRANDMEMBER",
+              "SDIFF",
+              "SINTER",
+              "SUNION",
+              "SSCAN",
+              // Sorted Set commands
+              "ZADD",
+              "ZREM",
+              "ZRANGE",
+              "ZREVRANGE",
+              "ZRANGEBYSCORE",
+              "ZREVRANGEBYSCORE",
+              "ZRANK",
+              "ZREVRANK",
+              "ZSCORE",
+              "ZCARD",
+              "ZCOUNT",
+              "ZINCRBY",
+              "ZSCAN",
+              // Stream commands
+              "XADD",
+              "XREAD",
+              "XRANGE",
+              "XREVRANGE",
+              "XLEN",
+              "XINFO",
+              // Server commands
+              "PING",
+              "ECHO",
+              "INFO",
+              "CONFIG",
+              "CLIENT",
+              "SELECT",
+            ].map((keyword) => ({
+              label: keyword,
+              kind: monaco.languages.CompletionItemKind.Function,
+              insertText: keyword,
+            }))
+          : [
+              "SELECT",
+              "FROM",
+              "WHERE",
+              "AND",
+              "OR",
+              "INSERT",
+              "INTO",
+              "VALUES",
+              "UPDATE",
+              "SET",
+              "DELETE",
+              "CREATE",
+              "TABLE",
+              "DROP",
+              "ALTER",
+              "JOIN",
+              "LEFT",
+              "RIGHT",
+              "INNER",
+              "OUTER",
+              "ON",
+              "GROUP",
+              "BY",
+              "ORDER",
+              "ASC",
+              "DESC",
+              "LIMIT",
+              "OFFSET",
+              "HAVING",
+              "DISTINCT",
+              "COUNT",
+              "SUM",
+              "AVG",
+              "MIN",
+              "MAX",
+              "AS",
+              "NULL",
+              "NOT",
+              "IN",
+              "LIKE",
+              "BETWEEN",
+              "EXISTS",
+              "CASE",
+              "WHEN",
+              "THEN",
+              "ELSE",
+              "END",
+              "PRIMARY",
+              "KEY",
+              "FOREIGN",
+              "REFERENCES",
+              "UNIQUE",
+              "INDEX",
+              "BEGIN",
+              "COMMIT",
+              "ROLLBACK",
+              "TRANSACTION",
+            ].map((keyword) => ({
+              label: keyword,
+              kind: monaco.languages.CompletionItemKind.Keyword,
+              insertText: keyword,
             }));
 
-          // Add column names from all tables (deduplicated)
-          const columnItems: {
-            label: string;
-            kind: typeof monaco.languages.CompletionItemKind.Field;
-            insertText: string;
-            detail: string;
-          }[] = [];
-          const seenPrefixedColumns = new Set<string>();
-          const seenColumns = new Set<string>();
+        // Add table names from connection
+        const tableItems = tables.map((table) => ({
+          label: table.name,
+          kind: monaco.languages.CompletionItemKind.Class,
+          insertText: table.schema === "public" ? table.name : `${table.schema}.${table.name}`,
+          detail: `${table.schema}.${table.name} (${table.row_count} rows)`,
+        }));
 
-          if (allColumns) {
-            for (const [tableKey, columns] of Object.entries(allColumns)) {
-              for (const col of columns) {
-                // Add column with table prefix (table.column) - deduplicated
-                const prefixedLabel = `${col.tableName}.${col.name}`;
-                if (!seenPrefixedColumns.has(prefixedLabel)) {
-                  seenPrefixedColumns.add(prefixedLabel);
-                  columnItems.push({
-                    label: prefixedLabel,
-                    kind: monaco.languages.CompletionItemKind.Field,
-                    insertText: prefixedLabel,
-                    detail: `${col.dataType} (${tableKey})`,
-                  });
-                }
+        // Add schema.table format for non-public schemas
+        const schemaTableItems = tables
+          .filter((t) => t.schema !== "public")
+          .map((table) => ({
+            label: `${table.schema}.${table.name}`,
+            kind: monaco.languages.CompletionItemKind.Class,
+            insertText: `${table.schema}.${table.name}`,
+            detail: `${table.row_count} rows`,
+          }));
 
-                // Add column without prefix (only once per unique column name)
-                if (!seenColumns.has(col.name)) {
-                  seenColumns.add(col.name);
-                  columnItems.push({
-                    label: col.name,
-                    kind: monaco.languages.CompletionItemKind.Field,
-                    insertText: col.name,
-                    detail: `${col.dataType}`,
-                  });
-                }
+        // Add column names from all tables (deduplicated)
+        const columnItems: {
+          label: string;
+          kind: typeof monaco.languages.CompletionItemKind.Field;
+          insertText: string;
+          detail: string;
+        }[] = [];
+        const seenPrefixedColumns = new Set<string>();
+        const seenColumns = new Set<string>();
+
+        if (allColumns) {
+          for (const [tableKey, columns] of Object.entries(allColumns)) {
+            for (const col of columns) {
+              // Add column with table prefix (table.column) - deduplicated
+              const prefixedLabel = `${col.tableName}.${col.name}`;
+              if (!seenPrefixedColumns.has(prefixedLabel)) {
+                seenPrefixedColumns.add(prefixedLabel);
+                columnItems.push({
+                  label: prefixedLabel,
+                  kind: monaco.languages.CompletionItemKind.Field,
+                  insertText: prefixedLabel,
+                  detail: `${col.dataType} (${tableKey})`,
+                });
+              }
+
+              // Add column without prefix (only once per unique column name)
+              if (!seenColumns.has(col.name)) {
+                seenColumns.add(col.name);
+                columnItems.push({
+                  label: col.name,
+                  kind: monaco.languages.CompletionItemKind.Field,
+                  insertText: col.name,
+                  detail: `${col.dataType}`,
+                });
               }
             }
           }
+        }
 
-          return {
-            suggestions: [
-              ...keywords,
-              ...tableItems,
-              ...schemaTableItems,
-              ...columnItems,
-            ],
-          };
-        },
-      });
+        return {
+          suggestions: [...keywords, ...tableItems, ...schemaTableItems, ...columnItems],
+        };
+      },
+    });
   };
 
   const formatValue = (value: unknown): string => {
@@ -655,17 +621,14 @@ export const QueryEditor = memo(function QueryEditor({
       <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
         <p className="text-lg font-medium">Query Editor Not Available</p>
         <p className="mt-2 text-sm">
-          MongoDB uses its own query language. Use the Documents tab to browse
-          collections.
+          MongoDB uses its own query language. Use the Documents tab to browse collections.
         </p>
       </div>
     );
   }
 
   if (isRedis) {
-    return (
-      <RedisConsole tabId={tabId} paneId={paneId} connectionId={connectionId} />
-    );
+    return <RedisConsole tabId={tabId} paneId={paneId} connectionId={connectionId} />;
   }
 
   return (
@@ -771,12 +734,9 @@ export const QueryEditor = memo(function QueryEditor({
                                 </p>
                                 <p className="text-xs text-muted-foreground mt-0.5">
                                   {new Date(entry.executedAt).toLocaleString()}
-                                  {entry.success &&
-                                    entry.rowCount !== undefined && (
-                                      <span className="ml-2">
-                                        {entry.rowCount} rows
-                                      </span>
-                                    )}
+                                  {entry.success && entry.rowCount !== undefined && (
+                                    <span className="ml-2">{entry.rowCount} rows</span>
+                                  )}
                                 </p>
                               </div>
                             </div>
@@ -869,9 +829,7 @@ export const QueryEditor = memo(function QueryEditor({
                     results.map((result) => ({
                       columns: result.columns,
                       rows: result.rows.map((row) =>
-                        Object.fromEntries(
-                          result.columns.map((col, i) => [col, row[i]]),
-                        ),
+                        Object.fromEntries(result.columns.map((col, i) => [col, row[i]])),
                       ),
                       row_count: result.row_count,
                     })),
@@ -917,10 +875,7 @@ export const QueryEditor = memo(function QueryEditor({
                             </TableRow>
                           ) : (
                             result.rows.map((row: unknown[], i: number) => (
-                              <TableRow
-                                key={i}
-                                className="border-border hover:bg-card/50"
-                              >
+                              <TableRow key={i} className="border-border hover:bg-card/50">
                                 {row.map((cell: unknown, j: number) => {
                                   const isNull = cell === null;
                                   return (
@@ -928,8 +883,7 @@ export const QueryEditor = memo(function QueryEditor({
                                       key={j}
                                       className={cn(
                                         "max-w-xs truncate border-r border-border font-mono text-xs last:border-r-0",
-                                        isNull &&
-                                          "text-muted-foreground italic",
+                                        isNull && "text-muted-foreground italic",
                                       )}
                                       title={formatValue(cell)}
                                     >

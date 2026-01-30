@@ -105,8 +105,7 @@ export const useAIQueryStore = create<AIQueryState>()(
       clearPendingSql: () => set({ pendingSql: null }),
 
       debugRequest: null,
-      requestDebug: (query: string, error: string) =>
-        set({ debugRequest: { query, error } }),
+      requestDebug: (query: string, error: string) => set({ debugRequest: { query, error } }),
       clearDebugRequest: () => set({ debugRequest: null }),
 
       activeTab: "data",
@@ -114,33 +113,26 @@ export const useAIQueryStore = create<AIQueryState>()(
 
       aiPanelOpen: false,
       setAiPanelOpen: (open: boolean) => set({ aiPanelOpen: open }),
-      toggleAiPanel: () =>
-        set((state) => ({ aiPanelOpen: !state.aiPanelOpen })),
+      toggleAiPanel: () => set((state) => ({ aiPanelOpen: !state.aiPanelOpen })),
 
       sidebarWidth: 256,
       sidebarCollapsed: false,
       setSidebarWidth: (width: number) => set({ sidebarWidth: width }),
-      setSidebarCollapsed: (collapsed: boolean) =>
-        set({ sidebarCollapsed: collapsed }),
-      toggleSidebar: () =>
-        set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
+      setSidebarCollapsed: (collapsed: boolean) => set({ sidebarCollapsed: collapsed }),
+      toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
 
       statusBarVisible: true,
-      setStatusBarVisible: (visible: boolean) =>
-        set({ statusBarVisible: visible }),
-      toggleStatusBar: () =>
-        set((state) => ({ statusBarVisible: !state.statusBarVisible })),
+      setStatusBarVisible: (visible: boolean) => set({ statusBarVisible: visible }),
+      toggleStatusBar: () => set((state) => ({ statusBarVisible: !state.statusBarVisible })),
 
       autoReconnect: true,
       setAutoReconnect: (enabled: boolean) => set({ autoReconnect: enabled }),
 
       experimentalTerminal: false,
-      setExperimentalTerminal: (enabled: boolean) =>
-        set({ experimentalTerminal: enabled }),
+      setExperimentalTerminal: (enabled: boolean) => set({ experimentalTerminal: enabled }),
 
       experimentalPlugins: false,
-      setExperimentalPlugins: (enabled: boolean) =>
-        set({ experimentalPlugins: enabled }),
+      setExperimentalPlugins: (enabled: boolean) => set({ experimentalPlugins: enabled }),
 
       debugMode: false,
       setDebugMode: (enabled: boolean) => set({ debugMode: enabled }),
@@ -174,10 +166,7 @@ interface QueryHistoryEntry {
 interface QueryHistoryState {
   // Map of connectionId -> query history
   history: Record<string, QueryHistoryEntry[]>;
-  addQuery: (
-    connectionId: string,
-    entry: Omit<QueryHistoryEntry, "executedAt">,
-  ) => void;
+  addQuery: (connectionId: string, entry: Omit<QueryHistoryEntry, "executedAt">) => void;
   getHistory: (connectionId: string) => QueryHistoryEntry[];
   clearHistory: (connectionId: string) => void;
 
@@ -193,10 +182,7 @@ export const useQueryHistoryStore = create<QueryHistoryState>()(
       history: {},
       currentQueries: {},
 
-      addQuery: (
-        connectionId: string,
-        entry: Omit<QueryHistoryEntry, "executedAt">,
-      ) => {
+      addQuery: (connectionId: string, entry: Omit<QueryHistoryEntry, "executedAt">) => {
         set((state) => {
           const connectionHistory = state.history[connectionId] || [];
           const newEntry: QueryHistoryEntry = {

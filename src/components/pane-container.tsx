@@ -94,10 +94,7 @@ export const PaneContainer = memo(function PaneContainer({
     );
   }
 
-  const contextValue = useMemo(
-    () => ({ isDraggingTab, setIsDraggingTab }),
-    [isDraggingTab],
-  );
+  const contextValue = useMemo(() => ({ isDraggingTab, setIsDraggingTab }), [isDraggingTab]);
 
   return (
     <DragContext.Provider value={contextValue}>
@@ -125,13 +122,7 @@ const PaneRenderer = memo(function PaneRenderer({
   allPanes,
 }: PaneRendererProps) {
   if (pane.type === "leaf") {
-    return (
-      <LeafPaneRenderer
-        connectionId={connectionId}
-        dbType={dbType}
-        pane={pane}
-      />
-    );
+    return <LeafPaneRenderer connectionId={connectionId} dbType={dbType} pane={pane} />;
   }
 
   return (
@@ -240,13 +231,7 @@ const LeafPaneRenderer = memo(function LeafPaneRenderer({
   const tabContent = useMemo(() => {
     // Show welcome screen when there are no tabs
     if (!hasTabs) {
-      return (
-        <PaneWelcomeScreen
-          connectionId={connectionId}
-          paneId={pane.id}
-          dbType={dbType}
-        />
-      );
+      return <PaneWelcomeScreen connectionId={connectionId} paneId={pane.id} dbType={dbType} />;
     }
 
     if (!activeTab) {
@@ -317,9 +302,7 @@ const LeafPaneRenderer = memo(function LeafPaneRenderer({
         <div
           className={cn(
             "absolute left-0 top-0 bottom-0 w-1/2 bg-primary/20 border-2 border-primary/50 border-r-0 z-50 pointer-events-none flex items-center justify-center transition-opacity duration-150",
-            dragOverZone === "left"
-              ? "opacity-100"
-              : "opacity-0 pointer-events-none",
+            dragOverZone === "left" ? "opacity-100" : "opacity-0 pointer-events-none",
           )}
         >
           <div className="bg-primary/30 rounded px-3 py-1 text-sm font-medium text-primary-foreground">
@@ -329,9 +312,7 @@ const LeafPaneRenderer = memo(function LeafPaneRenderer({
         <div
           className={cn(
             "absolute right-0 top-0 bottom-0 w-1/2 bg-primary/20 border-2 border-primary/50 border-l-0 z-50 pointer-events-none flex items-center justify-center transition-opacity duration-150",
-            dragOverZone === "right"
-              ? "opacity-100"
-              : "opacity-0 pointer-events-none",
+            dragOverZone === "right" ? "opacity-100" : "opacity-0 pointer-events-none",
           )}
         >
           <div className="bg-primary/30 rounded px-3 py-1 text-sm font-medium text-primary-foreground">
@@ -341,9 +322,7 @@ const LeafPaneRenderer = memo(function LeafPaneRenderer({
         <div
           className={cn(
             "absolute left-0 right-0 top-0 h-1/2 bg-primary/20 border-2 border-primary/50 border-b-0 z-50 pointer-events-none flex items-center justify-center transition-opacity duration-150",
-            dragOverZone === "top"
-              ? "opacity-100"
-              : "opacity-0 pointer-events-none",
+            dragOverZone === "top" ? "opacity-100" : "opacity-0 pointer-events-none",
           )}
         >
           <div className="bg-primary/30 rounded px-3 py-1 text-sm font-medium text-primary-foreground">
@@ -353,9 +332,7 @@ const LeafPaneRenderer = memo(function LeafPaneRenderer({
         <div
           className={cn(
             "absolute left-0 right-0 bottom-0 h-1/2 bg-primary/20 border-2 border-primary/50 border-t-0 z-50 pointer-events-none flex items-center justify-center transition-opacity duration-150",
-            dragOverZone === "bottom"
-              ? "opacity-100"
-              : "opacity-0 pointer-events-none",
+            dragOverZone === "bottom" ? "opacity-100" : "opacity-0 pointer-events-none",
           )}
         >
           <div className="bg-primary/30 rounded px-3 py-1 text-sm font-medium text-primary-foreground">
@@ -365,9 +342,7 @@ const LeafPaneRenderer = memo(function LeafPaneRenderer({
         <div
           className={cn(
             "absolute inset-0 bg-primary/10 border-2 border-primary/50 z-50 pointer-events-none flex items-center justify-center transition-opacity duration-150",
-            dragOverZone === "center"
-              ? "opacity-100"
-              : "opacity-0 pointer-events-none",
+            dragOverZone === "center" ? "opacity-100" : "opacity-0 pointer-events-none",
           )}
         >
           <div className="bg-primary/30 rounded px-3 py-1 text-sm font-medium text-primary-foreground">
@@ -432,8 +407,7 @@ const SplitPaneRenderer = memo(function SplitPaneRenderer({
       setTimeout(() => setIsTransitioning(true), 50);
     };
 
-    document.body.style.cursor =
-      pane.direction === "horizontal" ? "col-resize" : "row-resize";
+    document.body.style.cursor = pane.direction === "horizontal" ? "col-resize" : "row-resize";
     document.body.style.userSelect = "none";
 
     window.addEventListener("mousemove", handleMouseMove);
@@ -456,22 +430,16 @@ const SplitPaneRenderer = memo(function SplitPaneRenderer({
   return (
     <div
       ref={containerRef}
-      className={cn(
-        "flex h-full w-full",
-        isHorizontal ? "flex-row" : "flex-col",
-      )}
+      className={cn("flex h-full w-full", isHorizontal ? "flex-row" : "flex-col")}
     >
       {/* First pane */}
       <div
         style={{
-          [isHorizontal ? "width" : "height"]:
-            `calc(${pane.ratio * 100}% - 2px)`,
+          [isHorizontal ? "width" : "height"]: `calc(${pane.ratio * 100}% - 2px)`,
         }}
         className={cn(
           "overflow-hidden",
-          isTransitioning &&
-            !isResizing &&
-            "transition-all duration-200 ease-out",
+          isTransitioning && !isResizing && "transition-all duration-200 ease-out",
         )}
       >
         <PaneRenderer
@@ -487,9 +455,7 @@ const SplitPaneRenderer = memo(function SplitPaneRenderer({
         onMouseDown={handleResizeStart}
         className={cn(
           "shrink-0 bg-border transition-colors hover:bg-primary/50 active:bg-primary/70",
-          isHorizontal
-            ? "w-1 cursor-col-resize hover:w-1"
-            : "h-1 cursor-row-resize hover:h-1",
+          isHorizontal ? "w-1 cursor-col-resize hover:w-1" : "h-1 cursor-row-resize hover:h-1",
           isResizing && "bg-primary/70",
         )}
       />
@@ -497,14 +463,11 @@ const SplitPaneRenderer = memo(function SplitPaneRenderer({
       {/* Second pane */}
       <div
         style={{
-          [isHorizontal ? "width" : "height"]:
-            `calc(${(1 - pane.ratio) * 100}% - 2px)`,
+          [isHorizontal ? "width" : "height"]: `calc(${(1 - pane.ratio) * 100}% - 2px)`,
         }}
         className={cn(
           "overflow-hidden",
-          isTransitioning &&
-            !isResizing &&
-            "transition-all duration-200 ease-out",
+          isTransitioning && !isResizing && "transition-all duration-200 ease-out",
         )}
       >
         <PaneRenderer

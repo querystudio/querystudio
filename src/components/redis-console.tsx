@@ -11,9 +11,7 @@ import type { TabContentProps } from "@/lib/tab-sdk";
 
 // Get computed color from CSS variable and convert to hex
 function getCssVarAsHex(varName: string): string {
-  const value = getComputedStyle(document.documentElement)
-    .getPropertyValue(varName)
-    .trim();
+  const value = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
 
   if (!value) {
     return "#1a1b26";
@@ -134,14 +132,10 @@ export const RedisConsole = memo(function RedisConsole({
           output = formatValue(value);
         } else if (result.columns.length === 1) {
           // List of values
-          output = result.rows
-            .map((row, i) => `${i + 1}) ${formatValue(row[0])}`)
-            .join("\r\n");
+          output = result.rows.map((row, i) => `${i + 1}) ${formatValue(row[0])}`).join("\r\n");
         } else {
           // Key-value pairs or table
-          output = result.rows
-            .map((row) => row.map(formatValue).join(" | "))
-            .join("\r\n");
+          output = result.rows.map((row) => row.map(formatValue).join(" | ")).join("\r\n");
         }
 
         terminal.write("\r\n" + output);
@@ -211,22 +205,14 @@ export const RedisConsole = memo(function RedisConsole({
     fitAddonRef.current = fitAddon;
 
     // Welcome message
-    terminal.writeln(
-      "\x1b[36m╔════════════════════════════════════════╗\x1b[0m",
-    );
+    terminal.writeln("\x1b[36m╔════════════════════════════════════════╗\x1b[0m");
     terminal.writeln(
       "\x1b[36m║\x1b[0m       \x1b[1;32mRedis Console\x1b[0m                   \x1b[36m║\x1b[0m",
     );
-    terminal.writeln(
-      "\x1b[36m╚════════════════════════════════════════╝\x1b[0m",
-    );
+    terminal.writeln("\x1b[36m╚════════════════════════════════════════╝\x1b[0m");
     terminal.writeln("");
-    terminal.writeln(
-      "\x1b[90mType Redis commands and press Enter to execute.\x1b[0m",
-    );
-    terminal.writeln(
-      "\x1b[90mUse ↑/↓ for command history, 'clear' to clear screen.\x1b[0m",
-    );
+    terminal.writeln("\x1b[90mType Redis commands and press Enter to execute.\x1b[0m");
+    terminal.writeln("\x1b[90mUse ↑/↓ for command history, 'clear' to clear screen.\x1b[0m");
     terminal.write(PROMPT);
 
     // Handle user input
@@ -262,8 +248,7 @@ export const RedisConsole = memo(function RedisConsole({
           } else if (historyIndexRef.current > 0) {
             historyIndexRef.current--;
           }
-          inputBufferRef.current =
-            commandHistoryRef.current[historyIndexRef.current];
+          inputBufferRef.current = commandHistoryRef.current[historyIndexRef.current];
           cursorPosRef.current = inputBufferRef.current.length;
           refreshLine(terminal);
         }
@@ -272,8 +257,7 @@ export const RedisConsole = memo(function RedisConsole({
         if (historyIndexRef.current !== -1) {
           if (historyIndexRef.current < commandHistoryRef.current.length - 1) {
             historyIndexRef.current++;
-            inputBufferRef.current =
-              commandHistoryRef.current[historyIndexRef.current];
+            inputBufferRef.current = commandHistoryRef.current[historyIndexRef.current];
           } else {
             historyIndexRef.current = -1;
             inputBufferRef.current = "";
@@ -390,11 +374,5 @@ export const RedisConsole = memo(function RedisConsole({
     );
   }
 
-  return (
-    <div
-      ref={containerRef}
-      className="h-full w-full"
-      style={{ padding: "8px" }}
-    />
-  );
+  return <div ref={containerRef} className="h-full w-full" style={{ padding: "8px" }} />;
 });

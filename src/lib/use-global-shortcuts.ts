@@ -47,8 +47,7 @@ export function useGlobalShortcuts(options: GlobalShortcutsOptions = {}) {
     const activePane = getActivePane(connectionId);
     if (activePane) {
       createTab(connectionId, activePane.id, type, {
-        title:
-          type === "data" ? "Data" : type === "query" ? "Query" : "Terminal",
+        title: type === "data" ? "Data" : type === "query" ? "Query" : "Terminal",
       });
     }
   };
@@ -73,28 +72,13 @@ export function useGlobalShortcuts(options: GlobalShortcutsOptions = {}) {
 
     if (selectedTable) {
       queryClient.invalidateQueries({
-        queryKey: [
-          "tableData",
-          connection.id,
-          selectedTable.schema,
-          selectedTable.name,
-        ],
+        queryKey: ["tableData", connection.id, selectedTable.schema, selectedTable.name],
       });
       queryClient.invalidateQueries({
-        queryKey: [
-          "tableCount",
-          connection.id,
-          selectedTable.schema,
-          selectedTable.name,
-        ],
+        queryKey: ["tableCount", connection.id, selectedTable.schema, selectedTable.name],
       });
       queryClient.invalidateQueries({
-        queryKey: [
-          "columns",
-          connection.id,
-          selectedTable.schema,
-          selectedTable.name,
-        ],
+        queryKey: ["columns", connection.id, selectedTable.schema, selectedTable.name],
       });
     }
   };

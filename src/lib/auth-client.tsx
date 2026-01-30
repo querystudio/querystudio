@@ -32,15 +32,8 @@ async function tauriFetchWithOrigin(
  * Custom fetch implementation that uses Tauri's HTTP plugin on macOS
  * and regular fetch elsewhere
  */
-function customFetch(
-  input: RequestInfo | URL,
-  init?: RequestInit,
-): Promise<Response> {
-  if (
-    isTauri() &&
-    platform() === "macos" &&
-    window.location.protocol === "tauri:"
-  ) {
+function customFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  if (isTauri() && platform() === "macos" && window.location.protocol === "tauri:") {
     return tauriFetchWithOrigin(input, init);
   }
   return fetch(input, init);

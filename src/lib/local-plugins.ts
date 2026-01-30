@@ -50,17 +50,13 @@ export function registerLocalPlugin(module: LocalPluginModule): boolean {
   }
 
   if (!Component) {
-    console.error(
-      `[LocalPlugins] Invalid plugin "${plugin.type}": missing Component`,
-    );
+    console.error(`[LocalPlugins] Invalid plugin "${plugin.type}": missing Component`);
     return false;
   }
 
   // Check if already registered
   if (tabRegistry.has(plugin.type)) {
-    console.warn(
-      `[LocalPlugins] Plugin "${plugin.type}" is already registered, skipping`,
-    );
+    console.warn(`[LocalPlugins] Plugin "${plugin.type}" is already registered, skipping`);
     return false;
   }
 
@@ -74,15 +70,10 @@ export function registerLocalPlugin(module: LocalPluginModule): boolean {
     // Track locally
     registeredLocalPlugins.set(plugin.type, module);
 
-    console.info(
-      `[LocalPlugins] Registered plugin: ${plugin.type} (${plugin.displayName})`,
-    );
+    console.info(`[LocalPlugins] Registered plugin: ${plugin.type} (${plugin.displayName})`);
     return true;
   } catch (error) {
-    console.error(
-      `[LocalPlugins] Failed to register plugin "${plugin.type}":`,
-      error,
-    );
+    console.error(`[LocalPlugins] Failed to register plugin "${plugin.type}":`, error);
     return false;
   }
 }
@@ -142,9 +133,7 @@ export function registerLocalPlugins(modules: LocalPluginModule[]): {
     }
   }
 
-  console.info(
-    `[LocalPlugins] Registered ${success} bundled plugin(s), ${failed} failed`,
-  );
+  console.info(`[LocalPlugins] Registered ${success} bundled plugin(s), ${failed} failed`);
 
   return { success, failed };
 }
@@ -176,16 +165,12 @@ export function registerInstalledPlugin(
   Component: ComponentType<TabContentProps>,
 ): boolean {
   if (!installedPlugin.enabled) {
-    console.info(
-      `[LocalPlugins] Skipping disabled plugin: ${installedPlugin.displayName}`,
-    );
+    console.info(`[LocalPlugins] Skipping disabled plugin: ${installedPlugin.displayName}`);
     return false;
   }
 
   if (tabRegistry.has(installedPlugin.type)) {
-    console.warn(
-      `[LocalPlugins] Plugin type "${installedPlugin.type}" already registered`,
-    );
+    console.warn(`[LocalPlugins] Plugin type "${installedPlugin.type}" already registered`);
     return false;
   }
 
@@ -204,9 +189,7 @@ export function registerInstalledPlugin(
     tabRegistry.register(pluginRegistration);
     tabRegistry.registerComponent(installedPlugin.type, Component);
 
-    console.info(
-      `[LocalPlugins] Registered installed plugin: ${installedPlugin.displayName}`,
-    );
+    console.info(`[LocalPlugins] Registered installed plugin: ${installedPlugin.displayName}`);
     return true;
   } catch (error) {
     console.error(`[LocalPlugins] Failed to register installed plugin:`, error);
@@ -233,9 +216,7 @@ export function syncInstalledPlugins(
     if (Component) {
       registerInstalledPlugin(plugin, Component);
     } else {
-      console.warn(
-        `[LocalPlugins] No component found for installed plugin: ${plugin.type}`,
-      );
+      console.warn(`[LocalPlugins] No component found for installed plugin: ${plugin.type}`);
     }
   }
 }
@@ -293,9 +274,7 @@ export function registerImportedPlugins(): {
   }
 
   if (success > 0) {
-    console.info(
-      `[LocalPlugins] Registered ${success} imported plugin(s), ${skipped} disabled`,
-    );
+    console.info(`[LocalPlugins] Registered ${success} imported plugin(s), ${skipped} disabled`);
   }
 
   return { success, skipped };

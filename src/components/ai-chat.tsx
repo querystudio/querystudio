@@ -45,11 +45,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
-import {
-  useConnectionStore,
-  useAIQueryStore,
-  useLastChatStore,
-} from "@/lib/store";
+import { useConnectionStore, useAIQueryStore, useLastChatStore } from "@/lib/store";
 import {
   AIAgent,
   AI_MODELS,
@@ -99,8 +95,7 @@ const CodeBlock = memo(function CodeBlock({
 }: CodeBlockProps) {
   const [copied, setCopied] = useState(false);
   const language = className?.replace("language-", "") || "";
-  const isSql =
-    language === "sql" || language === "pgsql" || language === "postgresql";
+  const isSql = language === "sql" || language === "pgsql" || language === "postgresql";
   const code = String(children).replace(/\n$/, "");
 
   const handleCopy = useCallback(async () => {
@@ -168,11 +163,7 @@ const CodeBlock = memo(function CodeBlock({
 // Memoized Inline Code Component
 // ============================================================================
 
-const InlineCode = memo(function InlineCode({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+const InlineCode = memo(function InlineCode({ children }: { children: React.ReactNode }) {
   return (
     <code className="bg-muted px-1.5 py-0.5 rounded text-primary text-sm font-mono">
       {children}
@@ -199,22 +190,11 @@ const MessageBubble = memo(function MessageBubble({
   // This prevents React from seeing different component trees during streaming
   const markdownComponents = useMemo(
     () => ({
-      code({
-        className,
-        children,
-        ...props
-      }: {
-        className?: string;
-        children?: React.ReactNode;
-      }) {
-        const isBlock =
-          className?.includes("language-") || String(children).includes("\n");
+      code({ className, children, ...props }: { className?: string; children?: React.ReactNode }) {
+        const isBlock = className?.includes("language-") || String(children).includes("\n");
         if (isBlock) {
           return (
-            <CodeBlock
-              className={className}
-              onAppendToRunner={onAppendToRunner}
-            >
+            <CodeBlock className={className} onAppendToRunner={onAppendToRunner}>
               {children}
             </CodeBlock>
           );
@@ -239,11 +219,7 @@ const MessageBubble = memo(function MessageBubble({
         );
       },
       td({ children }: { children?: React.ReactNode }) {
-        return (
-          <td className="px-2 py-1 border-b border-border/30 text-xs">
-            {children}
-          </td>
-        );
+        return <td className="px-2 py-1 border-b border-border/30 text-xs">{children}</td>;
       },
     }),
     [onAppendToRunner],
@@ -254,9 +230,7 @@ const MessageBubble = memo(function MessageBubble({
       <div
         className={cn(
           "max-w-[90%] rounded-xl px-3 py-2 text-sm",
-          isUser
-            ? "bg-primary text-primary-foreground"
-            : "bg-transparent text-foreground",
+          isUser ? "bg-primary text-primary-foreground" : "bg-transparent text-foreground",
         )}
       >
         {/* Loading state */}
@@ -265,9 +239,7 @@ const MessageBubble = memo(function MessageBubble({
             {message.toolCalls?.length ? (
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Wrench className="h-3 w-3 animate-pulse" />
-                <span>
-                  {message.toolCalls[message.toolCalls.length - 1].name}...
-                </span>
+                <span>{message.toolCalls[message.toolCalls.length - 1].name}...</span>
               </div>
             ) : null}
             <div className="space-y-1">
@@ -293,10 +265,7 @@ const MessageBubble = memo(function MessageBubble({
               </div>
             )}
             <div className="prose prose-sm prose-invert max-w-none prose-p:my-0.5 prose-ul:my-0.5 prose-ol:my-0.5 prose-li:my-0 prose-table:my-1.5 prose-headings:my-1 prose-hr:hidden">
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                components={markdownComponents}
-              >
+              <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                 {message.content}
               </ReactMarkdown>
               <span className="inline-block w-1.5 h-4 bg-primary animate-pulse ml-0.5 rounded-sm" />
@@ -320,10 +289,7 @@ const MessageBubble = memo(function MessageBubble({
             )}
             {message.content ? (
               <div className="prose prose-sm prose-invert max-w-none prose-p:my-0.5 prose-ul:my-0.5 prose-ol:my-0.5 prose-li:my-0 prose-table:my-1.5 prose-headings:my-1 prose-hr:hidden">
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  components={markdownComponents}
-                >
+                <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                   {message.content}
                 </ReactMarkdown>
               </div>
@@ -463,9 +429,7 @@ export const AIChat = memo(function AIChat() {
   }, [debugRequest, currentApiKey, connection?.id, clearDebugRequest]);
 
   // Filter sessions for current connection
-  const connectionSessions = sessions.filter(
-    (s) => s.connectionId === connection?.id,
-  );
+  const connectionSessions = sessions.filter((s) => s.connectionId === connection?.id);
 
   const handleSaveApiKeys = () => {
     setOpenaiApiKey(tempOpenaiKey);
@@ -479,11 +443,7 @@ export const AIChat = memo(function AIChat() {
 
   const handleNewChat = () => {
     if (!connection?.id) return;
-    const session = createChatSession(
-      connection.id,
-      selectedModel,
-      connection.db_type,
-    );
+    const session = createChatSession(connection.id, selectedModel, connection.db_type);
     const newSessions = [...sessions, session];
     setSessions(newSessions);
     saveChatHistory(newSessions);
@@ -570,11 +530,7 @@ export const AIChat = memo(function AIChat() {
           : s,
       );
     } else {
-      const session = createChatSession(
-        connection.id,
-        selectedModel,
-        connection.db_type,
-      );
+      const session = createChatSession(connection.id, selectedModel, connection.db_type);
       session.messages = updatedMessages;
       session.title = generateSessionTitle(updatedMessages);
       newSessions = [...sessions, session];
@@ -607,14 +563,7 @@ export const AIChat = memo(function AIChat() {
         }
       }
     },
-    [
-      connection,
-      getAllLeafPanes,
-      setActiveTab,
-      createTab,
-      getActivePane,
-      appendSql,
-    ],
+    [connection, getAllLeafPanes, setActiveTab, createTab, getActivePane, appendSql],
   );
 
   const handleCancel = useCallback(() => {
@@ -656,28 +605,25 @@ export const AIChat = memo(function AIChat() {
       ]);
 
       try {
-        const stream = agentRef.current.chatStream(
-          userText,
-          (toolName, args) => {
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.id === loadingId
-                  ? {
-                      ...m,
-                      toolCalls: [
-                        ...(m.toolCalls || []),
-                        {
-                          id: crypto.randomUUID(),
-                          name: toolName,
-                          arguments: args,
-                        },
-                      ],
-                    }
-                  : m,
-              ),
-            );
-          },
-        );
+        const stream = agentRef.current.chatStream(userText, (toolName, args) => {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === loadingId
+                ? {
+                    ...m,
+                    toolCalls: [
+                      ...(m.toolCalls || []),
+                      {
+                        id: crypto.randomUUID(),
+                        name: toolName,
+                        arguments: args,
+                      },
+                    ],
+                  }
+                : m,
+            ),
+          );
+        });
 
         let fullContent = "";
         for await (const chunk of stream) {
@@ -688,24 +634,19 @@ export const AIChat = memo(function AIChat() {
           fullContent += chunk;
           setMessages((prev) =>
             prev.map((m) =>
-              m.id === loadingId
-                ? { ...m, content: fullContent, isLoading: true }
-                : m,
+              m.id === loadingId ? { ...m, content: fullContent, isLoading: true } : m,
             ),
           );
           scrollToBottom();
         }
 
         setMessages((prev) => {
-          const updated = prev.map((m) =>
-            m.id === loadingId ? { ...m, isLoading: false } : m,
-          );
+          const updated = prev.map((m) => (m.id === loadingId ? { ...m, isLoading: false } : m));
           saveCurrentSession(updated);
           return updated;
         });
       } catch (error) {
-        const isCancelled =
-          error instanceof Error && error.message === "Request cancelled";
+        const isCancelled = error instanceof Error && error.message === "Request cancelled";
         setMessages((prev) => {
           const updated = prev.map((m) =>
             m.id === loadingId
@@ -765,12 +706,8 @@ export const AIChat = memo(function AIChat() {
     return (
       <div className="flex h-full items-center justify-center">
         <div className="text-center space-y-2">
-          <p className="text-lg font-medium text-foreground">
-            Connect to a database first
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Querybuddy needs an active connection
-          </p>
+          <p className="text-lg font-medium text-foreground">Connect to a database first</p>
+          <p className="text-sm text-muted-foreground">Querybuddy needs an active connection</p>
         </div>
       </div>
     );
@@ -779,11 +716,7 @@ export const AIChat = memo(function AIChat() {
   if (!currentApiKey) {
     const provider = getModelProvider(selectedModel);
     const missingProvider =
-      provider === "anthropic"
-        ? "Anthropic"
-        : provider === "google"
-          ? "Google"
-          : "OpenAI";
+      provider === "anthropic" ? "Anthropic" : provider === "google" ? "Google" : "OpenAI";
     const modelType = selectedModel.startsWith("claude")
       ? "Claude"
       : selectedModel.startsWith("gemini")
@@ -798,8 +731,8 @@ export const AIChat = memo(function AIChat() {
               {missingProvider} API Key Required
             </p>
             <p className="text-sm text-muted-foreground">
-              To use {modelType} models, you need to provide a {missingProvider}{" "}
-              API key. Your keys are stored locally.
+              To use {modelType} models, you need to provide a {missingProvider} API key. Your keys
+              are stored locally.
             </p>
           </div>
           <Button
@@ -819,8 +752,8 @@ export const AIChat = memo(function AIChat() {
               <DialogHeader>
                 <DialogTitle>API Keys</DialogTitle>
                 <DialogDescription>
-                  Enter your API keys to enable Querybuddy. You can use OpenAI,
-                  Anthropic, Google, or any combination.
+                  Enter your API keys to enable Querybuddy. You can use OpenAI, Anthropic, Google,
+                  or any combination.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
@@ -833,24 +766,17 @@ export const AIChat = memo(function AIChat() {
                     value={tempOpenaiKey}
                     onChange={(e) => setTempOpenaiKey(e.target.value)}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    For GPT models
-                  </p>
+                  <p className="text-xs text-muted-foreground">For GPT models</p>
                 </div>
               </div>
               <div className="flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowSettings(false)}
-                >
+                <Button variant="outline" onClick={() => setShowSettings(false)}>
                   Cancel
                 </Button>
                 <Button
                   onClick={handleSaveApiKeys}
                   disabled={
-                    !tempOpenaiKey.trim() &&
-                    !tempAnthropicKey.trim() &&
-                    !tempGoogleKey.trim()
+                    !tempOpenaiKey.trim() && !tempAnthropicKey.trim() && !tempGoogleKey.trim()
                   }
                 >
                   Save
@@ -878,20 +804,13 @@ export const AIChat = memo(function AIChat() {
           {/* Chat History Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6"
-                title="Chat History"
-              >
+              <Button variant="ghost" size="icon" className="h-6 w-6" title="Chat History">
                 <History className="h-3.5 w-3.5" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-72">
               <div className="px-2 py-1.5">
-                <p className="text-xs font-medium text-muted-foreground">
-                  Recent Chats
-                </p>
+                <p className="text-xs font-medium text-muted-foreground">Recent Chats</p>
               </div>
               <DropdownMenuSeparator />
               <ScrollArea className="max-h-64">
@@ -911,9 +830,7 @@ export const AIChat = memo(function AIChat() {
                       >
                         <div className="flex items-center gap-2 min-w-0 flex-1">
                           <MessageSquare className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                          <span className="truncate text-sm">
-                            {session.title}
-                          </span>
+                          <span className="truncate text-sm">{session.title}</span>
                         </div>
                         <Button
                           variant="ghost"
@@ -980,23 +897,19 @@ export const AIChat = memo(function AIChat() {
                   <Bot className="h-6 w-6 text-primary/40" />
                 </div>
               </div>
-              <p className="text-sm text-muted-foreground">
-                Ask me anything about your database
-              </p>
+              <p className="text-sm text-muted-foreground">Ask me anything about your database</p>
               <div className="flex flex-wrap justify-center gap-2">
-                {[
-                  "What tables do I have?",
-                  "Show me recent data",
-                  "Describe the schema",
-                ].map((suggestion) => (
-                  <button
-                    key={suggestion}
-                    onClick={() => setInput(suggestion)}
-                    className="text-[11px] px-2.5 py-1 rounded-full bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {suggestion}
-                  </button>
-                ))}
+                {["What tables do I have?", "Show me recent data", "Describe the schema"].map(
+                  (suggestion) => (
+                    <button
+                      key={suggestion}
+                      onClick={() => setInput(suggestion)}
+                      className="text-[11px] px-2.5 py-1 rounded-full bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {suggestion}
+                    </button>
+                  ),
+                )}
               </div>
             </div>
           </div>
@@ -1060,12 +973,7 @@ export const AIChat = memo(function AIChat() {
                   </span>
                 </Button>
               ) : (
-                <Button
-                  type="submit"
-                  size="icon"
-                  disabled={!input.trim()}
-                  className="h-8 w-8"
-                >
+                <Button type="submit" size="icon" disabled={!input.trim()} className="h-8 w-8">
                   <Send className="h-4 w-4" />
                 </Button>
               )}
@@ -1095,9 +1003,7 @@ export const AIChat = memo(function AIChat() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>AI Settings</DialogTitle>
-            <DialogDescription>
-              Configure your API keys for Querybuddy.
-            </DialogDescription>
+            <DialogDescription>Configure your API keys for Querybuddy.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -1118,11 +1024,7 @@ export const AIChat = memo(function AIChat() {
             </Button>
             <Button
               onClick={handleSaveApiKeys}
-              disabled={
-                !tempOpenaiKey.trim() &&
-                !tempAnthropicKey.trim() &&
-                !tempGoogleKey.trim()
-              }
+              disabled={!tempOpenaiKey.trim() && !tempAnthropicKey.trim() && !tempGoogleKey.trim()}
             >
               Save
             </Button>

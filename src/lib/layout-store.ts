@@ -98,12 +98,7 @@ interface LayoutState {
     tabId: string,
     updates: Partial<Omit<Tab, "id">>,
   ) => void;
-  reorderTabs: (
-    connectionId: string,
-    paneId: string,
-    fromIndex: number,
-    toIndex: number,
-  ) => void;
+  reorderTabs: (connectionId: string, paneId: string, fromIndex: number, toIndex: number) => void;
 
   // Split operations
   splitPane: (
@@ -122,11 +117,7 @@ interface LayoutState {
   ) => void;
 
   closePane: (connectionId: string, paneId: string) => void;
-  resizePane: (
-    connectionId: string,
-    splitPaneId: string,
-    ratio: number,
-  ) => void;
+  resizePane: (connectionId: string, splitPaneId: string, ratio: number) => void;
 
   // Open or focus a data tab for a specific table
   openDataTab: (connectionId: string, schema: string, name: string) => string;
@@ -175,17 +166,13 @@ export const useLayoutStore = create<LayoutState>()(
 
       getAllLeafPanes: (connectionId: string) => {
         const allPanes = get().panes[connectionId] || {};
-        return Object.values(allPanes).filter(
-          (p): p is LeafPane => p.type === "leaf",
-        );
+        return Object.values(allPanes).filter((p): p is LeafPane => p.type === "leaf");
       },
 
       getActiveTab: (connectionId: string) => {
         const activePane = get().getActivePane(connectionId);
         if (!activePane) return null;
-        return (
-          activePane.tabs.find((t) => t.id === activePane.activeTabId) || null
-        );
+        return activePane.tabs.find((t) => t.id === activePane.activeTabId) || null;
       },
 
       setActivePane: (connectionId: string, paneId: string) => {
@@ -236,9 +223,7 @@ export const useLayoutStore = create<LayoutState>()(
           const defaultTitle = generateTabTitle(
             type,
             sameTypeTabs.length,
-            options.tableInfo
-              ? { name: options.tableInfo.name }
-              : options.metadata,
+            options.tableInfo ? { name: options.tableInfo.name } : options.metadata,
           );
 
           const newTab: Tab = {
@@ -246,8 +231,7 @@ export const useLayoutStore = create<LayoutState>()(
             type,
             title: options.title || defaultTitle,
             tableInfo: options.tableInfo,
-            queryContent:
-              options.queryContent ?? (type === "query" ? "" : undefined),
+            queryContent: options.queryContent ?? (type === "query" ? "" : undefined),
             terminalId: options.terminalId,
             metadata: options.metadata,
           };
@@ -261,8 +245,7 @@ export const useLayoutStore = create<LayoutState>()(
           const newPane: LeafPane = {
             ...pane,
             tabs: [...pane.tabs, newTab],
-            activeTabId:
-              options.makeActive !== false ? tabId : pane.activeTabId,
+            activeTabId: options.makeActive !== false ? tabId : pane.activeTabId,
           };
 
           return {
@@ -309,8 +292,7 @@ export const useLayoutStore = create<LayoutState>()(
         // just leave it empty instead of preventing the close
         if (newTabs.length === 0) {
           const rootId = state.rootPaneId[connectionId];
-          const isOnlyPane =
-            paneId === rootId && Object.keys(panes).length === 1;
+          const isOnlyPane = paneId === rootId && Object.keys(panes).length === 1;
 
           if (isOnlyPane) {
             // Keep the pane but with no tabs
@@ -371,9 +353,7 @@ export const useLayoutStore = create<LayoutState>()(
                 ...panes,
                 [paneId]: {
                   ...pane,
-                  tabs: pane.tabs.map((t) =>
-                    t.id === tabId ? { ...t, ...updates } : t,
-                  ),
+                  tabs: pane.tabs.map((t) => (t.id === tabId ? { ...t, ...updates } : t)),
                 },
               },
             },
@@ -452,9 +432,7 @@ export const useLayoutStore = create<LayoutState>()(
               ...pane,
               tabs: remainingTabs,
               activeTabId:
-                pane.activeTabId === tabId
-                  ? remainingTabs[0]?.id || null
-                  : pane.activeTabId,
+                pane.activeTabId === tabId ? remainingTabs[0]?.id || null : pane.activeTabId,
             };
           } else {
             // Create empty new pane with no tabs
@@ -482,10 +460,7 @@ export const useLayoutStore = create<LayoutState>()(
           const newPanes = { ...panes };
 
           // Find and update parent split that references this pane
-          const updateParentReference = (
-            oldPaneId: string,
-            newPaneId: string,
-          ) => {
+          const updateParentReference = (oldPaneId: string, newPaneId: string) => {
             for (const [id, p] of Object.entries(newPanes)) {
               if (p.type === "split") {
                 if (p.first === oldPaneId) {
@@ -600,9 +575,7 @@ export const useLayoutStore = create<LayoutState>()(
         } else {
           // Create a split
           const direction: SplitDirection =
-            dropZone === "left" || dropZone === "right"
-              ? "horizontal"
-              : "vertical";
+            dropZone === "left" || dropZone === "right" ? "horizontal" : "vertical";
 
           // If dragging within same pane with only one tab, do nothing
           if (fromPaneId === toPaneId && fromPane.tabs.length === 1) {
@@ -619,15 +592,12 @@ export const useLayoutStore = create<LayoutState>()(
           // Find the newly created leaf pane (second child of the new split)
           const toSplit = Object.values(newPanes).find(
             (p): p is SplitPane =>
-              p.type === "split" &&
-              (p.first === toPaneId || p.second === toPaneId),
+              p.type === "split" && (p.first === toPaneId || p.second === toPaneId),
           );
 
           if (toSplit) {
             const newPaneId =
-              dropZone === "right" || dropZone === "bottom"
-                ? toSplit.second
-                : toSplit.first;
+              dropZone === "right" || dropZone === "bottom" ? toSplit.second : toSplit.first;
 
             // Swap if needed based on drop zone
             if (dropZone === "left" || dropZone === "top") {
@@ -648,13 +618,7 @@ export const useLayoutStore = create<LayoutState>()(
 
             // Now move the tab to the new pane
             if (fromPaneId !== toPaneId) {
-              get().moveTabToPane(
-                connectionId,
-                fromPaneId,
-                tabId,
-                newPaneId,
-                "center",
-              );
+              get().moveTabToPane(connectionId, fromPaneId, tabId, newPaneId, "center");
             }
           }
         }
@@ -782,9 +746,7 @@ export const useLayoutStore = create<LayoutState>()(
         for (const pane of leafPanes) {
           const existingTab = pane.tabs.find(
             (t) =>
-              t.type === "data" &&
-              t.tableInfo?.schema === schema &&
-              t.tableInfo?.name === name,
+              t.type === "data" && t.tableInfo?.schema === schema && t.tableInfo?.name === name,
           );
 
           if (existingTab) {
@@ -871,21 +833,16 @@ export const useLayoutStore = create<LayoutState>()(
         // Clean up terminal tabs from all panes
         const cleanedPanes: Record<string, Record<string, Pane>> = {};
 
-        for (const [connectionId, connectionPanes] of Object.entries(
-          state.panes || {},
-        )) {
+        for (const [connectionId, connectionPanes] of Object.entries(state.panes || {})) {
           cleanedPanes[connectionId] = {};
 
           for (const [paneId, pane] of Object.entries(connectionPanes)) {
             if (pane.type === "leaf") {
               // Filter out terminal tabs
-              const filteredTabs = pane.tabs.filter(
-                (tab) => tab.type !== "terminal",
-              );
+              const filteredTabs = pane.tabs.filter((tab) => tab.type !== "terminal");
               // Update activeTabId if the active tab was a terminal
               const activeTabId =
-                pane.activeTabId &&
-                filteredTabs.some((t) => t.id === pane.activeTabId)
+                pane.activeTabId && filteredTabs.some((t) => t.id === pane.activeTabId)
                   ? pane.activeTabId
                   : filteredTabs.length > 0
                     ? filteredTabs[0].id

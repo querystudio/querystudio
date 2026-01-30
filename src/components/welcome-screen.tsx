@@ -1,16 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Plus, Pencil, Key, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  useSavedConnections,
-  useCanSaveConnection,
-  useDeleteSavedConnection,
-} from "@/lib/hooks";
-import {
-  getLastConnectionId,
-  useLicenseStore,
-  useAIQueryStore,
-} from "@/lib/store";
+import { useSavedConnections, useCanSaveConnection, useDeleteSavedConnection } from "@/lib/hooks";
+import { getLastConnectionId, useLicenseStore, useAIQueryStore } from "@/lib/store";
 import type { SavedConnection } from "@/lib/types";
 import { LicenseSettings } from "@/components/license-settings";
 import { api } from "@/lib/api";
@@ -59,9 +51,7 @@ export function WelcomeScreen({
 
     const lastConnectionId = getLastConnectionId();
     if (lastConnectionId && savedConnections) {
-      const lastConnection = savedConnections.find(
-        (c) => c.id === lastConnectionId,
-      );
+      const lastConnection = savedConnections.find((c) => c.id === lastConnectionId);
       if (lastConnection) {
         onSelectConnection(lastConnection);
       }
@@ -156,9 +146,7 @@ export function WelcomeScreen({
                 ))}
               </div>
             ) : (
-              <p className="py-8 text-center text-sm text-muted-foreground">
-                No connections yet
-              </p>
+              <p className="py-8 text-center text-sm text-muted-foreground">No connections yet</p>
             )}
           </div>
 
@@ -173,18 +161,13 @@ export function WelcomeScreen({
           </Button>
 
           <p className="mt-4 text-center text-xs text-muted-foreground">
-            <kbd className="rounded border px-1.5 py-0.5 font-mono text-[10px]">
-              ⌘K
-            </kbd>{" "}
-            command palette
+            <kbd className="rounded border px-1.5 py-0.5 font-mono text-[10px]">⌘K</kbd> command
+            palette
           </p>
         </div>
       </div>
 
-      <LicenseSettings
-        open={licenseSettingsOpen}
-        onOpenChange={setLicenseSettingsOpen}
-      />
+      <LicenseSettings open={licenseSettingsOpen} onOpenChange={setLicenseSettingsOpen} />
     </div>
   );
 }

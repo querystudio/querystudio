@@ -3,16 +3,8 @@ import { Table, LogOut, ChevronRight, ChevronLeft } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import {
-  useConnectionStore,
-  useAIQueryStore,
-  useLicenseStore,
-} from "@/lib/store";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useConnectionStore, useAIQueryStore, useLicenseStore } from "@/lib/store";
 import { useLayoutStore } from "@/lib/layout-store";
 import { useShallow } from "zustand/react/shallow";
 import { useTables, useDisconnect } from "@/lib/hooks";
@@ -24,13 +16,7 @@ import type { DatabaseType } from "@/lib/types";
 const MIN_SIDEBAR_WIDTH = 180;
 const MAX_SIDEBAR_WIDTH = 400;
 
-export function DatabaseIcon({
-  type,
-  className,
-}: {
-  type: DatabaseType;
-  className?: string;
-}) {
+export function DatabaseIcon({ type, className }: { type: DatabaseType; className?: string }) {
   if (type === "mysql") {
     return (
       <span
@@ -144,9 +130,7 @@ export const Sidebar = memo(function Sidebar() {
     const handleMouseMove = (e: MouseEvent) => {
       e.preventDefault();
       const newWidth = e.clientX;
-      setSidebarWidth(
-        Math.min(MAX_SIDEBAR_WIDTH, Math.max(MIN_SIDEBAR_WIDTH, newWidth)),
-      );
+      setSidebarWidth(Math.min(MAX_SIDEBAR_WIDTH, Math.max(MIN_SIDEBAR_WIDTH, newWidth)));
     };
 
     const handleMouseUp = () => {
@@ -233,9 +217,7 @@ export const Sidebar = memo(function Sidebar() {
               </Button>
             ))}
             {tables.length > 10 && (
-              <span className="text-[10px] text-muted-foreground">
-                +{tables.length - 10}
-              </span>
+              <span className="text-[10px] text-muted-foreground">+{tables.length - 10}</span>
             )}
           </div>
         </ScrollArea>
@@ -261,9 +243,7 @@ export const Sidebar = memo(function Sidebar() {
       <motion.div
         initial={{ x: -20, opacity: 0 }}
         animate={{ x: 0, opacity: 1, width: sidebarWidth }}
-        transition={
-          isResizing ? { duration: 0 } : { duration: 0.2, ease: "easeInOut" }
-        }
+        transition={isResizing ? { duration: 0 } : { duration: 0.2, ease: "easeInOut" }}
         className="relative flex h-full flex-col border-r border-border bg-card shrink-0"
         style={{ width: sidebarWidth }}
       >
@@ -317,77 +297,69 @@ export const Sidebar = memo(function Sidebar() {
         <ScrollArea className="flex-1">
           <div className="p-2">
             <AnimatePresence>
-              {Object.entries(groupedTables).map(
-                ([schema, schemaTables], schemaIdx) => (
-                  <motion.div
-                    key={schema}
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.2, delay: schemaIdx * 0.05 }}
-                  >
-                    <Collapsible defaultOpen={schema === "public"}>
-                      <CollapsibleTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="w-full justify-start gap-2 text-xs text-muted-foreground"
-                        >
-                          <ChevronRight className="h-3 w-3 transition-transform duration-200 [[data-state=open]>&]:rotate-90" />
-                          {schema}
-                          <span className="ml-auto opacity-50">
-                            {schemaTables.length}
-                          </span>
-                        </Button>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                        <div className="ml-3 border-l border-border pl-2">
-                          {schemaTables.map((table, tableIdx) => (
-                            <motion.div
-                              key={`${table.schema}.${table.name}`}
-                              initial={{ opacity: 0, x: -10 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{
-                                duration: 0.15,
-                                delay: tableIdx * 0.02,
+              {Object.entries(groupedTables).map(([schema, schemaTables], schemaIdx) => (
+                <motion.div
+                  key={schema}
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2, delay: schemaIdx * 0.05 }}
+                >
+                  <Collapsible defaultOpen={schema === "public"}>
+                    <CollapsibleTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full justify-start gap-2 text-xs text-muted-foreground"
+                      >
+                        <ChevronRight className="h-3 w-3 transition-transform duration-200 [[data-state=open]>&]:rotate-90" />
+                        {schema}
+                        <span className="ml-auto opacity-50">{schemaTables.length}</span>
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="ml-3 border-l border-border pl-2">
+                        {schemaTables.map((table, tableIdx) => (
+                          <motion.div
+                            key={`${table.schema}.${table.name}`}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{
+                              duration: 0.15,
+                              delay: tableIdx * 0.02,
+                            }}
+                          >
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className={cn(
+                                "w-full justify-start gap-2 text-xs transition-colors duration-150",
+                                selectedTable?.schema === table.schema &&
+                                  selectedTable?.name === table.name &&
+                                  "bg-secondary",
+                              )}
+                              onClick={() => {
+                                setSelectedTable({
+                                  schema: table.schema,
+                                  name: table.name,
+                                });
                               }}
+                              onDoubleClick={() => {
+                                if (connection?.id) {
+                                  openDataTab(connection.id, table.schema, table.name);
+                                }
+                              }}
+                              title="Double-click to open in tab"
                             >
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className={cn(
-                                  "w-full justify-start gap-2 text-xs transition-colors duration-150",
-                                  selectedTable?.schema === table.schema &&
-                                    selectedTable?.name === table.name &&
-                                    "bg-secondary",
-                                )}
-                                onClick={() => {
-                                  setSelectedTable({
-                                    schema: table.schema,
-                                    name: table.name,
-                                  });
-                                }}
-                                onDoubleClick={() => {
-                                  if (connection?.id) {
-                                    openDataTab(
-                                      connection.id,
-                                      table.schema,
-                                      table.name,
-                                    );
-                                  }
-                                }}
-                                title="Double-click to open in tab"
-                              >
-                                <Table className="h-3 w-3 shrink-0" />
-                                <span className="truncate">{table.name}</span>
-                              </Button>
-                            </motion.div>
-                          ))}
-                        </div>
-                      </CollapsibleContent>
-                    </Collapsible>
-                  </motion.div>
-                ),
-              )}
+                              <Table className="h-3 w-3 shrink-0" />
+                              <span className="truncate">{table.name}</span>
+                            </Button>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                </motion.div>
+              ))}
             </AnimatePresence>
 
             {tables.length === 0 && (
@@ -404,10 +376,7 @@ export const Sidebar = memo(function Sidebar() {
         </ScrollArea>
       </motion.div>
 
-      <LicenseSettings
-        open={licenseSettingsOpen}
-        onOpenChange={setLicenseSettingsOpen}
-      />
+      <LicenseSettings open={licenseSettingsOpen} onOpenChange={setLicenseSettingsOpen} />
     </>
   );
 });

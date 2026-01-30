@@ -26,9 +26,7 @@ export function ImportedPluginPlaceholder({
   pluginType,
 }: ImportedPluginPlaceholderProps) {
   const [copied, setCopied] = useState(false);
-  const plugin = usePluginStore((s) =>
-    s.plugins.find((p) => p.type === pluginType),
-  );
+  const plugin = usePluginStore((s) => s.plugins.find((p) => p.type === pluginType));
 
   // Plugin SDK is available for imported plugins too!
   const sdk = usePluginSDK(connectionId, tabId, paneId);
@@ -62,12 +60,8 @@ export function ImportedPluginPlaceholder({
             <Icon className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-lg font-semibold text-foreground">
-              {plugin.displayName}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              {plugin.description}
-            </p>
+            <h1 className="text-lg font-semibold text-foreground">{plugin.displayName}</h1>
+            <p className="text-sm text-muted-foreground">{plugin.description}</p>
           </div>
         </div>
       </div>
@@ -116,9 +110,7 @@ export function ImportedPluginPlaceholder({
                 <span className="text-muted-foreground">Status</span>
                 <span
                   className={`font-medium ${
-                    sdk.connection.isConnected
-                      ? "text-green-500"
-                      : "text-red-500"
+                    sdk.connection.isConnected ? "text-green-500" : "text-red-500"
                   }`}
                 >
                   {sdk.connection.isConnected ? "Connected" : "Disconnected"}
@@ -148,13 +140,10 @@ export function ImportedPluginPlaceholder({
               <div className="text-sm text-green-600 dark:text-green-400">
                 <p className="font-medium mb-1">Plugin SDK Available</p>
                 <p>
-                  This plugin has access to the Plugin SDK with connection data,
-                  API functions, and utilities. When properly bundled, your
-                  component can use{" "}
-                  <code className="bg-green-500/20 px-1 rounded">
-                    usePluginSDK()
-                  </code>{" "}
-                  to access these features.
+                  This plugin has access to the Plugin SDK with connection data, API functions, and
+                  utilities. When properly bundled, your component can use{" "}
+                  <code className="bg-green-500/20 px-1 rounded">usePluginSDK()</code> to access
+                  these features.
                 </p>
               </div>
             </div>
@@ -166,17 +155,14 @@ export function ImportedPluginPlaceholder({
               Imported Plugin
             </h3>
             <p className="text-sm text-muted-foreground mb-4">
-              This plugin was imported from a file but hasn't been bundled with
-              the application yet. To use this plugin's full functionality, you
-              need to add it to the source code.
+              This plugin was imported from a file but hasn't been bundled with the application yet.
+              To use this plugin's full functionality, you need to add it to the source code.
             </p>
           </div>
 
           {/* Instructions */}
           <div className="rounded-lg border border-border bg-card p-4">
-            <h2 className="mb-3 text-sm font-medium text-foreground">
-              How to Bundle This Plugin
-            </h2>
+            <h2 className="mb-3 text-sm font-medium text-foreground">How to Bundle This Plugin</h2>
             <ol className="list-inside list-decimal space-y-2 text-sm text-muted-foreground">
               <li>
                 Copy the plugin code to{" "}
@@ -186,9 +172,7 @@ export function ImportedPluginPlaceholder({
               </li>
               <li>
                 Add it to{" "}
-                <code className="rounded bg-muted px-1 py-0.5 text-xs">
-                  src/plugins/index.ts
-                </code>
+                <code className="rounded bg-muted px-1 py-0.5 text-xs">src/plugins/index.ts</code>
               </li>
               <li>Rebuild the application</li>
             </ol>
@@ -198,15 +182,8 @@ export function ImportedPluginPlaceholder({
           {plugin.componentCode && (
             <div className="rounded-lg border border-border bg-card p-4">
               <div className="flex items-center justify-between mb-3">
-                <h2 className="text-sm font-medium text-foreground">
-                  Plugin Code
-                </h2>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleCopyCode}
-                  className="gap-2"
-                >
+                <h2 className="text-sm font-medium text-foreground">Plugin Code</h2>
+                <Button variant="outline" size="sm" onClick={handleCopyCode} className="gap-2">
                   {copied ? (
                     <>
                       <Check className="h-3.5 w-3.5" />

@@ -15,13 +15,7 @@ import { useConnectionStore, useAIQueryStore } from "@/lib/store";
 import { useGlobalShortcuts } from "@/lib/use-global-shortcuts";
 import type { SavedConnection } from "@/lib/types";
 import { FpsCounter } from "@/components/fps-counter";
-import {
-  PanelRightClose,
-  PanelRight,
-  PanelLeftClose,
-  PanelLeft,
-  Settings,
-} from "lucide-react";
+import { PanelRightClose, PanelRight, PanelLeftClose, PanelLeft, Settings } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   component: App,
@@ -31,12 +25,11 @@ function App() {
   const navigate = useNavigate();
   const [connectionDialogOpen, setConnectionDialogOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
-  const [editConnectionDialogOpen, setEditConnectionDialogOpen] =
-    useState(false);
-  const [connectionToEdit, setConnectionToEdit] =
-    useState<SavedConnection | null>(null);
-  const [passwordPromptConnection, setPasswordPromptConnection] =
-    useState<SavedConnection | null>(null);
+  const [editConnectionDialogOpen, setEditConnectionDialogOpen] = useState(false);
+  const [connectionToEdit, setConnectionToEdit] = useState<SavedConnection | null>(null);
+  const [passwordPromptConnection, setPasswordPromptConnection] = useState<SavedConnection | null>(
+    null,
+  );
   const connection = useConnectionStore((s) => s.connection);
   const connectionId = connection?.id ?? "";
 
@@ -112,11 +105,7 @@ function App() {
       const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
       const modifier = isMac ? e.metaKey : e.ctrlKey;
 
-      if (
-        modifier &&
-        e.altKey &&
-        (e.key === "b" || e.key === "B" || e.keyCode === 66)
-      ) {
+      if (modifier && e.altKey && (e.key === "b" || e.key === "B" || e.keyCode === 66)) {
         e.preventDefault();
         e.stopPropagation();
         toggleAiPanel();
@@ -178,10 +167,7 @@ function App() {
           onSelectConnection={handleSelectSavedConnection}
           onEditConnection={handleEditConnection}
         />
-        <ConnectionDialog
-          open={connectionDialogOpen}
-          onOpenChange={setConnectionDialogOpen}
-        />
+        <ConnectionDialog open={connectionDialogOpen} onOpenChange={setConnectionDialogOpen} />
         <EditConnectionDialog
           connection={connectionToEdit}
           open={editConnectionDialogOpen}
@@ -270,10 +256,7 @@ function App() {
         <div className="flex flex-1 overflow-hidden">
           <main className="flex flex-1 flex-col overflow-hidden">
             <div className="flex-1 overflow-hidden h-full">
-              <PaneContainer
-                connectionId={connectionId}
-                dbType={connection?.db_type}
-              />
+              <PaneContainer connectionId={connectionId} dbType={connection?.db_type} />
             </div>
           </main>
 
@@ -305,10 +288,7 @@ function App() {
 
       {statusBarVisible && <StatusBar />}
 
-      <ConnectionDialog
-        open={connectionDialogOpen}
-        onOpenChange={setConnectionDialogOpen}
-      />
+      <ConnectionDialog open={connectionDialogOpen} onOpenChange={setConnectionDialogOpen} />
       <EditConnectionDialog
         connection={connectionToEdit}
         open={editConnectionDialogOpen}

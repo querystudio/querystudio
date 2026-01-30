@@ -29,11 +29,7 @@ export function useAllTableColumns(
   tables: { schema: string; name: string }[],
 ) {
   return useQuery({
-    queryKey: [
-      "allColumns",
-      connectionId,
-      tables.map((t) => `${t.schema}.${t.name}`).join(","),
-    ],
+    queryKey: ["allColumns", connectionId, tables.map((t) => `${t.schema}.${t.name}`).join(",")],
     queryFn: async () => {
       const columnsMap: Record<
         string,
@@ -44,11 +40,7 @@ export function useAllTableColumns(
       const results = await Promise.all(
         tables.map(async (table) => {
           try {
-            const columns = await api.getTableColumns(
-              connectionId!,
-              table.schema,
-              table.name,
-            );
+            const columns = await api.getTableColumns(connectionId!, table.schema, table.name);
             return { table, columns };
           } catch {
             return { table, columns: [] };
@@ -82,8 +74,7 @@ export function useTableData(
 ) {
   return useQuery({
     queryKey: ["tableData", connectionId, schema, table, limit, offset],
-    queryFn: () =>
-      api.getTableData(connectionId!, schema!, table!, limit, offset),
+    queryFn: () => api.getTableData(connectionId!, schema!, table!, limit, offset),
     enabled: !!connectionId && !!schema && !!table,
   });
 }
@@ -110,13 +101,7 @@ export function useInsertRow(connectionId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      query,
-    }: {
-      schema: string;
-      table: string;
-      query: string;
-    }) => {
+    mutationFn: async ({ query }: { schema: string; table: string; query: string }) => {
       return api.executeQuery(connectionId, query);
     },
     onSuccess: (_, { schema, table }) => {
@@ -135,13 +120,7 @@ export function useUpdateRow(connectionId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      query,
-    }: {
-      schema: string;
-      table: string;
-      query: string;
-    }) => {
+    mutationFn: async ({ query }: { schema: string; table: string; query: string }) => {
       return api.executeQuery(connectionId, query);
     },
     onSuccess: (_, { schema, table }) => {
@@ -156,13 +135,7 @@ export function useDeleteRow(connectionId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      query,
-    }: {
-      schema: string;
-      table: string;
-      query: string;
-    }) => {
+    mutationFn: async ({ query }: { schema: string; table: string; query: string }) => {
       return api.executeQuery(connectionId, query);
     },
     onSuccess: (_, { schema, table }) => {
@@ -430,13 +403,8 @@ export function useLicenseActivate() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
-      licenseKey,
-      deviceName,
-    }: {
-      licenseKey: string;
-      deviceName?: string;
-    }) => api.licenseActivate(licenseKey, deviceName),
+    mutationFn: ({ licenseKey, deviceName }: { licenseKey: string; deviceName?: string }) =>
+      api.licenseActivate(licenseKey, deviceName),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["licenseStatus"] });
     },

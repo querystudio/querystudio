@@ -50,8 +50,7 @@ export const useTerminalStore = create<TerminalState>()((set) => ({
 
   setActiveTerminal: (id) => set({ activeTerminalId: id }),
 
-  toggleTerminalPanel: () =>
-    set((state) => ({ isTerminalPanelOpen: !state.isTerminalPanelOpen })),
+  toggleTerminalPanel: () => set((state) => ({ isTerminalPanelOpen: !state.isTerminalPanelOpen })),
 
   openTerminalPanel: () => set({ isTerminalPanelOpen: true }),
 

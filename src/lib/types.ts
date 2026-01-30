@@ -1,9 +1,4 @@
-export type DatabaseType =
-  | "postgres"
-  | "mysql"
-  | "sqlite"
-  | "redis"
-  | "mongodb";
+export type DatabaseType = "postgres" | "mysql" | "sqlite" | "redis" | "mongodb";
 
 export type ConnectionParams =
   | { connection_string: string }

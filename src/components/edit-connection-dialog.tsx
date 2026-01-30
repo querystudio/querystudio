@@ -1,11 +1,6 @@
 import { useState, useEffect } from "react";
 import { Loader2, Database, FolderOpen } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,11 +15,7 @@ import {
 } from "@/components/ui/select";
 import { useSaveConnection, useTestConnection } from "@/lib/hooks";
 import { toast } from "sonner";
-import type {
-  SavedConnection,
-  ConnectionConfig,
-  DatabaseType,
-} from "@/lib/types";
+import type { SavedConnection, ConnectionConfig, DatabaseType } from "@/lib/types";
 
 interface EditConnectionDialogProps {
   connection: SavedConnection | null;
@@ -32,16 +23,14 @@ interface EditConnectionDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const DATABASE_CONFIGS: Record<
-  DatabaseType,
-  { port: string; database: string; username: string }
-> = {
-  postgres: { port: "5432", database: "postgres", username: "postgres" },
-  mysql: { port: "3306", database: "mysql", username: "root" },
-  sqlite: { port: "0", database: "", username: "" },
-  redis: { port: "6379", database: "0", username: "" },
-  mongodb: { port: "27017", database: "test", username: "" },
-};
+const DATABASE_CONFIGS: Record<DatabaseType, { port: string; database: string; username: string }> =
+  {
+    postgres: { port: "5432", database: "postgres", username: "postgres" },
+    mysql: { port: "3306", database: "mysql", username: "root" },
+    sqlite: { port: "0", database: "", username: "" },
+    redis: { port: "6379", database: "0", username: "" },
+    mongodb: { port: "27017", database: "test", username: "" },
+  };
 
 export function EditConnectionDialog({
   connection,
@@ -283,17 +272,12 @@ export function EditConnectionDialog({
               value={formData.name}
               onChange={(e) => updateField("name", e.target.value)}
             />
-            {errors.name && (
-              <p className="text-xs text-red-500">{errors.name}</p>
-            )}
+            {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="edit-dbType">Database Type</Label>
-            <Select
-              value={dbType}
-              onValueChange={(v) => handleDbTypeChange(v as DatabaseType)}
-            >
+            <Select value={dbType} onValueChange={(v) => handleDbTypeChange(v as DatabaseType)}>
               <SelectTrigger id="edit-dbType">
                 <SelectValue placeholder="Select database type" />
               </SelectTrigger>
@@ -335,9 +319,7 @@ export function EditConnectionDialog({
                     id="edit-connectionString"
                     placeholder="Select a SQLite database file..."
                     value={formData.connectionString}
-                    onChange={(e) =>
-                      updateField("connectionString", e.target.value)
-                    }
+                    onChange={(e) => updateField("connectionString", e.target.value)}
                     className="font-mono text-sm flex-1"
                   />
                   <input
@@ -358,17 +340,13 @@ export function EditConnectionDialog({
                     type="button"
                     variant="outline"
                     size="icon"
-                    onClick={() =>
-                      document.getElementById("edit-sqlite-file-input")?.click()
-                    }
+                    onClick={() => document.getElementById("edit-sqlite-file-input")?.click()}
                   >
                     <FolderOpen className="h-4 w-4" />
                   </Button>
                 </div>
                 {errors.connectionString && (
-                  <p className="text-xs text-red-500">
-                    {errors.connectionString}
-                  </p>
+                  <p className="text-xs text-red-500">{errors.connectionString}</p>
                 )}
                 <p className="text-xs text-muted-foreground">
                   Browse for a .db, .sqlite, or .sqlite3 file
@@ -376,10 +354,7 @@ export function EditConnectionDialog({
               </div>
             </div>
           ) : (
-            <Tabs
-              value={mode}
-              onValueChange={(v) => setMode(v as "params" | "string")}
-            >
+            <Tabs value={mode} onValueChange={(v) => setMode(v as "params" | "string")}>
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="params">Parameters</TabsTrigger>
                 <TabsTrigger value="string">Connection String</TabsTrigger>
@@ -395,9 +370,7 @@ export function EditConnectionDialog({
                       value={formData.host}
                       onChange={(e) => updateField("host", e.target.value)}
                     />
-                    {errors.host && (
-                      <p className="text-xs text-red-500">{errors.host}</p>
-                    )}
+                    {errors.host && <p className="text-xs text-red-500">{errors.host}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="edit-port">Port</Label>
@@ -408,9 +381,7 @@ export function EditConnectionDialog({
                       value={formData.port}
                       onChange={(e) => updateField("port", e.target.value)}
                     />
-                    {errors.port && (
-                      <p className="text-xs text-red-500">{errors.port}</p>
-                    )}
+                    {errors.port && <p className="text-xs text-red-500">{errors.port}</p>}
                   </div>
                 </div>
 
@@ -422,9 +393,7 @@ export function EditConnectionDialog({
                     value={formData.database}
                     onChange={(e) => updateField("database", e.target.value)}
                   />
-                  {errors.database && (
-                    <p className="text-xs text-red-500">{errors.database}</p>
-                  )}
+                  {errors.database && <p className="text-xs text-red-500">{errors.database}</p>}
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -436,9 +405,7 @@ export function EditConnectionDialog({
                       value={formData.username}
                       onChange={(e) => updateField("username", e.target.value)}
                     />
-                    {errors.username && (
-                      <p className="text-xs text-red-500">{errors.username}</p>
-                    )}
+                    {errors.username && <p className="text-xs text-red-500">{errors.username}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="edit-password">Password</Label>
@@ -449,54 +416,37 @@ export function EditConnectionDialog({
                       value={formData.password}
                       onChange={(e) => updateField("password", e.target.value)}
                     />
-                    <p className="text-xs text-muted-foreground">
-                      Required for testing
-                    </p>
+                    <p className="text-xs text-muted-foreground">Required for testing</p>
                   </div>
                 </div>
               </TabsContent>
 
               <TabsContent value="string" className="mt-4 space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="edit-connectionString">
-                    Connection String
-                  </Label>
+                  <Label htmlFor="edit-connectionString">Connection String</Label>
                   <Textarea
                     id="edit-connectionString"
                     placeholder={getConnectionStringPlaceholder()}
                     value={formData.connectionString}
-                    onChange={(e) =>
-                      updateField("connectionString", e.target.value)
-                    }
+                    onChange={(e) => updateField("connectionString", e.target.value)}
                     className="min-h-[80px] font-mono text-sm"
                   />
                   {errors.connectionString && (
-                    <p className="text-xs text-red-500">
-                      {errors.connectionString}
-                    </p>
+                    <p className="text-xs text-red-500">{errors.connectionString}</p>
                   )}
-                  <p className="text-xs text-muted-foreground">
-                    {getConnectionStringHelp()}
-                  </p>
+                  <p className="text-xs text-muted-foreground">{getConnectionStringHelp()}</p>
                 </div>
               </TabsContent>
             </Tabs>
           )}
 
           <div className="flex justify-between pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleTest}
-              disabled={testing}
-            >
+            <Button type="button" variant="outline" onClick={handleTest} disabled={testing}>
               {testing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Test Connection
             </Button>
             <Button type="submit" disabled={saveConnection.isPending}>
-              {saveConnection.isPending && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}
+              {saveConnection.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Save Changes
             </Button>
           </div>
