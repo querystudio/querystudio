@@ -76,7 +76,6 @@ export const Sidebar = memo(function Sidebar() {
     })),
   );
   const setTables = useConnectionStore((s) => s.setTables);
-  const setSelectedTable = useConnectionStore((s) => s.setSelectedTable);
 
   // Layout store for multi-tab support
   const openDataTab = useLayoutStore((s) => s.openDataTab);
@@ -184,17 +183,11 @@ export const Sidebar = memo(function Sidebar() {
                     "bg-secondary",
                 )}
                 onClick={() => {
-                  setSelectedTable({
-                    schema: table.schema,
-                    name: table.name,
-                  });
-                }}
-                onDoubleClick={() => {
                   if (connection?.id) {
                     openDataTab(connection.id, table.schema, table.name);
                   }
                 }}
-                title={`${table.schema}.${table.name} (double-click to open)`}
+                title={`${table.schema}.${table.name}`}
               >
                 <Table className="h-3 w-3" />
               </Button>
@@ -321,17 +314,11 @@ export const Sidebar = memo(function Sidebar() {
                                   "bg-secondary",
                               )}
                               onClick={() => {
-                                setSelectedTable({
-                                  schema: table.schema,
-                                  name: table.name,
-                                });
-                              }}
-                              onDoubleClick={() => {
                                 if (connection?.id) {
                                   openDataTab(connection.id, table.schema, table.name);
                                 }
                               }}
-                              title="Double-click to open in tab"
+                              title={`${table.schema}.${table.name}`}
                             >
                               <Table className="h-3 w-3 shrink-0" />
                               <span className="truncate">{table.name}</span>

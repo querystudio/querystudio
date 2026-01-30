@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useConnectionStore, useAIQueryStore } from "@/lib/store";
 import { useLayoutStore } from "@/lib/layout-store";
+import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import type { DatabaseType } from "@/lib/types";
 import { create } from "zustand";
@@ -133,6 +134,9 @@ export function StatusBar() {
   const cursorPosition = useStatusBarStore((s) => s.cursorPosition);
 
   const experimentalTerminal = useAIQueryStore((s) => s.experimentalTerminal);
+
+  // Auth status
+  const session = authClient.useSession();
 
   // Get terminal tabs count and create function from layout store
   const connectionId = connection?.id ?? "";
@@ -311,6 +315,32 @@ export function StatusBar() {
             </TooltipProvider>
           </>
         )}
+
+        {/* Auth status */}
+        <div className="h-3 w-px bg-border" />
+        <div className="flex items-center">
+          {session.data?.user ? (
+            <>
+              {session.data.user.image ? (
+                <img
+                  src={session.data.user.image}
+                  alt={session.data.user.name || "User"}
+                  className="h-4 w-4 rounded-full"
+                />
+              ) : (
+                <div className="h-4 w-4 rounded-full bg-primary/20 flex items-center justify-center text-[8px] font-medium text-primary">
+                  {session.data.user.name?.charAt(0).toUpperCase() ||
+                    session.data.user.email?.charAt(0).toUpperCase() ||
+                    "?"}
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="h-4 w-4 rounded-full bg-muted flex items-center justify-center">
+              <span className="text-[8px] text-muted-foreground">?</span>
+            </div>
+          )}
+        </div>
 
         {/* Current time */}
         <div className="h-3 w-px bg-border" />
