@@ -95,9 +95,11 @@ export const Sidebar = memo(function Sidebar() {
   const { data: fetchedTables } = useTables(connection?.id ?? null);
   const disconnect = useDisconnect();
 
-  if (fetchedTables && fetchedTables !== tables) {
-    setTables(fetchedTables);
-  }
+  useEffect(() => {
+    if (fetchedTables && fetchedTables !== tables) {
+      setTables(fetchedTables);
+    }
+  }, [fetchedTables, tables, setTables]);
 
   // Handle resize drag
   const handleResizeStart = useCallback((e: React.MouseEvent) => {

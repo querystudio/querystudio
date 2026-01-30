@@ -1,27 +1,19 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState, useEffect, useCallback } from "react";
-import { Button } from "@/components/ui/button";
-import { Sidebar } from "@/components/sidebar";
+import { useState, useEffect } from "react";
 import { ConnectionDialog } from "@/components/connection-dialog";
 import { EditConnectionDialog } from "@/components/edit-connection-dialog";
-import { AIChat } from "@/components/ai-chat";
 import { WelcomeScreen } from "@/components/welcome-screen";
 import { CommandPalette } from "@/components/command-palette";
 import { PasswordPromptDialog } from "@/components/password-prompt-dialog";
-import { StatusBar } from "@/components/status-bar";
-import { TerminalPanel } from "@/components/terminal-panel";
-import { PaneContainer } from "@/components/pane-container";
-import { useConnectionStore, useAIQueryStore } from "@/lib/store";
+import { useConnectionStore } from "@/lib/store";
 import { useGlobalShortcuts } from "@/lib/use-global-shortcuts";
 import type { SavedConnection } from "@/lib/types";
-import { FpsCounter } from "@/components/fps-counter";
-import { PanelRightClose, PanelRight, PanelLeftClose, PanelLeft, Settings } from "lucide-react";
 
 export const Route = createFileRoute("/")({
-  component: App,
+  component: Home,
 });
 
-function App() {
+function Home() {
   const navigate = useNavigate();
   const [connectionDialogOpen, setConnectionDialogOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
@@ -31,109 +23,13 @@ function App() {
     null,
   );
   const connection = useConnectionStore((s) => s.connection);
-  const connectionId = connection?.id ?? "";
 
-  // AI Panel state
-  const aiPanelOpen = useAIQueryStore((s) => s.aiPanelOpen);
-  const setAiPanelOpen = useAIQueryStore((s) => s.setAiPanelOpen);
-  const toggleAiPanel = useAIQueryStore((s) => s.toggleAiPanel);
-
-  // Sidebar state
-  const sidebarCollapsed = useAIQueryStore((s) => s.sidebarCollapsed);
-  const toggleSidebar = useAIQueryStore((s) => s.toggleSidebar);
-
-  // Status bar visibility
-  const statusBarVisible = useAIQueryStore((s) => s.statusBarVisible);
-
-  // Experimental terminal
-  const experimentalTerminal = useAIQueryStore((s) => s.experimentalTerminal);
-
-  // Debug mode
-  const debugMode = useAIQueryStore((s) => s.debugMode);
-
-  // AI Panel width (resizable)
-  const [aiPanelWidth, setAiPanelWidth] = useState(() => {
-    const saved = localStorage.getItem("querystudio_ai_panel_width");
-    return saved ? parseInt(saved, 10) : 420;
-  });
-  const [isResizing, setIsResizing] = useState(false);
-  const minWidth = 320;
-  const maxWidth = 800;
-
-  // Save width to localStorage when it changes
+  // If there's an active connection, redirect to the database studio
   useEffect(() => {
-    localStorage.setItem("querystudio_ai_panel_width", String(aiPanelWidth));
-  }, [aiPanelWidth]);
-
-  // Handle resize drag
-  const handleResizeStart = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsResizing(true);
-  }, []);
-
-  useEffect(() => {
-    if (!isResizing) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      e.preventDefault();
-      const newWidth = window.innerWidth - e.clientX;
-      setAiPanelWidth(Math.min(maxWidth, Math.max(minWidth, newWidth)));
-    };
-
-    const handleMouseUp = () => {
-      setIsResizing(false);
-    };
-
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-    return () => {
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [isResizing]);
-
-  // Keyboard shortcut for AI panel (Cmd+Option+B / Ctrl+Alt+B)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Option+Cmd+B on Mac (keyCode 66 = B), Ctrl+Alt+B on Windows/Linux - Toggle AI Panel
-      const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
-      const modifier = isMac ? e.metaKey : e.ctrlKey;
-
-      if (modifier && e.altKey && (e.key === "b" || e.key === "B" || e.keyCode === 66)) {
-        e.preventDefault();
-        e.stopPropagation();
-        toggleAiPanel();
-        return;
-      }
-
-      // Cmd+B on Mac, Ctrl+B on Windows/Linux - Toggle Sidebar
-      if (
-        modifier &&
-        !e.altKey &&
-        !e.shiftKey &&
-        (e.key === "b" || e.key === "B" || e.keyCode === 66)
-      ) {
-        e.preventDefault();
-        e.stopPropagation();
-        toggleSidebar();
-        return;
-      }
-
-      // Escape to close AI panel
-      if (e.key === "Escape" && aiPanelOpen) {
-        setAiPanelOpen(false);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [aiPanelOpen, toggleAiPanel, setAiPanelOpen, toggleSidebar]);
+    if (connection) {
+      navigate({ to: "/db/$connectionId", params: { connectionId: connection.id } });
+    }
+  }, [connection, navigate]);
 
   // Global keyboard shortcuts and menu event handling
   const { refreshAll } = useGlobalShortcuts({
@@ -159,135 +55,13 @@ function App() {
     setEditConnectionDialogOpen(true);
   };
 
-  if (!connection) {
-    return (
-      <>
-        <WelcomeScreen
-          onNewConnection={() => setConnectionDialogOpen(true)}
-          onSelectConnection={handleSelectSavedConnection}
-          onEditConnection={handleEditConnection}
-        />
-        <ConnectionDialog open={connectionDialogOpen} onOpenChange={setConnectionDialogOpen} />
-        <EditConnectionDialog
-          connection={connectionToEdit}
-          open={editConnectionDialogOpen}
-          onOpenChange={setEditConnectionDialogOpen}
-        />
-        <CommandPalette
-          open={commandPaletteOpen}
-          onOpenChange={setCommandPaletteOpen}
-          onSelectConnection={handleSelectSavedConnection}
-          onEditConnection={handleEditConnection}
-          onNewConnection={() => setConnectionDialogOpen(true)}
-          onRefresh={refreshAll}
-        />
-        <PasswordPromptDialog
-          connection={passwordPromptConnection}
-          open={passwordPromptConnection !== null}
-          onOpenChange={(open) => !open && setPasswordPromptConnection(null)}
-        />
-      </>
-    );
-  }
-
   return (
-    <div className="flex h-screen flex-col bg-background text-foreground">
-      {/* Titlebar with drag region and controls */}
-      <div className="relative h-8 w-full shrink-0 bg-background">
-        {/* Drag region - full width behind everything */}
-        <div
-          data-tauri-drag-region
-          className="absolute inset-0"
-          style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
-        />
-
-        <div
-          className="absolute left-17.5 top-0 bottom-0 flex items-center"
-          style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
-        >
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-muted-foreground hover:text-foreground"
-            onClick={toggleSidebar}
-            title="Toggle sidebar (⌘B)"
-          >
-            {sidebarCollapsed ? (
-              <PanelLeft className="h-4 w-4" />
-            ) : (
-              <PanelLeftClose className="h-4 w-4" />
-            )}
-          </Button>
-        </div>
-
-        <div
-          className="absolute right-2 top-0 bottom-0 flex items-center gap-1"
-          style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
-        >
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-muted-foreground hover:text-foreground"
-            onClick={() => navigate({ to: "/settings" })}
-            title="Settings"
-          >
-            <Settings className="h-4 w-4" />
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-muted-foreground hover:text-foreground"
-            onClick={toggleAiPanel}
-            title="Toggle Querybuddy (⌥⌘B)"
-          >
-            {aiPanelOpen ? (
-              <PanelRightClose className="h-4 w-4" />
-            ) : (
-              <PanelRight className="h-4 w-4" />
-            )}
-          </Button>
-        </div>
-      </div>
-
-      <div className="flex flex-1 overflow-hidden">
-        <Sidebar />
-
-        <div className="flex flex-1 overflow-hidden">
-          <main className="flex flex-1 flex-col overflow-hidden">
-            <div className="flex-1 overflow-hidden h-full">
-              <PaneContainer connectionId={connectionId} dbType={connection?.db_type} />
-            </div>
-          </main>
-
-          <div
-            className="relative shrink-0 overflow-hidden"
-            style={{
-              width: aiPanelOpen ? aiPanelWidth : 0,
-              transition: isResizing ? "none" : "width 0.2s ease-in-out",
-            }}
-          >
-            <aside
-              className="absolute inset-y-0 right-0 flex flex-col border-l border-border bg-background"
-              style={{ width: aiPanelWidth }}
-            >
-              <div
-                onMouseDown={handleResizeStart}
-                className="absolute left-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-primary/30 active:bg-primary/40 z-10 -ml-1"
-              />
-
-              <div className="flex-1 overflow-hidden">
-                <AIChat />
-              </div>
-            </aside>
-          </div>
-        </div>
-      </div>
-
-      {experimentalTerminal && <TerminalPanel />}
-
-      {statusBarVisible && <StatusBar />}
-
+    <>
+      <WelcomeScreen
+        onNewConnection={() => setConnectionDialogOpen(true)}
+        onSelectConnection={handleSelectSavedConnection}
+        onEditConnection={handleEditConnection}
+      />
       <ConnectionDialog open={connectionDialogOpen} onOpenChange={setConnectionDialogOpen} />
       <EditConnectionDialog
         connection={connectionToEdit}
@@ -307,7 +81,6 @@ function App() {
         open={passwordPromptConnection !== null}
         onOpenChange={(open) => !open && setPasswordPromptConnection(null)}
       />
-      {debugMode && <FpsCounter />}
-    </div>
+    </>
   );
 }

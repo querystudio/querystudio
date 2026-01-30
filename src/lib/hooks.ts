@@ -322,6 +322,10 @@ export function useDisconnect() {
     onSuccess: () => {
       disconnect();
       queryClient.invalidateQueries({ queryKey: ["tables"] });
+      // Navigate back to home page
+      if (typeof window !== "undefined") {
+        window.location.href = "/";
+      }
     },
   });
 }
