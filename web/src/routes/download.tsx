@@ -193,12 +193,6 @@ function DownloadPage() {
   const macosAssets = release.assets.filter(
     (a) => a.platform === "macos" && !isSignatureFile(a.name),
   );
-  const windowsAssets = release.assets.filter(
-    (a) => a.platform === "windows" && !isSignatureFile(a.name),
-  );
-  const linuxAssets = release.assets.filter(
-    (a) => a.platform === "linux" && !isSignatureFile(a.name),
-  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -248,30 +242,7 @@ function DownloadPage() {
                 <span className="text-xs bg-muted px-2 py-0.5 rounded">Your platform</span>
               )}
             </div>
-            {windowsAssets.length > 0 ? (
-              <div className="space-y-2">
-                {windowsAssets.map((asset) => {
-                  const label = asset.name.toLowerCase().includes(".msi")
-                    ? ".msi installer"
-                    : ".exe installer";
-                  return (
-                    <a
-                      key={asset.name}
-                      href={asset.downloadUrl}
-                      download
-                      className="flex items-center justify-between py-2 px-3 -mx-3 rounded hover:bg-muted transition-colors"
-                    >
-                      <span>{label}</span>
-                      <span className="text-sm text-muted-foreground">
-                        {formatBytes(asset.size)}
-                      </span>
-                    </a>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">Coming soon</p>
-            )}
+            <p className="text-sm text-muted-foreground">On the way</p>
           </section>
 
           {/* Linux */}
@@ -282,33 +253,7 @@ function DownloadPage() {
                 <span className="text-xs bg-muted px-2 py-0.5 rounded">Your platform</span>
               )}
             </div>
-            {linuxAssets.length > 0 ? (
-              <div className="space-y-2">
-                {linuxAssets.map((asset) => {
-                  const lower = asset.name.toLowerCase();
-                  let label = asset.name;
-                  if (lower.includes(".appimage")) label = "AppImage";
-                  else if (lower.includes(".deb")) label = ".deb (Debian/Ubuntu)";
-                  else if (lower.includes(".rpm")) label = ".rpm (Fedora/RHEL)";
-
-                  return (
-                    <a
-                      key={asset.name}
-                      href={asset.downloadUrl}
-                      download
-                      className="flex items-center justify-between py-2 px-3 -mx-3 rounded hover:bg-muted transition-colors"
-                    >
-                      <span>{label}</span>
-                      <span className="text-sm text-muted-foreground">
-                        {formatBytes(asset.size)}
-                      </span>
-                    </a>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">Coming soon</p>
-            )}
+            <p className="text-sm text-muted-foreground">On the way</p>
           </section>
         </div>
 
