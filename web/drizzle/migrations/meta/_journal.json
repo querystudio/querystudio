@@ -57,6 +57,13 @@
       "when": 1769861012728,
       "tag": "0007_silly_power_man",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1769872646470,
+      "tag": "0008_reflective_vindicator",
+      "breakpoints": true
     }
   ]
 }

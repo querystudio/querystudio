@@ -75,21 +75,9 @@ export const verification = pgTable(
   (table) => [index("verification_identifier_idx").on(table.identifier)],
 );
 
-export const waitlist = pgTable("waitlist", {
-  id: text("id").primaryKey(),
-  email: text("email").notNull().unique(),
-  status: text("status").default("pending").notNull(),
-  requestedAt: timestamp("requested_at"),
-  processedAt: timestamp("processed_at"),
-  processedBy: text("processed_by").references(() => user.id, {
-    onDelete: "no action",
-  }),
-});
-
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),
-  waitlists: many(waitlist),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -102,13 +90,6 @@ export const sessionRelations = relations(session, ({ one }) => ({
 export const accountRelations = relations(account, ({ one }) => ({
   user: one(user, {
     fields: [account.userId],
-    references: [user.id],
-  }),
-}));
-
-export const waitlistRelations = relations(waitlist, ({ one }) => ({
-  user: one(user, {
-    fields: [waitlist.processedBy],
     references: [user.id],
   }),
 }));

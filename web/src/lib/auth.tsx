@@ -1,20 +1,15 @@
 import { betterAuth } from "better-auth";
 import { captcha, oAuthProxy, oneTimeToken } from "better-auth/plugins";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { waitlist } from "better-auth-waitlist";
 import { db } from "drizzle";
 import { zeroId } from "zero-id";
 import { emailer } from "./emailer";
 import { env } from "./env";
 import { render } from "@react-email/render";
 import VerifyEmail from "@/emails/verify-email";
-import WaitlistJoined from "@/emails/waitlist-joined";
-import WaitlistStatus from "@/emails/waitlist-status";
 import { polar } from "./polar";
 import { user } from "drizzle/schema/auth";
 import { eq } from "drizzle-orm";
-
-const ADMIN_EMAILS = [];
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -94,35 +89,6 @@ export const auth = betterAuth({
     captcha({
       provider: "cloudflare-turnstile",
       secretKey: env.TURNSTILE_SECRET_KEY,
-    }),
-    waitlist({
-      enabled: true,
-      onJoinRequest: async ({ request }) => {
-        await emailer.emails.send({
-          from: env.USESEND_FROM,
-          to: request.email,
-          subject: "You're on the QueryStudio waitlist!",
-          html: await render(<WaitlistJoined />),
-        });
-      },
-      onStatusChange: async (entry) => {
-        if (entry.status === "accepted" || entry.status === "rejected") {
-          await emailer.emails.send({
-            from: env.USESEND_FROM,
-            to: entry.email,
-            subject:
-              entry.status === "accepted"
-                ? "You've been approved for QueryStudio!"
-                : "Update on your QueryStudio waitlist request",
-            html: await render(
-              <WaitlistStatus status={entry.status === "accepted" ? "approved" : "rejected"} />,
-            ),
-          });
-        }
-      },
-      canManageWaitlist: async (user) => {
-        return ADMIN_EMAILS.includes(user.email);
-      },
     }),
   ],
   trustedOrigins: [
