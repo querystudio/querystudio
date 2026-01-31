@@ -1,12 +1,10 @@
-import { useEffect, useRef, useCallback, memo, useState } from "react";
+import { useEffect, useRef, useCallback, memo } from "react";
 import { Terminal as XTerm } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
-import { CanvasAddon } from "@xterm/addon-canvas";
 import { useConnectionStore } from "@/lib/store";
 import { useThemeStore } from "@/lib/theme-store";
 import { api } from "@/lib/api";
-import { REDIS_COMMANDS, getCommandSuggestions, getCommandInfo } from "@/lib/redis-commands";
 import "@xterm/xterm/css/xterm.css";
 import type { TabContentProps } from "@/lib/tab-sdk";
 
@@ -101,9 +99,6 @@ export const RedisConsole = memo(function RedisConsole({
   const commandHistoryRef = useRef<string[]>([]);
   const historyIndexRef = useRef<number>(-1);
   const cursorPosRef = useRef<number>(0);
-  const [showAutocomplete, setShowAutocomplete] = useState(false);
-  const [suggestions, setSuggestions] = useState<typeof REDIS_COMMANDS>([]);
-  const [selectedSuggestion, setSelectedSuggestion] = useState(0);
 
   // Load history from localStorage
   useEffect(() => {
@@ -122,7 +117,7 @@ export const RedisConsole = memo(function RedisConsole({
     try {
       localStorage.setItem(
         HISTORY_KEY,
-        JSON.stringify(commandHistoryRef.current.slice(-MAX_HISTORY))
+        JSON.stringify(commandHistoryRef.current.slice(-MAX_HISTORY)),
       );
     } catch {
       // Ignore storage errors
@@ -161,7 +156,6 @@ export const RedisConsole = memo(function RedisConsole({
         terminal.writeln("\x1b[36mKeyboard Shortcuts:\x1b[0m");
         terminal.writeln("  \x1b[33mCtrl+L\x1b[0m    - Clear screen");
         terminal.writeln("  \x1b[33mCtrl+U\x1b[0m    - Clear current line");
-        terminal.writeln("  \x1b[33mTab\x1b[0m       - Autocomplete command");
         terminal.writeln("  \x1b[33m↑/↓\x1b[0m      - Navigate history");
         return;
       }
@@ -201,51 +195,22 @@ export const RedisConsole = memo(function RedisConsole({
         terminal.write(`\r\n\x1b[31m(error) ${String(error)}\x1b[0m`);
       }
     },
-    [connectionId, formatValue]
+    [connectionId, formatValue],
   );
 
   const writePrompt = useCallback((terminal: XTerm) => {
     terminal.write("\r\n" + PROMPT);
   }, []);
 
-  const refreshLine = useCallback(
-    (terminal: XTerm) => {
-      // Clear current line and rewrite
-      terminal.write("\r\x1b[K" + PROMPT + inputBufferRef.current);
-      // Move cursor to correct position
-      const moveBack = inputBufferRef.current.length - cursorPosRef.current;
-      if (moveBack > 0) {
-        terminal.write(`\x1b[${moveBack}D`);
-      }
-    },
-    []
-  );
-
-  // Handle autocomplete
-  const handleAutocomplete = useCallback(() => {
-    const input = inputBufferRef.current;
-    const parts = input.trim().split(/\s+/);
-    const currentWord = parts[parts.length - 1] || "";
-
-    if (parts.length === 1) {
-      // Autocomplete command
-      const matches = getCommandSuggestions(currentWord);
-      if (matches.length === 1) {
-        // Single match - complete it
-        inputBufferRef.current = matches[0].name + " ";
-        cursorPosRef.current = inputBufferRef.current.length;
-        if (terminalRef.current) {
-          refreshLine(terminalRef.current);
-        }
-        setShowAutocomplete(false);
-      } else if (matches.length > 1) {
-        // Multiple matches - show suggestions
-        setSuggestions(matches);
-        setSelectedSuggestion(0);
-        setShowAutocomplete(true);
-      }
+  const refreshLine = useCallback((terminal: XTerm) => {
+    // Clear current line and rewrite
+    terminal.write("\r\x1b[K" + PROMPT + inputBufferRef.current);
+    // Move cursor to correct position
+    const moveBack = inputBufferRef.current.length - cursorPosRef.current;
+    if (moveBack > 0) {
+      terminal.write(`\x1b[${moveBack}D`);
     }
-  }, [refreshLine]);
+  }, []);
 
   // Initialize terminal
   useEffect(() => {
@@ -270,16 +235,19 @@ export const RedisConsole = memo(function RedisConsole({
 
     const fitAddon = new FitAddon();
     const webLinksAddon = new WebLinksAddon();
-    const canvasAddon = new CanvasAddon();
 
     terminal.loadAddon(fitAddon);
     terminal.loadAddon(webLinksAddon);
 
     terminal.open(containerRef.current);
-    terminal.loadAddon(canvasAddon);
 
+    // Delay fit to ensure renderer is ready
     requestAnimationFrame(() => {
-      fitAddon.fit();
+      try {
+        fitAddon.fit();
+      } catch (e) {
+        console.warn("Initial fit failed:", e);
+      }
     });
 
     terminalRef.current = terminal;
@@ -293,7 +261,7 @@ export const RedisConsole = memo(function RedisConsole({
     terminal.writeln("\x1b[36m╚══════════════════════════════════════════════════════╝\x1b[0m");
     terminal.writeln("");
     terminal.writeln("\x1b[90mType 'help' for available commands\x1b[0m");
-    terminal.writeln("\x1b[90mUse ↑/↓ for history, Tab for autocomplete, Ctrl+L to clear\x1b[0m");
+    terminal.writeln("\x1b[90mUse ↑/↓ for history, Ctrl+L to clear\x1b[0m");
     terminal.write(PROMPT);
 
     // Handle user input
@@ -308,7 +276,6 @@ export const RedisConsole = memo(function RedisConsole({
           saveHistory();
           historyIndexRef.current = -1;
         }
-        setShowAutocomplete(false);
         executeCommand(command, terminal).then(() => {
           inputBufferRef.current = "";
           cursorPosRef.current = 0;
@@ -321,15 +288,18 @@ export const RedisConsole = memo(function RedisConsole({
             inputBufferRef.current.slice(0, cursorPosRef.current - 1) +
             inputBufferRef.current.slice(cursorPosRef.current);
           cursorPosRef.current--;
-          setShowAutocomplete(false);
           refreshLine(terminal);
         }
       } else if (data === "\t") {
-        // Tab - autocomplete
-        handleAutocomplete();
+        // Tab - insert a tab character
+        inputBufferRef.current =
+          inputBufferRef.current.slice(0, cursorPosRef.current) +
+          "\t" +
+          inputBufferRef.current.slice(cursorPosRef.current);
+        cursorPosRef.current += 1;
+        refreshLine(terminal);
       } else if (data === "\x1b[A") {
         // Arrow up
-        setShowAutocomplete(false);
         if (commandHistoryRef.current.length > 0) {
           if (historyIndexRef.current === -1) {
             historyIndexRef.current = commandHistoryRef.current.length - 1;
@@ -342,7 +312,6 @@ export const RedisConsole = memo(function RedisConsole({
         }
       } else if (data === "\x1b[B") {
         // Arrow down
-        setShowAutocomplete(false);
         if (historyIndexRef.current !== -1) {
           if (historyIndexRef.current < commandHistoryRef.current.length - 1) {
             historyIndexRef.current++;
@@ -356,28 +325,24 @@ export const RedisConsole = memo(function RedisConsole({
         }
       } else if (data === "\x1b[C") {
         // Arrow right
-        setShowAutocomplete(false);
         if (cursorPosRef.current < inputBufferRef.current.length) {
           cursorPosRef.current++;
           terminal.write(data);
         }
       } else if (data === "\x1b[D") {
         // Arrow left
-        setShowAutocomplete(false);
         if (cursorPosRef.current > 0) {
           cursorPosRef.current--;
           terminal.write(data);
         }
       } else if (data === "\x1b[H" || data === "\x01") {
         // Home or Ctrl+A
-        setShowAutocomplete(false);
         if (cursorPosRef.current > 0) {
           terminal.write(`\x1b[${cursorPosRef.current}D`);
           cursorPosRef.current = 0;
         }
       } else if (data === "\x1b[F" || data === "\x05") {
         // End or Ctrl+E
-        setShowAutocomplete(false);
         const moveRight = inputBufferRef.current.length - cursorPosRef.current;
         if (moveRight > 0) {
           terminal.write(`\x1b[${moveRight}C`);
@@ -385,25 +350,21 @@ export const RedisConsole = memo(function RedisConsole({
         }
       } else if (data === "\x15") {
         // Ctrl+U - clear line
-        setShowAutocomplete(false);
         inputBufferRef.current = "";
         cursorPosRef.current = 0;
         refreshLine(terminal);
       } else if (data === "\x0c") {
         // Ctrl+L - clear screen
-        setShowAutocomplete(false);
         terminal.clear();
         refreshLine(terminal);
       } else if (data === "\x03") {
         // Ctrl+C - cancel current input
-        setShowAutocomplete(false);
         terminal.write("^C");
         inputBufferRef.current = "";
         cursorPosRef.current = 0;
         writePrompt(terminal);
       } else if (code >= 32) {
         // Printable characters
-        setShowAutocomplete(false);
         inputBufferRef.current =
           inputBufferRef.current.slice(0, cursorPosRef.current) +
           data +
@@ -415,9 +376,13 @@ export const RedisConsole = memo(function RedisConsole({
 
     // Handle window resize
     const handleResize = () => {
-      if (fitAddonRef.current && terminalRef.current) {
+      if (fitAddonRef.current && terminalRef.current && isInitializedRef.current) {
         requestAnimationFrame(() => {
-          fitAddonRef.current?.fit();
+          try {
+            fitAddonRef.current?.fit();
+          } catch (e) {
+            // Ignore resize errors when renderer is not ready
+          }
         });
       }
     };
@@ -426,9 +391,13 @@ export const RedisConsole = memo(function RedisConsole({
 
     // ResizeObserver for container
     const resizeObserver = new ResizeObserver(() => {
-      if (fitAddonRef.current && terminalRef.current) {
+      if (fitAddonRef.current && terminalRef.current && isInitializedRef.current) {
         requestAnimationFrame(() => {
-          fitAddonRef.current?.fit();
+          try {
+            fitAddonRef.current?.fit();
+          } catch (e) {
+            // Ignore resize errors when renderer is not ready
+          }
         });
       }
     });
@@ -442,7 +411,12 @@ export const RedisConsole = memo(function RedisConsole({
       fitAddonRef.current = null;
       isInitializedRef.current = false;
     };
-  }, [executeCommand, refreshLine, writePrompt, saveHistory, handleAutocomplete]);
+  }, [
+    executeCommand,
+    refreshLine,
+    writePrompt,
+    saveHistory,
+  ]);
 
   // Update theme when it changes
   useEffect(() => {
@@ -453,10 +427,14 @@ export const RedisConsole = memo(function RedisConsole({
 
   // Focus terminal when visible
   useEffect(() => {
-    if (fitAddonRef.current && terminalRef.current) {
+    if (fitAddonRef.current && terminalRef.current && isInitializedRef.current) {
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          fitAddonRef.current?.fit();
+          try {
+            fitAddonRef.current?.fit();
+          } catch (e) {
+            // Ignore fit errors when renderer is not ready
+          }
           terminalRef.current?.focus();
         });
       });
@@ -475,38 +453,7 @@ export const RedisConsole = memo(function RedisConsole({
     <div className="relative h-full w-full">
       <div ref={containerRef} className="h-full w-full" style={{ padding: "8px" }} />
 
-      {/* Autocomplete dropdown */}
-      {showAutocomplete && suggestions.length > 0 && (
-        <div className="absolute bottom-4 left-4 bg-popover border rounded-md shadow-lg max-h-48 overflow-y-auto z-50 min-w-[300px]">
-          {suggestions.map((cmd, index) => (
-            <div
-              key={cmd.name}
-              className={`px-3 py-2 cursor-pointer text-sm ${
-                index === selectedSuggestion
-                  ? "bg-accent text-accent-foreground"
-                  : "hover:bg-accent/50"
-              }`}
-              onClick={() => {
-                inputBufferRef.current = cmd.name + " ";
-                cursorPosRef.current = inputBufferRef.current.length;
-                if (terminalRef.current) {
-                  refreshLine(terminalRef.current);
-                }
-                setShowAutocomplete(false);
-              }}
-            >
-              <div className="flex items-center justify-between">
-                <span className="font-mono font-semibold">{cmd.name}</span>
-                <span className="text-xs text-muted-foreground">{cmd.complexity}</span>
-              </div>
-              <div className="text-xs text-muted-foreground mt-0.5">{cmd.summary}</div>
-              <div className="text-xs text-muted-foreground/70 font-mono mt-0.5">
-                {cmd.args}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+
     </div>
   );
 });

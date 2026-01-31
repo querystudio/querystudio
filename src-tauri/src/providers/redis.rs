@@ -739,7 +739,7 @@ impl RedisProvider {
             RedisConnection::Single(conn) => {
                 let mut c = conn.lock().await;
                 redis::cmd("MULTI")
-                    .query_async::<_, ()>(&mut *c)
+                    .query_async::<()>(&mut *c)
                     .await
                     .map_err(Self::format_error)?;
 

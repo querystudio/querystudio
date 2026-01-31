@@ -80,7 +80,7 @@ export const REDIS_COMMANDS: RedisCommand[] = [
   { name: "LSET", args: "key index value", summary: "Set the value of an element in a list by its index", complexity: "O(N)" },
   { name: "LTRIM", args: "key start stop", summary: "Trim a list to the specified range", complexity: "O(N)" },
   { name: "MGET", args: "key [key ...]", summary: "Get the values of all the given keys", complexity: "O(N)" },
-  { name: "MIGRATE", args: "host port key|"" destination-db timeout [COPY] [REPLACE] [KEYS key [key ...]]", summary: "Atomically transfer a key from a Redis instance to another one", complexity: "O(N)" },
+  { name: "MIGRATE", args: "host port key|\"\" destination-db timeout [COPY] [REPLACE] [KEYS key [key ...]]", summary: "Atomically transfer a key from a Redis instance to another one", complexity: "O(N)" },
   { name: "MONITOR", args: "", summary: "Listen for all requests received by the server in real time", complexity: "O(1)" },
   { name: "MOVE", args: "key db", summary: "Move a key to another database", complexity: "O(1)" },
   { name: "MSET", args: "key value [key value ...]", summary: "Set multiple keys to multiple values", complexity: "O(N)" },
