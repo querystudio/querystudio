@@ -356,13 +356,8 @@ export function useTestConnection() {
   });
 }
 
-// User status hooks - using auth session as source of truth
 const MAX_FREE_CONNECTIONS = 2;
 
-/**
- * Hook to sync auth session's isPro status to the Tauri backend
- * Should be used at the app root level
- */
 export function useSyncProStatus() {
   const { data: session } = authClient.useSession();
   // Cast user to ExtendedUser to access custom fields from the server
@@ -392,10 +387,6 @@ export function useSavedConnectionCount() {
   });
 }
 
-/**
- * Hook to check if user can create a new connection
- * Uses auth session's isPro status
- */
 export function useCanConnect() {
   const { data: session } = authClient.useSession();
   const { data: connectionCount } = useConnectionCount();
@@ -416,10 +407,6 @@ export function useCanConnect() {
   };
 }
 
-/**
- * Hook to check if user can save a new connection
- * Uses auth session's isPro status
- */
 export function useCanSaveConnection() {
   const { data: session } = authClient.useSession();
   const { data: savedConnectionCount } = useSavedConnectionCount();

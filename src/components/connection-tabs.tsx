@@ -24,19 +24,13 @@ export function ConnectionTabs({ onAddConnection }: ConnectionTabsProps) {
   const handleCloseConnection = async (connectionId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     
-    console.log("[FRONTEND] Closing connection:", connectionId);
-    
     try {
-      // Disconnect from backend
       await disconnect.mutateAsync(connectionId);
-      console.log("[FRONTEND] Backend disconnect successful");
     } catch (err) {
-      console.error("[FRONTEND] Backend disconnect failed:", err);
+      console.error("Disconnect failed:", err);
     }
     
-    // Remove from store
     removeConnection(connectionId);
-    console.log("[FRONTEND] Removed from store");
   };
 
   const handleAddConnection = () => {
@@ -44,26 +38,21 @@ export function ConnectionTabs({ onAddConnection }: ConnectionTabsProps) {
   };
 
   const handleTabClick = async (connectionId: string) => {
-    // Check if this is already the active connection
     if (connectionId === activeConnectionId) return;
-
-    // Prevent multiple simultaneous reconnects
     if (isReconnecting.current) return;
 
-    // Find the connection in active connections
     const connection = activeConnections.find((c) => c.id === connectionId);
     if (!connection) return;
 
-    // First, set it as active
     setActiveConnection(connectionId);
 
-    // For Redis connections, verify the connection is still alive by calling list_tables
+    // Redis connections can become stale when switching tabs, so we verify
+    // the connection is still alive and reconnect if needed
     if (connection.db_type === "redis") {
       try {
         const { api } = await import("@/lib/api");
         await api.listTables(connectionId);
       } catch (_error) {
-        // Connection lost, need to reconnect
         const savedConnection = savedConnections?.find((c) => c.id === connectionId);
         if (!savedConnection) {
           toast.error("Connection configuration not found");
@@ -72,7 +61,6 @@ export function ConnectionTabs({ onAddConnection }: ConnectionTabsProps) {
 
         isReconnecting.current = true;
 
-        // Reconnect
         const config =
           "connection_string" in savedConnection.config
             ? {
@@ -91,7 +79,7 @@ export function ConnectionTabs({ onAddConnection }: ConnectionTabsProps) {
             name: savedConnection.name,
             db_type: savedConnection.db_type || "postgres",
             config,
-            save: false, // Don't save again, just reconnect
+            save: false,
           });
           toast.success("Reconnected to Redis");
         } catch (error) {

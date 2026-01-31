@@ -29,15 +29,6 @@ impl ConnectionManager {
     pub fn connection_count(&self) -> usize {
         self.connections.read().len()
     }
-    
-    pub fn debug_connections(&self) {
-        let connections = self.connections.read();
-        print!("[CONNECTIONS] Active: ");
-        for id in connections.keys() {
-            print!("{} ", id);
-        }
-        println!();
-    }
 
     pub async fn connect(&self, id: String, config: ConnectionConfig) -> Result<(), String> {
         let provider = create_provider(config.db_type, config.params)
@@ -49,16 +40,10 @@ impl ConnectionManager {
     }
 
     pub fn disconnect(&self, id: &str) -> Result<(), String> {
-        let mut connections = self.connections.write();
-        let count_before = connections.len();
-        
-        let removed = connections.remove(id);
-        let count_after = connections.len();
-        
-        println!("[DISCONNECT] id={} before={} after={} removed={}", 
-                 id, count_before, count_after, removed.is_some());
-        
-        removed.ok_or_else(|| "Connection not found".to_string())?;
+        self.connections
+            .write()
+            .remove(id)
+            .ok_or_else(|| "Connection not found".to_string())?;
         Ok(())
     }
 

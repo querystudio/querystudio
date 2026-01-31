@@ -39,9 +39,6 @@ async fn connect(
     let max_connections = user_state.get_max_connections().await;
 
     let current_connections = state.connection_count();
-    
-    println!("[CONNECT] id={} current={} max={}", id, current_connections, max_connections);
-    state.debug_connections();
 
     if current_connections >= max_connections {
         return Err(format!(

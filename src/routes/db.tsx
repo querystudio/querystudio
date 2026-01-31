@@ -46,25 +46,19 @@ function DatabaseStudio() {
   const connect = useConnect();
   const reconnectAttempted = useRef(false);
 
-  // AI Panel state
   const aiPanelOpen = useAIQueryStore((s) => s.aiPanelOpen);
   const setAiPanelOpen = useAIQueryStore((s) => s.setAiPanelOpen);
   const toggleAiPanel = useAIQueryStore((s) => s.toggleAiPanel);
 
-  // Sidebar state
   const sidebarCollapsed = useAIQueryStore((s) => s.sidebarCollapsed);
   const toggleSidebar = useAIQueryStore((s) => s.toggleSidebar);
 
-  // Status bar visibility
   const statusBarVisible = useAIQueryStore((s) => s.statusBarVisible);
 
-  // Experimental terminal
   const experimentalTerminal = useAIQueryStore((s) => s.experimentalTerminal);
 
-  // Debug mode
   const debugMode = useAIQueryStore((s) => s.debugMode);
 
-  // AI Panel width (resizable)
   const [aiPanelWidth, setAiPanelWidth] = useState(() => {
     const saved = localStorage.getItem("querystudio_ai_panel_width");
     return saved ? parseInt(saved, 10) : 420;
@@ -73,12 +67,10 @@ function DatabaseStudio() {
   const minWidth = 320;
   const maxWidth = 800;
 
-  // Save width to localStorage when it changes
   useEffect(() => {
     localStorage.setItem("querystudio_ai_panel_width", String(aiPanelWidth));
   }, [aiPanelWidth]);
 
-  // Handle resize drag
   const handleResizeStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -111,10 +103,8 @@ function DatabaseStudio() {
     };
   }, [isResizing]);
 
-  // Keyboard shortcut for AI panel (Cmd+Option+B / Ctrl+Alt+B)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Option+Cmd+B on Mac (keyCode 66 = B), Ctrl+Alt+B on Windows/Linux - Toggle AI Panel
       const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
       const modifier = isMac ? e.metaKey : e.ctrlKey;
 
@@ -125,7 +115,6 @@ function DatabaseStudio() {
         return;
       }
 
-      // Cmd+B on Mac, Ctrl+B on Windows/Linux - Toggle Sidebar
       if (
         modifier &&
         !e.altKey &&
@@ -138,7 +127,6 @@ function DatabaseStudio() {
         return;
       }
 
-      // Escape to close AI panel
       if (e.key === "Escape" && aiPanelOpen) {
         setAiPanelOpen(false);
       }
@@ -152,7 +140,6 @@ function DatabaseStudio() {
     navigate({ to: "/new-connection" });
   };
 
-  // Global keyboard shortcuts and menu event handling
   const { refreshAll } = useGlobalShortcuts({
     onNewConnection: handleNewConnection,
     onOpenCommandPalette: () => setCommandPaletteOpen(true),
@@ -162,13 +149,7 @@ function DatabaseStudio() {
   });
 
   const handleSelectSavedConnection = (savedConnection: SavedConnection) => {
-    // If it's a connection string, it has the password embedded, so connect directly
-    if ("connection_string" in savedConnection.config) {
-      setPasswordPromptConnection(savedConnection);
-    } else {
-      // Need password for params-based connections
-      setPasswordPromptConnection(savedConnection);
-    }
+    setPasswordPromptConnection(savedConnection);
   };
 
   const handleEditConnection = (savedConnection: SavedConnection) => {
@@ -178,22 +159,20 @@ function DatabaseStudio() {
     });
   };
 
-  // Auto-reconnect on page reload if there are saved connections and no active connections
+  // Auto-reconnect to last active connection on page reload
   useEffect(() => {
-    if (activeConnections.length > 0) return; // Already have connections
-    if (isLoadingSaved) return; // Still loading saved connections
-    if (reconnectAttempted.current) return; // Already tried
+    if (activeConnections.length > 0) return;
+    if (isLoadingSaved) return;
+    if (reconnectAttempted.current) return;
 
     reconnectAttempted.current = true;
 
-    // Get last connection ID from localStorage
     const lastConnectionId = localStorage.getItem("querystudio_last_connection");
     if (!lastConnectionId) return;
 
     const savedConnection = savedConnections?.find((c) => c.id === lastConnectionId);
     if (!savedConnection) return;
 
-    // Try to auto-connect
     setIsReconnecting(true);
     const config =
       "connection_string" in savedConnection.config
@@ -204,7 +183,7 @@ function DatabaseStudio() {
         : {
             db_type: savedConnection.db_type || "postgres",
             ...savedConnection.config,
-            password: "", // Will prompt if needed
+            password: "",
           };
 
     connect
@@ -225,11 +204,9 @@ function DatabaseStudio() {
       });
   }, [activeConnections.length, isLoadingSaved, savedConnections, connect]);
 
-  // Show loading state while reconnecting
   if (isReconnecting) {
     return (
       <div className="flex h-screen flex-col bg-background text-foreground">
-        {/* Titlebar with drag region */}
         <div
           data-tauri-drag-region
           className="h-8 w-full shrink-0"
@@ -245,7 +222,6 @@ function DatabaseStudio() {
     );
   }
 
-  // If no connections, redirect to home
   useEffect(() => {
     if (activeConnections.length === 0 && !isReconnecting) {
       navigate({ to: "/" });
@@ -256,7 +232,6 @@ function DatabaseStudio() {
 
   return (
     <div className="flex h-screen flex-col bg-background text-foreground">
-      {/* Titlebar with drag region and controls */}
       <div
         className="h-8 w-full shrink-0 flex items-center justify-between"
         data-tauri-drag-region
@@ -311,7 +286,6 @@ function DatabaseStudio() {
         </div>
       </div>
 
-      {/* Connection Tabs */}
       <ConnectionTabs onAddConnection={() => setConnectionPaletteOpen(true)} />
 
       <ConnectionPalette

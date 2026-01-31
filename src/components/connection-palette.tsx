@@ -26,7 +26,6 @@ export function ConnectionPalette({ open, onOpenChange, onSelectConnection }: Co
   const connect = useConnect();
   const [search, setSearch] = useState("");
 
-  // Reset search when opening
   useEffect(() => {
     if (open) {
       setSearch("");
@@ -36,16 +35,12 @@ export function ConnectionPalette({ open, onOpenChange, onSelectConnection }: Co
   const handleSelectConnection = async (savedConnection: SavedConnection) => {
     onOpenChange(false);
 
-    // If parent provided a handler, use it (for password prompts etc.)
     if (onSelectConnection) {
       onSelectConnection(savedConnection);
       return;
     }
 
-    // Fallback: try to connect directly
-    // Check if it's a connection string (has embedded password) or params-based
     if ("connection_string" in savedConnection.config) {
-      // Connect directly
       try {
         await connect.mutateAsync({
           id: savedConnection.id,
@@ -61,7 +56,6 @@ export function ConnectionPalette({ open, onOpenChange, onSelectConnection }: Co
         toast.error(`Failed to connect: ${error}`);
       }
     } else {
-      // For params-based, we need a password - navigate to legacy route
       navigate({
         to: "/db/$connectionId",
         params: { connectionId: savedConnection.id },

@@ -11,14 +11,11 @@ const LAST_CHAT_SESSION_KEY = "querystudio_last_chat_session";
 
 // Connection state
 interface ConnectionState {
-  // Multiple active connections support
   activeConnections: Connection[];
   activeConnectionId: string | null;
-  // Tables and selected table for the active connection
   tables: TableInfo[];
   selectedTable: { schema: string; name: string } | null;
 
-  // Actions
   addConnection: (connection: Connection) => void;
   removeConnection: (connectionId: string) => void;
   setActiveConnection: (connectionId: string | null) => void;
@@ -27,7 +24,6 @@ interface ConnectionState {
   disconnect: (connectionId?: string) => void;
   disconnectAll: () => void;
 
-  // Getters
   getConnection: (connectionId: string) => Connection | undefined;
   getActiveConnection: () => Connection | null;
 }
@@ -40,13 +36,10 @@ export const useConnectionStore = create<ConnectionState>()((set, get) => ({
 
   addConnection: (connection: Connection) => {
     set((state) => {
-      // Check if connection already exists
       const exists = state.activeConnections.some((c) => c.id === connection.id);
       if (exists) {
-        // Just activate it
         return { activeConnectionId: connection.id, tables: [], selectedTable: null };
       }
-      // Add new connection and activate it
       return {
         activeConnections: [...state.activeConnections, connection],
         activeConnectionId: connection.id,
@@ -62,7 +55,6 @@ export const useConnectionStore = create<ConnectionState>()((set, get) => ({
       const newConnections = state.activeConnections.filter((c) => c.id !== connectionId);
       let newActiveId = state.activeConnectionId;
 
-      // If we removed the active connection, activate another one
       if (state.activeConnectionId === connectionId) {
         newActiveId = newConnections.length > 0 ? newConnections[0].id : null;
       }
@@ -107,7 +99,6 @@ export const useConnectionStore = create<ConnectionState>()((set, get) => ({
         newActiveId = newConnections.length > 0 ? newConnections[0].id : null;
       }
 
-      // If no connections left, clear localStorage
       if (newConnections.length === 0) {
         localStorage.removeItem(LAST_CONNECTION_KEY);
       } else if (newActiveId) {
