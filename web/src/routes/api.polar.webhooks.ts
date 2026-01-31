@@ -57,27 +57,9 @@ export const Route = createFileRoute("/api/polar/webhooks")({
                   .set({ isPro: false })
                   .where(eq(userTable.polarCustomerId, customerId));
 
-                console.log(`[Polar Webhook] Subscription ${event.type === "subscription.canceled" ? "canceled" : "revoked"} for customer: ${customerId}`);
-              }
-              break;
-            }
-
-            case "benefit_grant.created": {
-              const { customerId, benefit, properties } = event.data;
-
-              console.log(event.data.properties);
-
-              if (benefit.type === "license_keys" && customerId) {
-                const licenseKey = (properties as { licenseKey?: string })?.licenseKey;
-
-                if (licenseKey) {
-                  await db
-                    .update(userTable)
-                    .set({ licenseKey })
-                    .where(eq(userTable.polarCustomerId, customerId));
-
-                  console.log(`[Polar Webhook] License key granted for customer: ${customerId}`);
-                }
+                console.log(
+                  `[Polar Webhook] Subscription ${event.type === "subscription.canceled" ? "canceled" : "revoked"} for customer: ${customerId}`,
+                );
               }
               break;
             }
