@@ -39,3 +39,11 @@ bun run lint
 # Format code
 bun run fmt
 ```
+
+## Sponsoring
+
+If you find QueryStudio useful, consider supporting its development:
+
+- [GitHub Sponsors](https://github.com/sponsors/lassejlv)
+
+Your support helps keep the project alive and enables new features!
