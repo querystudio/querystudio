@@ -114,6 +114,12 @@ function LandingPage() {
               <Link to='/pricing' className='text-sm text-muted-foreground hover:text-foreground'>
                 Pricing
               </Link>
+              <Link to='/privacy' className='text-sm text-muted-foreground hover:text-foreground'>
+                Privacy
+              </Link>
+              <Link to='/terms' className='text-sm text-muted-foreground hover:text-foreground'>
+                Terms
+              </Link>
               <Link to='/login' className='text-sm text-muted-foreground hover:text-foreground'>
                 Login
               </Link>
