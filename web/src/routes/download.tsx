@@ -1,9 +1,9 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { Header } from '@/components/header'
 import { Button } from '@/components/ui/button'
-import { ExternalLink, Download, Apple, Monitor, Terminal, Sparkles } from 'lucide-react'
+import { ExternalLink, Download, Apple } from 'lucide-react'
 import { createServerFn } from '@tanstack/react-start'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { redis } from 'bun'
 
 const donateUrl = 'https://buy.polar.sh/polar_cl_GjR7lflPCEnKKPTB2QE5eNOfWOLqlRNYJAvsF2Tf9t6'
@@ -144,37 +144,9 @@ function getArchLabel(arch: FormattedAsset['arch']) {
   }
 }
 
-// Scroll reveal hook
-function useScrollReveal() {
-  const ref = useRef<HTMLDivElement>(null)
-  const [isVisible, setIsVisible] = useState(false)
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setIsVisible(true)
-          }
-        })
-      },
-      { threshold: 0.1, rootMargin: '0px 0px -50px 0px' },
-    )
-
-    if (ref.current) {
-      observer.observe(ref.current)
-    }
-
-    return () => observer.disconnect()
-  }, [])
-
-  return { ref, isVisible }
-}
-
 function DownloadPage() {
   const release = Route.useLoaderData()
   const [userPlatform, setUserPlatform] = useState<'macos' | 'windows' | 'linux' | null>(null)
-  const cardsRef = useScrollReveal()
 
   useEffect(() => {
     const ua = navigator.userAgent.toLowerCase()
@@ -216,7 +188,6 @@ function DownloadPage() {
       <Header />
 
       <main className='container mx-auto px-4 py-16 max-w-5xl'>
-        {/* Hero */}
         <div className='text-center mb-16'>
           <h1 className='text-4xl md:text-5xl font-bold mb-4'>Download QueryStudio</h1>
           <p className='text-xl text-muted-foreground'>
@@ -231,9 +202,8 @@ function DownloadPage() {
           </p>
         </div>
 
-        <div ref={cardsRef.ref} className={`grid md:grid-cols-3 gap-6 mb-12 transition-all duration-1000 ${cardsRef.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-          {/* macOS */}
-          <div className={`group relative p-6 rounded-2xl border bg-card hover-glow card-shine transition-all duration-300 ${userPlatform === 'macos' ? 'ring-2 ring-primary' : ''}`}>
+        <div className='grid md:grid-cols-3 gap-6 mb-12'>
+          <div className={`p-6 rounded-2xl border bg-card ${userPlatform === 'macos' ? 'ring-2 ring-primary' : ''}`}>
             <div className='flex items-center justify-between mb-6'>
               <div className='flex items-center gap-3'>
                 <div>
@@ -241,15 +211,15 @@ function DownloadPage() {
                   <p className='text-sm text-muted-foreground'>10.15 or later</p>
                 </div>
               </div>
-              {userPlatform === 'macos' && <span className='text-xs bg-primary text-primary-foreground px-2 py-1 rounded-full animate-pulse'>Your platform</span>}
+              {userPlatform === 'macos' && <span className='text-xs bg-primary text-primary-foreground px-2 py-1 rounded-full'>Your platform</span>}
             </div>
 
             {macosAssets.length > 0 ? (
               <div className='space-y-2'>
                 {macosAssets.map((asset) => (
-                  <a key={asset.name} href={asset.downloadUrl} download className='flex items-center justify-between py-3 px-4 -mx-4 rounded-lg hover:bg-muted transition-all group/link'>
+                  <a key={asset.name} href={asset.downloadUrl} download className='flex items-center justify-between py-3 px-4 -mx-4 rounded-lg hover:bg-muted'>
                     <div className='flex items-center gap-3'>
-                      <Download className='w-4 h-4 text-muted-foreground group-hover/link:text-primary transition-colors' />
+                      <Download className='w-4 h-4 text-muted-foreground' />
                       <span className='font-medium'>{getArchLabel(asset.arch)}</span>
                     </div>
                     <span className='text-sm text-muted-foreground'>{formatBytes(asset.size)}</span>
@@ -261,8 +231,7 @@ function DownloadPage() {
             )}
           </div>
 
-          {/* Windows */}
-          <div className={`group relative p-6 rounded-2xl border bg-card hover-glow card-shine transition-all duration-300 ${userPlatform === 'windows' ? 'ring-2 ring-primary' : ''}`}>
+          <div className={`p-6 rounded-2xl border bg-card ${userPlatform === 'windows' ? 'ring-2 ring-primary' : ''}`}>
             <div className='flex items-center justify-between mb-6'>
               <div className='flex items-center gap-3'>
                 <div>
@@ -270,15 +239,15 @@ function DownloadPage() {
                   <p className='text-sm text-muted-foreground'>10 or later</p>
                 </div>
               </div>
-              {userPlatform === 'windows' && <span className='text-xs bg-primary text-primary-foreground px-2 py-1 rounded-full animate-pulse'>Your platform</span>}
+              {userPlatform === 'windows' && <span className='text-xs bg-primary text-primary-foreground px-2 py-1 rounded-full'>Your platform</span>}
             </div>
 
             {windowsAssets.length > 0 ? (
               <div className='space-y-2'>
                 {windowsAssets.map((asset) => (
-                  <a key={asset.name} href={asset.downloadUrl} download className='flex items-center justify-between py-3 px-4 -mx-4 rounded-lg hover:bg-muted transition-all group/link'>
+                  <a key={asset.name} href={asset.downloadUrl} download className='flex items-center justify-between py-3 px-4 -mx-4 rounded-lg hover:bg-muted'>
                     <div className='flex items-center gap-3'>
-                      <Download className='w-4 h-4 text-muted-foreground group-hover/link:text-primary transition-colors' />
+                      <Download className='w-4 h-4 text-muted-foreground' />
                       <span className='font-medium'>{asset.name.endsWith('.exe') ? 'Installer' : asset.name.endsWith('.msi') ? 'MSI' : getArchLabel(asset.arch)}</span>
                     </div>
                     <span className='text-sm text-muted-foreground'>{formatBytes(asset.size)}</span>
@@ -290,8 +259,7 @@ function DownloadPage() {
             )}
           </div>
 
-          {/* Linux */}
-          <div className={`group relative p-6 rounded-2xl border bg-card hover-glow card-shine transition-all duration-300 ${userPlatform === 'linux' ? 'ring-2 ring-primary' : ''}`}>
+          <div className={`p-6 rounded-2xl border bg-card ${userPlatform === 'linux' ? 'ring-2 ring-primary' : ''}`}>
             <div className='flex items-center justify-between mb-6'>
               <div className='flex items-center gap-3'>
                 <div>
@@ -299,15 +267,15 @@ function DownloadPage() {
                   <p className='text-sm text-muted-foreground'>Various distros</p>
                 </div>
               </div>
-              {userPlatform === 'linux' && <span className='text-xs bg-primary text-primary-foreground px-2 py-1 rounded-full animate-pulse'>Your platform</span>}
+              {userPlatform === 'linux' && <span className='text-xs bg-primary text-primary-foreground px-2 py-1 rounded-full'>Your platform</span>}
             </div>
 
             {linuxAssets.length > 0 ? (
               <div className='space-y-2'>
                 {linuxAssets.map((asset) => (
-                  <a key={asset.name} href={asset.downloadUrl} download className='flex items-center justify-between py-3 px-4 -mx-4 rounded-lg hover:bg-muted transition-all group/link'>
+                  <a key={asset.name} href={asset.downloadUrl} download className='flex items-center justify-between py-3 px-4 -mx-4 rounded-lg hover:bg-muted'>
                     <div className='flex items-center gap-3'>
-                      <Download className='w-4 h-4 text-muted-foreground group-hover/link:text-primary transition-colors' />
+                      <Download className='w-4 h-4 text-muted-foreground' />
                       <span className='font-medium'>
                         {asset.name.endsWith('.deb') ? 'Debian/Ubuntu' : asset.name.endsWith('.rpm') ? 'Fedora/RHEL' : asset.name.endsWith('.AppImage') ? 'AppImage' : getArchLabel(asset.arch)}
                       </span>
@@ -322,8 +290,7 @@ function DownloadPage() {
           </div>
         </div>
 
-        {/* Info Box */}
-        <div className='relative p-8 rounded-2xl bg-muted/30 border'>
+        <div className='p-8 rounded-2xl bg-muted/30 border'>
           <div className='grid md:grid-cols-2 gap-8'>
             <div>
               <h3 className='font-semibold mb-3 flex items-center gap-2'>

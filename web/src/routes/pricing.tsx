@@ -1,48 +1,18 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { Header } from '@/components/header'
 import { Button } from '@/components/ui/button'
-import { Download, Check, Sparkles, Zap, Crown } from 'lucide-react'
+import { Download, Check } from 'lucide-react'
 import { getPricing } from '@/server/pricing'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { useEffect, useRef, useState } from 'react'
 
 export const Route = createFileRoute('/pricing')({
   component: PricingPage,
   loader: () => getPricing(),
 })
 
-// Scroll reveal hook
-function useScrollReveal() {
-  const ref = useRef<HTMLDivElement>(null)
-  const [isVisible, setIsVisible] = useState(false)
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setIsVisible(true)
-          }
-        })
-      },
-      { threshold: 0.1, rootMargin: '0px 0px -50px 0px' },
-    )
-
-    if (ref.current) {
-      observer.observe(ref.current)
-    }
-
-    return () => observer.disconnect()
-  }, [])
-
-  return { ref, isVisible }
-}
-
 function PricingPage() {
   const pricing = Route.useLoaderData()
-  const cardsRef = useScrollReveal()
-  const faqRef = useScrollReveal()
 
   return (
     <div className='min-h-screen bg-background flex flex-col'>
@@ -54,9 +24,8 @@ function PricingPage() {
           <p className='mt-4 text-muted-foreground text-lg'>Free for personal use. Monthly or one-time options for professionals.</p>
         </div>
 
-        <div ref={cardsRef.ref} className={`grid md:grid-cols-3 gap-8 max-w-5xl mx-auto transition-all duration-1000 ${cardsRef.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-          {/* Free Tier */}
-          <Card className='flex flex-col shadow-md hover-glow card-shine transition-all duration-300 group'>
+        <div className='grid md:grid-cols-3 gap-8 max-w-5xl mx-auto'>
+          <Card className='flex flex-col'>
             <CardHeader>
               <div className='flex items-center justify-between'>
                 <CardTitle className='text-xl'>{pricing.tiers.free.name}</CardTitle>
@@ -98,22 +67,20 @@ function PricingPage() {
             </CardFooter>
           </Card>
 
-          {/* Pro Monthly Tier */}
-          <Card className='flex flex-col shadow-lg border-primary relative overflow-hidden hover-glow card-shine transition-all duration-300 group'>
+          <Card className='flex flex-col border-primary relative'>
             <div className='absolute top-0 right-0 p-3'>
-              <Badge variant='default' className='text-xs animate-pulse'>
+              <Badge variant='default' className='text-xs'>
                 Popular
               </Badge>
             </div>
-            <div className='absolute inset-0 bg-linear-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity' />
 
-            <CardHeader className='relative'>
+            <CardHeader>
               <div className='flex items-center justify-between'>
                 <CardTitle className='text-xl'>{pricing.tiers.proMonthly.name}</CardTitle>
               </div>
               <CardDescription>For professionals and commercial use</CardDescription>
             </CardHeader>
-            <CardContent className='flex-1 relative'>
+            <CardContent className='flex-1'>
               <div className='flex items-baseline gap-2 mb-2'>
                 <span className='text-4xl font-bold'>${pricing.tiers.proMonthly.price}</span>
                 <span className='text-muted-foreground text-sm'>/month</span>
@@ -142,8 +109,8 @@ function PricingPage() {
                 </li>
               </ul>
             </CardContent>
-            <CardFooter className='relative'>
-              <Button asChild className='w-full animate-pulse-glow'>
+            <CardFooter>
+              <Button asChild className='w-full'>
                 <Link to='/dashboard/billing' search={{ upgrade: true, plan: 'monthly' }}>
                   Get Pro Monthly
                 </Link>
@@ -151,23 +118,20 @@ function PricingPage() {
             </CardFooter>
           </Card>
 
-          {/* Pro One-time Tier */}
-          <Card className='flex flex-col shadow-md relative overflow-hidden hover-glow card-shine transition-all duration-300 group'>
+          <Card className='flex flex-col relative'>
             <div className='absolute top-0 right-0 p-3'>
               <Badge variant='secondary' className='text-xs'>
                 Early Bird
               </Badge>
             </div>
 
-            <div className='absolute inset-0 bg-linear-to-br from-accent/5 via-transparent to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity' />
-
-            <CardHeader className='relative'>
+            <CardHeader>
               <div className='flex items-center justify-between'>
                 <CardTitle className='text-xl'>{pricing.tiers.pro.name}</CardTitle>
               </div>
               <CardDescription>One-time purchase, lifetime access</CardDescription>
             </CardHeader>
-            <CardContent className='flex-1 relative'>
+            <CardContent className='flex-1'>
               <div className='flex items-baseline gap-2 mb-6'>
                 <span className='text-4xl font-bold'>${pricing.tiers.pro.earlyBirdPrice}</span>
                 <span className='text-muted-foreground line-through text-sm'>${pricing.tiers.pro.price}</span>
@@ -196,7 +160,7 @@ function PricingPage() {
                 </li>
               </ul>
             </CardContent>
-            <CardFooter className='relative'>
+            <CardFooter>
               <Button asChild className='w-full' variant='outline'>
                 <Link to='/dashboard/billing' search={{ upgrade: true, plan: 'onetime' }}>
                   Get Pro One-time
@@ -206,39 +170,26 @@ function PricingPage() {
           </Card>
         </div>
 
-        {/* FAQ */}
-        <div ref={faqRef.ref} className={`mt-24 max-w-3xl mx-auto transition-all duration-1000 ${faqRef.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+        <div className='mt-24 max-w-3xl mx-auto'>
           <h2 className='text-2xl font-semibold text-center mb-12'>Frequently Asked Questions</h2>
           <div className='grid gap-8 md:grid-cols-2'>
-            <div className='group p-4 rounded-xl hover:bg-muted/50 transition-colors'>
-              <h3 className='font-medium mb-2 flex items-center gap-2'>
-                <span className='w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs'>?</span>
-                What does BYOK mean?
-              </h3>
+            <div className='p-4'>
+              <h3 className='font-medium mb-2'>What does BYOK mean?</h3>
               <p className='text-sm text-muted-foreground'>Bring Your Own Key. You provide your own API key for OpenAI or Anthropic to use the AI features. We don't mark up AI costs.</p>
             </div>
-            <div className='group p-4 rounded-xl hover:bg-muted/50 transition-colors'>
-              <h3 className='font-medium mb-2 flex items-center gap-2'>
-                <span className='w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs'>?</span>
-                What's the difference between monthly and one-time?
-              </h3>
+            <div className='p-4'>
+              <h3 className='font-medium mb-2'>What's the difference between monthly and one-time?</h3>
               <p className='text-sm text-muted-foreground'>
                 Monthly is a subscription at $4.99/month with 3 days free trial and continuous updates. One-time is a single payment of $19.99 (early bird) for lifetime access and updates. Both have
                 the same features.
               </p>
             </div>
-            <div className='group p-4 rounded-xl hover:bg-muted/50 transition-colors'>
-              <h3 className='font-medium mb-2 flex items-center gap-2'>
-                <span className='w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs'>?</span>
-                Can I upgrade or switch plans later?
-              </h3>
+            <div className='p-4'>
+              <h3 className='font-medium mb-2'>Can I upgrade or switch plans later?</h3>
               <p className='text-sm text-muted-foreground'>Yes. Start with the Free version and upgrade to Pro anytime. You can also switch between monthly and one-time plans from your dashboard.</p>
             </div>
-            <div className='group p-4 rounded-xl hover:bg-muted/50 transition-colors'>
-              <h3 className='font-medium mb-2 flex items-center gap-2'>
-                <span className='w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs'>?</span>
-                Do you offer refunds?
-              </h3>
+            <div className='p-4'>
+              <h3 className='font-medium mb-2'>Do you offer refunds?</h3>
               <p className='text-sm text-muted-foreground'>
                 Yes. For one-time purchases, email us within 14 days for a full refund. For monthly subscriptions, you can cancel anytime and keep access until the end of your billing period.
               </p>
