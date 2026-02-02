@@ -768,6 +768,17 @@ export const AIChat = memo(function AIChat() {
                   />
                   <p className="text-xs text-muted-foreground">For GPT models</p>
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="googleKey">Google API Key</Label>
+                  <Input
+                    id="googleKey"
+                    type="password"
+                    placeholder="AIza..."
+                    value={tempGoogleKey}
+                    onChange={(e) => setTempGoogleKey(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">For Gemini models</p>
+                </div>
               </div>
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setShowSettings(false)}>
@@ -1016,6 +1027,17 @@ export const AIChat = memo(function AIChat() {
                 onChange={(e) => setTempOpenaiKey(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">For GPT models</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="googleKey2">Google API Key</Label>
+              <Input
+                id="googleKey2"
+                type="password"
+                placeholder="AIza..."
+                value={tempGoogleKey}
+                onChange={(e) => setTempGoogleKey(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">For Gemini models</p>
             </div>
           </div>
           <div className="flex justify-end gap-2">

@@ -63,7 +63,7 @@ export interface QueryResult {
 
 export type AIProviderType = "openai" | "anthropic" | "google";
 
-export type AIModelId = "gpt-5" | "gpt-5-mini";
+export type AIModelId = "gpt-5" | "gpt-5-mini" | "gemini-3-flash-preview";
 
 export interface AIModelInfo {
   id: AIModelId;
