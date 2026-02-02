@@ -77,6 +77,18 @@ function getApiKeyForModel(
   return openaiKey;
 }
 
+function isModelAvailable(
+  model: ModelId,
+  openaiKey: string,
+  anthropicKey: string,
+  googleKey: string,
+): boolean {
+  const provider = getModelProvider(model);
+  if (provider === "anthropic") return !!anthropicKey.trim();
+  if (provider === "google") return !!googleKey.trim();
+  return !!openaiKey.trim();
+}
+
 // ============================================================================
 // Memoized Code Block Component
 // ============================================================================
@@ -713,26 +725,18 @@ export const AIChat = memo(function AIChat() {
     );
   }
 
-  if (!currentApiKey) {
-    const provider = getModelProvider(selectedModel);
-    const missingProvider =
-      provider === "anthropic" ? "Anthropic" : provider === "google" ? "Google" : "OpenAI";
-    const modelType = selectedModel.startsWith("claude")
-      ? "Claude"
-      : selectedModel.startsWith("gemini")
-        ? "Gemini"
-        : "GPT";
+  // Check if user has ANY API key configured
+  const hasAnyApiKey = !!(openaiApiKey.trim() || anthropicApiKey.trim() || googleApiKey.trim());
 
+  if (!hasAnyApiKey) {
     return (
       <div className="flex h-full items-center justify-center">
         <div className="text-center space-y-4 max-w-sm">
           <div className="space-y-2">
-            <p className="text-lg font-medium text-foreground">
-              {missingProvider} API Key Required
-            </p>
+            <p className="text-lg font-medium text-foreground">API Key Required</p>
             <p className="text-sm text-muted-foreground">
-              To use {modelType} models, you need to provide a {missingProvider} API key. Your keys
-              are stored locally.
+              To use AI features, you need to provide at least one API key (OpenAI, Anthropic, or
+              Google). Your keys are stored locally.
             </p>
           </div>
           <Button
@@ -997,11 +1001,29 @@ export const AIChat = memo(function AIChat() {
                 <SelectValue placeholder="GPT-5" />
               </SelectTrigger>
               <SelectContent>
-                {AI_MODELS.map((model) => (
-                  <SelectItem key={model.id} value={model.id}>
-                    {model.name}
-                  </SelectItem>
-                ))}
+                {AI_MODELS.map((model) => {
+                  const available = isModelAvailable(
+                    model.id,
+                    openaiApiKey,
+                    anthropicApiKey,
+                    googleApiKey,
+                  );
+                  return (
+                    <SelectItem
+                      key={model.id}
+                      value={model.id}
+                      disabled={!available}
+                      className={!available ? "opacity-50" : ""}
+                    >
+                      {model.name}
+                      {!available && (
+                        <span className="ml-2 text-[10px] text-muted-foreground">
+                          (no key)
+                        </span>
+                      )}
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
             <span className="text-xs text-muted-foreground">↵ to send</span>

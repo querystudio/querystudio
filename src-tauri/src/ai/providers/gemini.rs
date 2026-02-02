@@ -314,10 +314,14 @@ impl AIProvider for GeminiProvider {
             })
         };
 
-        // Disable thinking to avoid thought_signature requirements for function calling
-        let generation_config = Some(GeminiGenerationConfig {
-            thinking_config: Some(GeminiThinkingConfig { thinking_budget: 0 }),
-        });
+        // Only disable thinking for Flash models - Pro models require thinking mode
+        let generation_config = if model == &AIModel::Gemini3Flash {
+            Some(GeminiGenerationConfig {
+                thinking_config: Some(GeminiThinkingConfig { thinking_budget: 0 }),
+            })
+        } else {
+            None
+        };
 
         let request = GeminiRequest {
             contents,
@@ -453,10 +457,14 @@ impl AIProvider for GeminiProvider {
             })
         };
 
-        // Disable thinking to avoid thought_signature requirements for function calling
-        let generation_config = Some(GeminiGenerationConfig {
-            thinking_config: Some(GeminiThinkingConfig { thinking_budget: 0 }),
-        });
+        // Only disable thinking for Flash models - Pro models require thinking mode
+        let generation_config = if model == &AIModel::Gemini3Flash {
+            Some(GeminiGenerationConfig {
+                thinking_config: Some(GeminiThinkingConfig { thinking_budget: 0 }),
+            })
+        } else {
+            None
+        };
 
         let request = GeminiRequest {
             contents,
