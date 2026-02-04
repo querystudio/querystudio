@@ -1,4 +1,4 @@
-mod ai;
+mod ai_commands;
 mod database;
 mod debug;
 mod providers;
@@ -6,7 +6,7 @@ mod storage;
 mod terminal;
 mod user_state;
 
-use ai::{
+use ai_commands::{
     ai_chat, ai_chat_stream, ai_fetch_openrouter_models, ai_fetch_vercel_models, ai_get_models,
     ai_validate_key,
 };

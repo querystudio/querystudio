@@ -1,15 +1,11 @@
-pub mod agent;
-pub mod providers;
-pub mod tools;
-
-use agent::Agent;
-use providers::get_available_models;
+use querystudio_ai::providers;
+use querystudio_ai::{AIModel, AIProviderError, Agent, AgentMessage, ModelInfo};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter, State};
 
 use crate::database::ConnectionManager;
-use crate::providers::DatabaseType;
+use querystudio_ai::DatabaseType;
 
 #[derive(Debug, Deserialize)]
 pub struct ChatRequest {
@@ -31,18 +27,16 @@ pub struct ChatResponse {
 
 #[tauri::command]
 pub fn ai_get_models() -> Vec<ModelInfo> {
-    get_available_models()
+    providers::get_available_models()
 }
 
 #[tauri::command]
 pub async fn ai_validate_key(api_key: String, model: String) -> Result<bool, String> {
-    let model: AIModel = model
-        .parse()
-        .map_err(|e: providers::AIProviderError| e.to_string())?;
+    let model: AIModel = model.parse().map_err(|e: AIProviderError| e.to_string())?;
     let provider =
         providers::create_ai_provider(model.provider(), api_key).map_err(|e| e.to_string())?;
 
-    let messages = vec![providers::ChatMessage::user("Hi")];
+    let messages = vec![querystudio_ai::ChatMessage::user("Hi")];
     match provider.chat(&model, messages, &[]).await {
         Ok(_) => Ok(true),
         Err(e) => Err(e.to_string()),
@@ -64,13 +58,10 @@ pub async fn ai_chat_stream(
         request.model, request.connection_id, request.db_type
     );
 
-    let model: AIModel = request
-        .model
-        .parse()
-        .map_err(|e: providers::AIProviderError| {
-            println!("[AI] Failed to parse model: {}", e);
-            e.to_string()
-        })?;
+    let model: AIModel = request.model.parse().map_err(|e: AIProviderError| {
+        println!("[AI] Failed to parse model: {}", e);
+        e.to_string()
+    })?;
 
     println!("[AI] Creating agent...");
 
@@ -133,7 +124,7 @@ pub async fn ai_chat(
     let model: AIModel = request
         .model
         .parse()
-        .map_err(|e: providers::AIProviderError| e.to_string())?;
+        .map_err(|e: AIProviderError| e.to_string())?;
 
     let mut agent = Agent::new(
         request.api_key,
@@ -172,6 +163,3 @@ pub async fn ai_fetch_vercel_models(api_key: String) -> Result<Vec<ModelInfo>, S
         .await
         .map_err(|e| e.to_string())
 }
-
-pub use agent::AgentMessage;
-pub use providers::{AIModel, ModelInfo};
