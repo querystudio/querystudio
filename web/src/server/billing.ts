@@ -27,7 +27,17 @@ export const createCheckout = createServerFn({ method: 'POST' })
       customerId = user.polarCustomerId
     }
 
-    const productId = data.plan === 'monthly' ? env.POLAR_MONTHLY_ID : data.plan === 'annually' ? env.POLAR_ANNUALLY_ID : env.POLAR_PRICING_ID
+    let productId: string
+    if (data.plan === 'monthly') {
+      productId = env.POLAR_MONTHLY_ID
+    } else if (data.plan === 'annually') {
+      if (!env.POLAR_ANNUALLY_ID) {
+        throw new Error('Annual plan is not available at this time')
+      }
+      productId = env.POLAR_ANNUALLY_ID
+    } else {
+      productId = env.POLAR_PRICING_ID
+    }
 
     const checkout = await polar.checkouts.create({
       customerId,
