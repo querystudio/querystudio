@@ -149,7 +149,7 @@ function PricingPage() {
                   <span className='text-4xl font-bold'>${pricing.tiers.proAnnually.price}</span>
                   <span className='text-muted-foreground text-sm'>/year</span>
                 </div>
-                <p className='text-sm text-muted-foreground mb-4'>Save ${(pricing.tiers.proMonthly.price * 12 - pricing.tiers.proAnnually.price).toFixed(2)}/year</p>
+                <p className='text-sm text-muted-foreground mb-4'>Save 2 months</p>
                 <ul className='space-y-3 text-sm'>
                   <li className='flex items-center gap-2'>
                     <Check className='h-4 w-4 text-green-500' />

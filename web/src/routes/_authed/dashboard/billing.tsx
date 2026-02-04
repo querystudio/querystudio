@@ -127,6 +127,33 @@ function BillingPage() {
               </Button>
             </div>
 
+            {/* Annually Plan */}
+            <div className="mt-4 py-4 border-b">
+              <div className="flex items-baseline justify-between">
+                <span className="text-sm font-medium">Pro Annually</span>
+                <div>
+                  <span className="font-medium">${pricing.tiers.proAnnually.price}</span>
+                  <span className="text-sm text-muted-foreground">/year</span>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Save 2 months</p>
+              <ul className="mt-3 space-y-1 text-sm text-muted-foreground">
+                <li>Unlimited connections</li>
+                <li>Commercial use allowed</li>
+                <li>Priority support</li>
+                <li>Continuous updates</li>
+              </ul>
+              <Button
+                size="sm"
+                variant="secondary"
+                className="mt-3 w-full"
+                onClick={() => createCheckoutMutation.mutate('annually')}
+                disabled={createCheckoutMutation.isPending}
+              >
+                {createCheckoutMutation.isPending ? "Loading..." : "Get Annually"}
+              </Button>
+            </div>
+
             {/* One-time Plan */}
             <div className="mt-4 py-4 border-b">
               <div className="flex items-baseline justify-between">
