@@ -25,7 +25,13 @@ function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
+  const canSubmit = Boolean(captchaToken) && !isLoading;
+
   const loginGithub = () => {
+    if (!captchaToken) {
+      toast.error("Please complete the captcha");
+      return;
+    }
     return authClient.signIn.social({ provider: "github" });
   };
 
@@ -107,7 +113,7 @@ function LoginPage() {
                   onError={() => setCaptchaToken(null)}
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={isLoading || !captchaToken}>
+              <Button type="submit" className="w-full" disabled={!canSubmit}>
                 {isLoading && <Spinner size={16} />}
                 Sign in
               </Button>
@@ -122,7 +128,7 @@ function LoginPage() {
               </div>
             </div>
 
-            <Button variant="outline" className="w-full" onClick={loginGithub} disabled={isLoading}>
+            <Button variant="outline" className="w-full" onClick={loginGithub} disabled={!canSubmit}>
               Github
               {lastMethod === "github" && <Badge className="ml-2">Last used</Badge>}
             </Button>

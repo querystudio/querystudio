@@ -62,8 +62,10 @@ export function CommandPalette({
   const { data: savedConnections } = useSavedConnections();
   const deleteConnection = useDeleteSavedConnection();
   const disconnect = useDisconnect();
-  const connection = useConnectionStore((s) => s.connection);
-  const connectionId = connection?.id ?? "";
+  const activeConnectionId = useConnectionStore((s) => s.activeConnectionId);
+  const getActiveConnection = useConnectionStore((s) => s.getActiveConnection);
+  const connection = getActiveConnection();
+  const connectionId = activeConnectionId ?? "";
   const getAllLeafPanes = useLayoutStore((s) => s.getAllLeafPanes);
   const setActiveTab = useLayoutStore((s) => s.setActiveTab);
   const createTab = useLayoutStore((s) => s.createTab);
@@ -385,12 +387,10 @@ export function CommandPalette({
                 <ClipboardPaste className="h-4 w-4" />
                 <span>{isProcessingAuth ? "Processing..." : "Paste Auth URL (Dev)"}</span>
               </CommandItem>
-              {appVersion && (
-                <CommandItem disabled className="opacity-70">
-                  <Info className="h-4 w-4" />
-                  <span>Version {appVersion}</span>
-                </CommandItem>
-              )}
+              <CommandItem disabled className="opacity-70">
+                <Info className="h-4 w-4" />
+                <span>{appVersion ? `Version ${appVersion}` : "Version ..."}</span>
+              </CommandItem>
             </CommandGroup>
           </>
         )}

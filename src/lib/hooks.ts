@@ -262,7 +262,7 @@ export function useDeleteSavedConnection() {
 
 export function useConnect() {
   const queryClient = useQueryClient();
-  const setConnection = useConnectionStore((s) => s.setConnection);
+  const addConnection = useConnectionStore((s) => s.addConnection);
   const saveConnection = useSaveConnection();
 
   return useMutation({
@@ -302,25 +302,45 @@ export function useConnect() {
       return { id, name, db_type, config };
     },
     onSuccess: ({ id, name, db_type, config }) => {
-      setConnection({ id, name, db_type, config });
+      addConnection({ id, name, db_type, config });
       queryClient.invalidateQueries({ queryKey: ["tables"] });
     },
   });
 }
 
-export function useDisconnect() {
+export function useDisconnect(connectionId?: string) {
   const queryClient = useQueryClient();
   const disconnect = useConnectionStore((s) => s.disconnect);
-  const connection = useConnectionStore((s) => s.connection);
+  const activeConnectionId = useConnectionStore((s) => s.activeConnectionId);
+
+  return useMutation({
+    mutationFn: async (id?: string) => {
+      const targetConnectionId = id || connectionId || activeConnectionId;
+      if (targetConnectionId) {
+        await api.disconnect(targetConnectionId);
+      }
+    },
+    onSuccess: (_, id) => {
+      const targetConnectionId = id || connectionId || activeConnectionId;
+      disconnect(targetConnectionId || undefined);
+      queryClient.invalidateQueries({ queryKey: ["tables"] });
+    },
+  });
+}
+
+export function useDisconnectAll() {
+  const queryClient = useQueryClient();
+  const disconnectAll = useConnectionStore((s) => s.disconnectAll);
+  const activeConnections = useConnectionStore((s) => s.activeConnections);
 
   return useMutation({
     mutationFn: async () => {
-      if (connection) {
+      for (const connection of activeConnections) {
         await api.disconnect(connection.id);
       }
     },
     onSuccess: () => {
-      disconnect();
+      disconnectAll();
       queryClient.invalidateQueries({ queryKey: ["tables"] });
       // Navigate back to home page
       if (typeof window !== "undefined") {
@@ -336,13 +356,8 @@ export function useTestConnection() {
   });
 }
 
-// User status hooks - using auth session as source of truth
 const MAX_FREE_CONNECTIONS = 2;
 
-/**
- * Hook to sync auth session's isPro status to the Tauri backend
- * Should be used at the app root level
- */
 export function useSyncProStatus() {
   const { data: session } = authClient.useSession();
   // Cast user to ExtendedUser to access custom fields from the server
@@ -372,10 +387,6 @@ export function useSavedConnectionCount() {
   });
 }
 
-/**
- * Hook to check if user can create a new connection
- * Uses auth session's isPro status
- */
 export function useCanConnect() {
   const { data: session } = authClient.useSession();
   const { data: connectionCount } = useConnectionCount();
@@ -396,10 +407,6 @@ export function useCanConnect() {
   };
 }
 
-/**
- * Hook to check if user can save a new connection
- * Uses auth session's isPro status
- */
 export function useCanSaveConnection() {
   const { data: session } = authClient.useSession();
   const { data: savedConnectionCount } = useSavedConnectionCount();
