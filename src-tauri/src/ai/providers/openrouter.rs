@@ -360,10 +360,15 @@ pub async fn fetch_models(api_key: &str) -> Result<Vec<ModelInfo>, AIProviderErr
                 .map(|mods| mods.iter().any(|m| m == "text"))
                 .unwrap_or(true) // include if no architecture info
         })
-        .map(|m| ModelInfo {
-            id: format!("openrouter/{}", m.id),
-            name: m.name,
-            provider: AIProviderType::OpenRouter,
+        .map(|m| {
+            // Extract the logo provider from the model ID (e.g., "anthropic/claude-3" -> "anthropic")
+            let logo_provider = m.id.split('/').next().map(|s| s.to_string());
+            ModelInfo {
+                id: format!("openrouter/{}", m.id),
+                name: m.name,
+                provider: AIProviderType::OpenRouter,
+                logo_provider,
+            }
         })
         .collect();
 

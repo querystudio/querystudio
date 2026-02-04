@@ -343,10 +343,28 @@ pub async fn fetch_models(api_key: &str) -> Result<Vec<ModelInfo>, AIProviderErr
     let models = models_response
         .data
         .into_iter()
-        .map(|m| ModelInfo {
-            id: format!("vercel/{}", m.id),
-            name: m.id.clone(),
-            provider: AIProviderType::Vercel,
+        .map(|m| {
+            // Extract the logo provider from the model ID
+            // Vercel model IDs can be like:
+            // - "anthropic/claude-sonnet-4" -> extract "anthropic"
+            // - "openai::gpt-4" -> extract "openai"
+            // - "gpt-4" -> no provider prefix
+            let logo_provider = if m.id.contains("::") {
+                // Handle :: separator (e.g., "openai::gpt-4")
+                m.id.split("::").next().map(|s| s.to_string())
+            } else if m.id.contains('/') {
+                // Handle / separator (e.g., "anthropic/claude-sonnet-4")
+                m.id.split('/').next().map(|s| s.to_string())
+            } else {
+                // No separator, no logo provider
+                None
+            };
+            ModelInfo {
+                id: format!("vercel/{}", m.id),
+                name: m.id.clone(),
+                provider: AIProviderType::Vercel,
+                logo_provider,
+            }
         })
         .collect();
 
