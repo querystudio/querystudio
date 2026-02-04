@@ -63,6 +63,7 @@ import {
 import { api } from "@/lib/api";
 import type { AIModelInfo } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { ProviderIcon, preloadProviderIcons } from "@/components/ui/provider-icon";
 
 const OPENAI_API_KEY_STORAGE_KEY = "querystudio_openai_api_key";
 const ANTHROPIC_API_KEY_STORAGE_KEY = "querystudio_anthropic_api_key";
@@ -435,6 +436,11 @@ export const AIChat = memo(function AIChat() {
   // Last chat session persistence
   const setLastSession = useLastChatStore((s) => s.setLastSession);
   const getLastSession = useLastChatStore((s) => s.getLastSession);
+
+  // Preload common provider icons on mount
+  useEffect(() => {
+    preloadProviderIcons();
+  }, []);
 
   // Load chat history on mount
   useEffect(() => {
@@ -1104,9 +1110,19 @@ export const AIChat = memo(function AIChat() {
                   aria-expanded={modelPickerOpen}
                   className="h-8 w-64 justify-between text-xs rounded-xl"
                 >
-                  <span className="truncate">
-                    {allModels.find((m) => m.id === selectedModel)?.name ?? selectedModel}
-                  </span>
+                  <div className="flex items-center gap-2 truncate">
+                    <ProviderIcon
+                      provider={
+                        allModels.find((m) => m.id === selectedModel)?.logo_provider ||
+                        allModels.find((m) => m.id === selectedModel)?.provider ||
+                        "openai"
+                      }
+                      size={14}
+                    />
+                    <span className="truncate">
+                      {allModels.find((m) => m.id === selectedModel)?.name ?? selectedModel}
+                    </span>
+                  </div>
                   <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
@@ -1121,7 +1137,7 @@ export const AIChat = memo(function AIChat() {
                         .map((model) => (
                           <CommandItem
                             key={model.id}
-                            value={`${model.name} ${model.provider}`}
+                            value={`${model.name} ${model.provider} ${model.logo_provider || ""}`}
                             onSelect={() => {
                               handleModelChange(model.id);
                               setModelPickerOpen(false);
@@ -1130,9 +1146,13 @@ export const AIChat = memo(function AIChat() {
                           >
                             <Check
                               className={cn(
-                                "mr-2 h-3 w-3",
+                                "h-3 w-3 shrink-0",
                                 selectedModel === model.id ? "opacity-100" : "opacity-0",
                               )}
+                            />
+                            <ProviderIcon
+                              provider={model.logo_provider || model.provider}
+                              size={14}
                             />
                             <span className="truncate">
                               {model.name}

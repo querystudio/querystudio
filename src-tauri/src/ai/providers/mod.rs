@@ -321,21 +321,25 @@ pub fn get_available_models() -> Vec<ModelInfo> {
             id: "gpt-5".to_string(),
             name: "GPT-5".to_string(),
             provider: AIProviderType::OpenAI,
+            logo_provider: None,
         },
         ModelInfo {
             id: "gpt-5-mini".to_string(),
             name: "GPT-5 Mini".to_string(),
             provider: AIProviderType::OpenAI,
+            logo_provider: None,
         },
         ModelInfo {
             id: "gemini-3-flash-preview".to_string(),
             name: "Gemini 3 Flash".to_string(),
             provider: AIProviderType::Google,
+            logo_provider: None,
         },
         ModelInfo {
             id: "gemini-3-pro-preview".to_string(),
             name: "Gemini 3 Pro".to_string(),
             provider: AIProviderType::Google,
+            logo_provider: None,
         },
     ]
 }
@@ -345,4 +349,7 @@ pub struct ModelInfo {
     pub id: String,
     pub name: String,
     pub provider: AIProviderType,
+    /// Override provider name for logo lookup (e.g., for OpenRouter models from different providers)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub logo_provider: Option<String>,
 }

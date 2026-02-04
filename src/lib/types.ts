@@ -69,6 +69,8 @@ export interface AIModelInfo {
   id: AIModelId;
   name: string;
   provider: AIProviderType;
+  /** Override provider name for logo lookup (e.g., for OpenRouter models from different providers) */
+  logo_provider?: string;
 }
 
 export interface AgentMessage {
