@@ -1,4 +1,4 @@
-mod ai;
+mod ai_commands;
 mod database;
 mod debug;
 mod providers;
@@ -6,7 +6,7 @@ mod storage;
 mod terminal;
 mod user_state;
 
-use ai::{
+use ai_commands::{
     ai_chat, ai_chat_stream, ai_fetch_openrouter_models, ai_fetch_vercel_models, ai_get_models,
     ai_validate_key,
 };
@@ -160,6 +160,20 @@ async fn delete_document(
 ) -> Result<u64, String> {
     state
         .delete_document(&connection_id, &collection, &filter)
+        .await
+}
+
+#[tauri::command]
+async fn create_redis_key(
+    state: State<'_, DbState>,
+    connection_id: String,
+    key: String,
+    key_type: String,
+    value: serde_json::Value,
+    ttl: Option<i64>,
+) -> Result<(), String> {
+    state
+        .create_redis_key(&connection_id, &key, &key_type, value, ttl)
         .await
 }
 
@@ -387,6 +401,8 @@ pub fn run() {
             insert_document,
             update_document,
             delete_document,
+            // Redis commands
+            create_redis_key,
             // AI commands
             ai_get_models,
             ai_validate_key,

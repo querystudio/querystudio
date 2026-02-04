@@ -1,14 +1,13 @@
-use super::providers::{
+use crate::providers::{
     create_ai_provider, AIModel, AIProvider, AIProviderError, ChatMessage, FinishReason,
     StreamChunk, ToolCall,
 };
-use super::tools::{
+use crate::tools::{
     get_system_prompt, get_tool_definitions, validate_select_query, ColumnSummary,
     ExecuteSelectQueryArgs, GetTableColumnsArgs, GetTableSampleArgs, QueryDataResult, TableSummary,
     ToolError, ToolResult,
 };
-use crate::database::ConnectionManager;
-use crate::providers::DatabaseType;
+use crate::types::{DatabaseOperations, DatabaseType};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::time::Instant;
@@ -57,7 +56,7 @@ pub enum AgentEvent {
 
 pub struct Agent {
     provider: Box<dyn AIProvider>,
-    connection_manager: Arc<ConnectionManager>,
+    db: Arc<dyn DatabaseOperations>,
     connection_id: String,
     db_type: DatabaseType,
     model: AIModel,
@@ -67,7 +66,7 @@ pub struct Agent {
 impl Agent {
     pub fn new(
         api_key: String,
-        connection_manager: Arc<ConnectionManager>,
+        db: Arc<dyn DatabaseOperations>,
         connection_id: String,
         db_type: DatabaseType,
         model: AIModel,
@@ -79,7 +78,7 @@ impl Agent {
 
         Ok(Self {
             provider,
-            connection_manager,
+            db,
             connection_id,
             db_type,
             model,
@@ -216,7 +215,7 @@ impl Agent {
     async fn stream_with_tools(
         &mut self,
         tx: mpsc::Sender<AgentEvent>,
-        tools: Vec<super::providers::ToolDefinition>,
+        tools: Vec<crate::providers::ToolDefinition>,
     ) -> Result<(), AIProviderError> {
         let stream_start = Instant::now();
         println!("[Agent] stream_with_tools called");
@@ -429,11 +428,7 @@ impl Agent {
     }
 
     async fn execute_list_tables(&self) -> ToolResult {
-        match self
-            .connection_manager
-            .list_tables(&self.connection_id)
-            .await
-        {
+        match self.db.list_tables(&self.connection_id).await {
             Ok(tables) => ToolResult::Tables(
                 tables
                     .into_iter()
@@ -450,7 +445,7 @@ impl Agent {
 
     async fn execute_get_table_columns(&self, args: GetTableColumnsArgs) -> ToolResult {
         match self
-            .connection_manager
+            .db
             .get_table_columns(&self.connection_id, &args.schema, &args.table)
             .await
         {
@@ -476,7 +471,7 @@ impl Agent {
         }
 
         match self
-            .connection_manager
+            .db
             .execute_query(&self.connection_id, &args.query)
             .await
         {
@@ -489,7 +484,7 @@ impl Agent {
         let limit = args.limit.max(1).min(100);
 
         match self
-            .connection_manager
+            .db
             .get_table_data(&self.connection_id, &args.schema, &args.table, limit, 0)
             .await
         {

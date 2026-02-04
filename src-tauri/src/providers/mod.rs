@@ -6,6 +6,7 @@ pub mod sqlite;
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
+use std::any::Any;
 use std::fmt;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -150,39 +151,13 @@ impl ConnectionParams {
         }
     }
 
-    pub fn to_redis_url(&self) -> String {
-        match self {
-            ConnectionParams::ConnectionString { connection_string } => connection_string.clone(),
-            ConnectionParams::Parameters {
-                host,
-                port,
-                database,
-                username,
-                password,
-            } => {
-                // Redis URL format: redis://[username:password@]host[:port][/database]
-                let auth = if !username.is_empty() && !password.is_empty() {
-                    format!("{}:{}@", username, password)
-                } else if !password.is_empty() {
-                    format!(":{}@", password)
-                } else {
-                    String::new()
-                };
-                let db = if !database.is_empty() && database != "0" {
-                    format!("/{}", database)
-                } else {
-                    String::new()
-                };
-                format!("redis://{}{}:{}{}", auth, host, port, db)
-            }
-        }
-    }
 }
 
 #[async_trait]
 #[allow(dead_code)]
-pub trait DatabaseProvider: Send + Sync {
+pub trait DatabaseProvider: Send + Sync + Any {
     fn database_type(&self) -> DatabaseType;
+    fn as_any(&self) -> &dyn Any;
     async fn list_tables(&self) -> Result<Vec<TableInfo>, ProviderError>;
     async fn get_table_columns(
         &self,

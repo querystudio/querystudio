@@ -2,7 +2,9 @@ use crate::providers::{
     create_provider, ColumnInfo, ConnectionParams, DatabaseProvider, DatabaseType, QueryResult,
     TableInfo,
 };
+use async_trait::async_trait;
 use parking_lot::RwLock;
+use querystudio_ai::DatabaseOperations;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -151,6 +153,115 @@ impl ConnectionManager {
             .delete_document(collection, filter)
             .await
             .map_err(|e| e.to_string())
+    }
+
+    pub async fn create_redis_key(
+        &self,
+        connection_id: &str,
+        key: &str,
+        key_type: &str,
+        value: serde_json::Value,
+        ttl: Option<i64>,
+    ) -> Result<(), String> {
+        use crate::providers::redis::RedisProvider;
+        use crate::providers::DatabaseType;
+
+        let provider = self.get_provider(connection_id)?;
+
+        // Check if this is a Redis connection
+        if provider.database_type() != DatabaseType::Redis {
+            return Err("create_redis_key is only supported for Redis connections".to_string());
+        }
+
+        // Cast to RedisProvider - this is safe because we checked the type
+        let redis_provider = provider
+            .as_any()
+            .downcast_ref::<RedisProvider>()
+            .ok_or_else(|| "Failed to cast provider to RedisProvider".to_string())?;
+
+        redis_provider
+            .create_key(key, key_type, value, ttl)
+            .await
+            .map_err(|e| e.to_string())
+    }
+}
+
+#[async_trait]
+impl DatabaseOperations for ConnectionManager {
+    async fn list_tables(
+        &self,
+        connection_id: &str,
+    ) -> Result<Vec<querystudio_ai::TableInfo>, String> {
+        let provider = self.get_provider(connection_id)?;
+        let tables = provider.list_tables().await.map_err(|e| e.to_string())?;
+        Ok(tables
+            .into_iter()
+            .map(|t| querystudio_ai::TableInfo {
+                schema: t.schema,
+                name: t.name,
+                row_count: t.row_count,
+            })
+            .collect())
+    }
+
+    async fn get_table_columns(
+        &self,
+        connection_id: &str,
+        schema: &str,
+        table: &str,
+    ) -> Result<Vec<querystudio_ai::ColumnInfo>, String> {
+        let provider = self.get_provider(connection_id)?;
+        let columns = provider
+            .get_table_columns(schema, table)
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(columns
+            .into_iter()
+            .map(|c| querystudio_ai::ColumnInfo {
+                name: c.name,
+                data_type: c.data_type,
+                is_nullable: c.is_nullable,
+                is_primary_key: c.is_primary_key,
+                has_default: c.has_default,
+            })
+            .collect())
+    }
+
+    async fn execute_query(
+        &self,
+        connection_id: &str,
+        query: &str,
+    ) -> Result<querystudio_ai::QueryResult, String> {
+        let provider = self.get_provider(connection_id)?;
+        let result = provider
+            .execute_query(query)
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(querystudio_ai::QueryResult {
+            columns: result.columns,
+            rows: result.rows,
+            row_count: result.row_count,
+        })
+    }
+
+    async fn get_table_data(
+        &self,
+        connection_id: &str,
+        schema: &str,
+        table: &str,
+        limit: i64,
+        offset: i64,
+    ) -> Result<querystudio_ai::QueryResult, String> {
+        let provider = self.get_provider(connection_id)?;
+        let result = provider
+            .get_table_data(schema, table, limit, offset)
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(querystudio_ai::QueryResult {
+            columns: result.columns,
+            rows: result.rows,
+            row_count: result.row_count,
+        })
     }
 }
 

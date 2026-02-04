@@ -1,8 +1,8 @@
-use crate::providers::{DatabaseType, QueryResult};
+use crate::types::{DatabaseType, QueryResult};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use super::providers::{ToolDefinition, ToolParameters};
+use crate::providers::{ToolDefinition, ToolParameters};
 
 pub fn get_tool_definitions(db_type: DatabaseType) -> Vec<ToolDefinition> {
     vec![
