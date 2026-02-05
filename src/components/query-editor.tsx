@@ -366,7 +366,7 @@ export const QueryEditor = memo(function QueryEditor({
     // Configure language completions based on database type
     const language = isRedis ? "plaintext" : "sql";
     completionProviderRef.current = monaco.languages.registerCompletionItemProvider(language, {
-      triggerCharacters: isRedis ? [' '] : [],
+      triggerCharacters: isRedis ? [" "] : [],
       provideCompletionItems: (model: editor.ITextModel, position: any) => {
         const wordUntilPosition = model.getWordUntilPosition(position);
         const range = {
@@ -384,7 +384,7 @@ export const QueryEditor = memo(function QueryEditor({
               insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
               detail: `${cmd.name} - ${cmd.complexity}`,
               documentation: {
-                value: `**${cmd.name}**\n\n${cmd.summary}\n\n**Complexity:** ${cmd.complexity}\n\n**Arguments:** ${cmd.args || 'None'}`,
+                value: `**${cmd.name}**\n\n${cmd.summary}\n\n**Complexity:** ${cmd.complexity}\n\n**Arguments:** ${cmd.args || "None"}`,
                 isTrusted: true,
               },
               range,

@@ -38,16 +38,18 @@ function DatabaseStudio() {
     null,
   );
   const [isReconnecting, setIsReconnecting] = useState(false);
-  
+
   const activeConnections = useConnectionStore((s) => s.activeConnections);
   const activeConnectionId = useConnectionStore((s) => s.activeConnectionId);
-  
+
   const { data: savedConnections, isLoading: isLoadingSaved } = useSavedConnections();
   const connect = useConnect();
   const reconnectAttempted = useRef(false);
 
   const aiPanelOpen = useAIQueryStore((s) => s.aiPanelOpen);
   const setAiPanelOpen = useAIQueryStore((s) => s.setAiPanelOpen);
+  const aiPanelWidth = useAIQueryStore((s) => s.aiPanelWidth);
+  const setAiPanelWidth = useAIQueryStore((s) => s.setAiPanelWidth);
   const toggleAiPanel = useAIQueryStore((s) => s.toggleAiPanel);
 
   const sidebarCollapsed = useAIQueryStore((s) => s.sidebarCollapsed);
@@ -59,17 +61,9 @@ function DatabaseStudio() {
 
   const debugMode = useAIQueryStore((s) => s.debugMode);
 
-  const [aiPanelWidth, setAiPanelWidth] = useState(() => {
-    const saved = localStorage.getItem("querystudio_ai_panel_width");
-    return saved ? parseInt(saved, 10) : 420;
-  });
   const [isResizing, setIsResizing] = useState(false);
   const minWidth = 320;
   const maxWidth = 800;
-
-  useEffect(() => {
-    localStorage.setItem("querystudio_ai_panel_width", String(aiPanelWidth));
-  }, [aiPanelWidth]);
 
   const handleResizeStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -301,7 +295,10 @@ function DatabaseStudio() {
           <main className="flex flex-1 flex-col overflow-hidden">
             <div className="flex-1 overflow-hidden h-full">
               {activeConnection ? (
-                <PaneContainer connectionId={activeConnection.id} dbType={activeConnection.db_type} />
+                <PaneContainer
+                  connectionId={activeConnection.id}
+                  dbType={activeConnection.db_type}
+                />
               ) : (
                 <div className="flex h-full items-center justify-center text-muted-foreground">
                   Select a connection
