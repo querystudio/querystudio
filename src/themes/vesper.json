@@ -39,5 +39,29 @@
     "sidebarAccentForeground": "#FFFFFF",
     "sidebarBorder": "#101010",
     "sidebarRing": "#FFC799"
+  },
+  "terminal": {
+    "background": "#101010",
+    "foreground": "#FFFFFF",
+    "cursor": "#FFC799",
+    "cursorAccent": "#101010",
+    "selectionBackground": "#282828",
+    "selectionForeground": "#FFFFFF",
+    "black": "#101010",
+    "red": "#FF8080",
+    "green": "#90b99f",
+    "yellow": "#FFC799",
+    "blue": "#99FFE4",
+    "magenta": "#aca1cf",
+    "cyan": "#ea83a5",
+    "white": "#FFFFFF",
+    "brightBlack": "#282828",
+    "brightRed": "#FF8080",
+    "brightGreen": "#90b99f",
+    "brightYellow": "#FFC799",
+    "brightBlue": "#99FFE4",
+    "brightMagenta": "#aca1cf",
+    "brightCyan": "#ea83a5",
+    "brightWhite": "#FFFFFF"
   }
 }

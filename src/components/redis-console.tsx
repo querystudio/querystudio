@@ -4,6 +4,7 @@ import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { useConnectionStore } from "@/lib/store";
 import { useThemeStore } from "@/lib/theme-store";
+import { buildTerminalTheme } from "@/lib/terminal-theme";
 import { api } from "@/lib/api";
 import "@xterm/xterm/css/xterm.css";
 import type { TabContentProps } from "@/lib/tab-sdk";
@@ -13,73 +14,6 @@ const PROMPT = "\x1b[32mredis>\x1b[0m ";
 const HISTORY_KEY = "redis-console-history";
 const MAX_HISTORY = 1000;
 
-// Get computed color from CSS variable and convert to hex
-function getCssVarAsHex(varName: string): string {
-  const value = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
-
-  if (!value) {
-    return "#1a1b26";
-  }
-
-  const temp = document.createElement("div");
-  temp.style.cssText = `color: ${value}; display: none;`;
-  document.body.appendChild(temp);
-
-  const computedColor = getComputedStyle(temp).color;
-  document.body.removeChild(temp);
-
-  const match = computedColor.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
-  if (match) {
-    const r = parseInt(match[1], 10);
-    const g = parseInt(match[2], 10);
-    const b = parseInt(match[3], 10);
-    return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
-  }
-
-  return "#1a1b26";
-}
-
-function buildTerminalTheme() {
-  const bg = getCssVarAsHex("--background");
-  const fg = getCssVarAsHex("--foreground");
-  const primary = getCssVarAsHex("--primary");
-  const primaryFg = getCssVarAsHex("--primary-foreground");
-  const accent = getCssVarAsHex("--accent");
-  const accentFg = getCssVarAsHex("--accent-foreground");
-  const muted = getCssVarAsHex("--muted-foreground");
-  const destructive = getCssVarAsHex("--destructive");
-  const chart1 = getCssVarAsHex("--chart-1");
-  const chart2 = getCssVarAsHex("--chart-2");
-  const chart3 = getCssVarAsHex("--chart-3");
-  const chart4 = getCssVarAsHex("--chart-4");
-  const sidebarPrimary = getCssVarAsHex("--sidebar-primary");
-
-  return {
-    background: bg,
-    foreground: fg,
-    cursor: primary,
-    cursorAccent: primaryFg,
-    selectionBackground: accent + "80",
-    selectionForeground: accentFg,
-    black: bg,
-    red: destructive,
-    green: chart2,
-    yellow: chart3,
-    blue: chart1,
-    magenta: chart4,
-    cyan: sidebarPrimary,
-    white: fg,
-    brightBlack: muted,
-    brightRed: destructive,
-    brightGreen: chart2,
-    brightYellow: chart3,
-    brightBlue: chart1,
-    brightMagenta: chart4,
-    brightCyan: sidebarPrimary,
-    brightWhite: fg,
-  };
-}
-
 export const RedisConsole = memo(function RedisConsole({
   tabId: _tabId,
   paneId: _paneId,
@@ -88,6 +22,7 @@ export const RedisConsole = memo(function RedisConsole({
   const activeConnectionId = useConnectionStore((s) => s.activeConnectionId);
   const connectionId = propsConnectionId || activeConnectionId || null;
   const activeThemeId = useThemeStore((s) => s.activeTheme);
+  const activeTheme = useThemeStore((s) => s.getActiveTheme());
 
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<XTerm | null>(null);
@@ -217,7 +152,7 @@ export const RedisConsole = memo(function RedisConsole({
     if (!containerRef.current || isInitializedRef.current) return;
     isInitializedRef.current = true;
 
-    const initialTheme = buildTerminalTheme();
+    const initialTheme = buildTerminalTheme(activeTheme);
 
     const terminal = new XTerm({
       cursorBlink: true,
@@ -421,9 +356,9 @@ export const RedisConsole = memo(function RedisConsole({
   // Update theme when it changes
   useEffect(() => {
     if (terminalRef.current) {
-      terminalRef.current.options.theme = buildTerminalTheme();
+      terminalRef.current.options.theme = buildTerminalTheme(activeTheme);
     }
-  }, [activeThemeId]);
+  }, [activeThemeId, activeTheme]);
 
   // Focus terminal when visible
   useEffect(() => {

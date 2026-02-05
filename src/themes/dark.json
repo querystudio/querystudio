@@ -39,5 +39,29 @@
     "sidebarAccentForeground": "oklch(0.93 0 0)",
     "sidebarBorder": "oklch(0.28 0.005 285)",
     "sidebarRing": "oklch(0.55 0.01 285)"
+  },
+  "terminal": {
+    "background": "#1a1a1a",
+    "foreground": "#e0e0e0",
+    "cursor": "#e0e0e0",
+    "cursorAccent": "#1a1a1a",
+    "selectionBackground": "#3a3a3a",
+    "selectionForeground": "#e0e0e0",
+    "black": "#0d0d0d",
+    "red": "#ff5f5f",
+    "green": "#5fff5f",
+    "yellow": "#ffff5f",
+    "blue": "#5f5fff",
+    "magenta": "#ff5fff",
+    "cyan": "#5fffff",
+    "white": "#e0e0e0",
+    "brightBlack": "#6a6a6a",
+    "brightRed": "#ff8787",
+    "brightGreen": "#87ff87",
+    "brightYellow": "#ffff87",
+    "brightBlue": "#8787ff",
+    "brightMagenta": "#ff87ff",
+    "brightCyan": "#87ffff",
+    "brightWhite": "#ffffff"
   }
 }
