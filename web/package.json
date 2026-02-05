@@ -10,7 +10,8 @@
     "gen-auth": "bun --bun better-auth generate --config src/lib/auth.tsx",
     "dev": "vite dev --port 3002",
     "bauth": "bun --bun better-auth",
-    "bauth:gen": "bun bauth generate --output drizzle/schema/auth.ts --config src/lib/auth.tsx"
+    "bauth:gen": "bun bauth generate --output drizzle/schema/auth.ts --config src/lib/auth.tsx",
+    "fmt": "oxfmt ./src/*.ts"
   },
   "dependencies": {
     "@hono/zod-validator": "^0.7.6",

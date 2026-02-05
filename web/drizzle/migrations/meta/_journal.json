@@ -71,6 +71,13 @@
       "when": 1769961512389,
       "tag": "0009_confused_dragon_man",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1770297629289,
+      "tag": "0010_burly_gideon",
+      "breakpoints": true
     }
   ]
 }
