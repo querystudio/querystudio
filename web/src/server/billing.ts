@@ -17,6 +17,8 @@ export const createCheckout = createServerFn({ method: 'POST' })
 
     const { user } = session
 
+    if (!user.termsAndPrivacyAccepted) throw new Error('Please accept terms and privacy before creating a checkout session')
+
     let customerId = ''
 
     if (!user.polarCustomerId) {
@@ -63,4 +65,19 @@ export const createCustomerPortal = createServerFn().handler(async () => {
   })
 
   return { url: portal.customerPortalUrl }
+})
+
+export const getSubscriptionDetails = createServerFn().handler(async () => {
+  const req = getRequest()
+  const session = await auth.api.getSession({ headers: req.headers })
+  if (!session) throw new Error('Unauthorized')
+
+  const { user } = session
+
+  if (!user.polarCustomerId) throw new Error('No active customerID')
+  if (!user.polarSubscriptionId) throw new Error('User has no active subscription!')
+
+  const subscription = await polar.subscriptions.get({ id: user.polarSubscriptionId })
+
+  return subscription
 })

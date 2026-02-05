@@ -27,6 +27,10 @@ export const auth = betterAuth({
         type: "string",
         required: false,
       },
+      polarSubscriptionId: {
+        type: "string",
+        required: false,
+      },
       isPro: {
         type: "boolean",
         required: false,
