@@ -1,3 +1,4 @@
+pub mod anthropic;
 pub mod gemini;
 pub mod openai;
 pub mod openrouter;
@@ -12,6 +13,7 @@ use std::fmt;
 pub enum AIProviderType {
     #[default]
     OpenAI,
+    Anthropic,
     Google,
     OpenRouter,
     Vercel,
@@ -21,6 +23,7 @@ impl fmt::Display for AIProviderType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             AIProviderType::OpenAI => write!(f, "OpenAI"),
+            AIProviderType::Anthropic => write!(f, "Anthropic"),
             AIProviderType::Google => write!(f, "Google"),
             AIProviderType::OpenRouter => write!(f, "OpenRouter"),
             AIProviderType::Vercel => write!(f, "Vercel"),
@@ -33,8 +36,14 @@ pub enum AIModel {
     #[default]
     Gpt5,
     Gpt5Mini,
+    /// Dynamic OpenAI model — holds the raw model slug (e.g. "gpt-4o", "o3")
+    OpenAI(String),
+    /// Dynamic Anthropic model — holds the raw model slug (e.g. "claude-sonnet-4-5-20250929")
+    Anthropic(String),
     Gemini3Flash,
     Gemini3Pro,
+    /// Dynamic Gemini model — holds the raw model slug (e.g. "gemini-2.5-flash")
+    Gemini(String),
     /// Dynamic OpenRouter model — holds the raw model slug (e.g. "anthropic/claude-sonnet-4")
     OpenRouter(String),
     /// Dynamic Vercel AI Gateway model — holds the raw model slug (e.g. "anthropic/claude-sonnet-4.5")
@@ -46,8 +55,11 @@ impl AIModel {
         match self {
             AIModel::Gpt5 => "gpt-5".to_string(),
             AIModel::Gpt5Mini => "gpt-5-mini".to_string(),
+            AIModel::OpenAI(slug) => slug.clone(),
+            AIModel::Anthropic(slug) => format!("anthropic/{}", slug),
             AIModel::Gemini3Flash => "gemini-3-flash-preview".to_string(),
             AIModel::Gemini3Pro => "gemini-3-pro-preview".to_string(),
+            AIModel::Gemini(slug) => slug.clone(),
             AIModel::OpenRouter(slug) => format!("openrouter/{}", slug),
             AIModel::Vercel(slug) => format!("vercel/{}", slug),
         }
@@ -55,18 +67,25 @@ impl AIModel {
 
     pub fn provider(&self) -> AIProviderType {
         match self {
-            AIModel::Gpt5 | AIModel::Gpt5Mini => AIProviderType::OpenAI,
-            AIModel::Gemini3Flash | AIModel::Gemini3Pro => AIProviderType::Google,
+            AIModel::Gpt5 | AIModel::Gpt5Mini | AIModel::OpenAI(_) => AIProviderType::OpenAI,
+            AIModel::Anthropic(_) => AIProviderType::Anthropic,
+            AIModel::Gemini3Flash | AIModel::Gemini3Pro | AIModel::Gemini(_) => {
+                AIProviderType::Google
+            }
             AIModel::OpenRouter(_) => AIProviderType::OpenRouter,
             AIModel::Vercel(_) => AIProviderType::Vercel,
         }
     }
 
     /// Returns the raw model slug sent to the provider API.
-    /// For gateway providers, this strips the prefix (e.g. "openrouter/" or "vercel/").
+    /// For dynamic providers, this strips prefixes when present (e.g. "anthropic/", "google/", "openrouter/", "vercel/").
     pub fn api_model_id(&self) -> String {
         match self {
-            AIModel::OpenRouter(slug) | AIModel::Vercel(slug) => slug.clone(),
+            AIModel::OpenAI(slug)
+            | AIModel::Anthropic(slug)
+            | AIModel::Gemini(slug)
+            | AIModel::OpenRouter(slug)
+            | AIModel::Vercel(slug) => slug.clone(),
             other => other.as_str(),
         }
     }
@@ -85,8 +104,25 @@ impl std::str::FromStr for AIModel {
         match s {
             "gpt-5" => Ok(AIModel::Gpt5),
             "gpt-5-mini" => Ok(AIModel::Gpt5Mini),
+            s if s.starts_with("gpt-")
+                || s.starts_with("o1")
+                || s.starts_with("o3")
+                || s.starts_with("o4")
+                || s.starts_with("codex-") =>
+            {
+                Ok(AIModel::OpenAI(s.to_string()))
+            }
+            s if s.starts_with("anthropic/") => {
+                let slug = s.strip_prefix("anthropic/").unwrap().to_string();
+                Ok(AIModel::Anthropic(slug))
+            }
             "gemini-3-flash-preview" => Ok(AIModel::Gemini3Flash),
             "gemini-3-pro-preview" => Ok(AIModel::Gemini3Pro),
+            s if s.starts_with("gemini-") => Ok(AIModel::Gemini(s.to_string())),
+            s if s.starts_with("google/") => {
+                let slug = s.strip_prefix("google/").unwrap().to_string();
+                Ok(AIModel::Gemini(slug))
+            }
             s if s.starts_with("openrouter/") => {
                 let slug = s.strip_prefix("openrouter/").unwrap().to_string();
                 Ok(AIModel::OpenRouter(slug))
@@ -298,6 +334,10 @@ pub fn create_ai_provider(
     match provider_type {
         AIProviderType::OpenAI => {
             let provider = openai::OpenAIProvider::new(api_key);
+            Ok(Box::new(provider))
+        }
+        AIProviderType::Anthropic => {
+            let provider = anthropic::AnthropicProvider::new(api_key);
             Ok(Box::new(provider))
         }
         AIProviderType::Google => {

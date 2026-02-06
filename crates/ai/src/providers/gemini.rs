@@ -1,6 +1,6 @@
 use super::{
     AIModel, AIProvider, AIProviderError, AIProviderType, ChatMessage, ChatResponse, ChatRole,
-    FinishReason, StreamChunk, ToolCall, ToolDefinition,
+    FinishReason, ModelInfo, StreamChunk, ToolCall, ToolDefinition,
 };
 use async_trait::async_trait;
 use reqwest::Client;
@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 
 const GEMINI_API_URL: &str = "https://generativelanguage.googleapis.com/v1beta/models/";
+const GEMINI_MODELS_URL: &str = "https://generativelanguage.googleapis.com/v1beta/models";
 
 pub struct GeminiProvider {
     client: Client,
@@ -22,11 +23,12 @@ impl GeminiProvider {
         }
     }
 
-    fn get_model_name(model: &AIModel) -> &'static str {
+    fn get_model_name(model: &AIModel) -> String {
         match model {
-            AIModel::Gemini3Flash => "gemini-3-flash-preview",
-            AIModel::Gemini3Pro => "gemini-3-pro-preview",
-            _ => "gemini-3-flash-preview",
+            AIModel::Gemini3Flash => "gemini-3-flash-preview".to_string(),
+            AIModel::Gemini3Pro => "gemini-3-pro-preview".to_string(),
+            AIModel::Gemini(model_id) => model_id.clone(),
+            _ => model.api_model_id(),
         }
     }
 }
@@ -651,4 +653,99 @@ impl AIProvider for GeminiProvider {
         println!("[Gemini] Returning receiver");
         Ok(rx)
     }
+}
+
+// ============================================================================
+// Model Fetching
+// ============================================================================
+
+#[derive(Debug, Deserialize)]
+struct GeminiModelsResponse {
+    #[serde(default)]
+    models: Vec<GeminiModelEntry>,
+}
+
+#[derive(Debug, Deserialize)]
+struct GeminiModelEntry {
+    name: String,
+    #[serde(rename = "displayName")]
+    display_name: Option<String>,
+    #[serde(rename = "supportedGenerationMethods", default)]
+    supported_generation_methods: Vec<String>,
+}
+
+/// Fetches available Gemini models from the Google Generative Language API.
+/// Returns them as `ModelInfo` with ids like `gemini-2.5-flash`.
+pub async fn fetch_models(api_key: &str) -> Result<Vec<ModelInfo>, AIProviderError> {
+    let client = Client::new();
+    let response = client
+        .get(GEMINI_MODELS_URL)
+        .query(&[("key", api_key)])
+        .send()
+        .await
+        .map_err(|e| AIProviderError::new(format!("Failed to fetch models: {}", e)))?;
+
+    let status = response.status();
+    let body = response.text().await.unwrap_or_default();
+
+    if !status.is_success() {
+        if let Ok(error_response) = serde_json::from_str::<serde_json::Value>(&body) {
+            if let Some(error) = error_response.get("error") {
+                let message = error
+                    .get("message")
+                    .and_then(|m| m.as_str())
+                    .unwrap_or("Unknown error");
+                let error_type = error
+                    .get("status")
+                    .and_then(|s| s.as_str())
+                    .map(|s| s.to_string());
+
+                let mut err = AIProviderError::new(message);
+                if let Some(t) = error_type {
+                    err = err.with_type(t);
+                }
+                if status.as_u16() == 429 || status.as_u16() >= 500 {
+                    err = err.retryable();
+                }
+                return Err(err);
+            }
+        }
+        return Err(AIProviderError::new(format!(
+            "Failed to fetch models ({}): {}",
+            status, body
+        )));
+    }
+
+    let models_response: GeminiModelsResponse = serde_json::from_str(&body)
+        .map_err(|e| AIProviderError::new(format!("Failed to parse models response: {}", e)))?;
+
+    let models = models_response
+        .models
+        .into_iter()
+        .filter(|m| {
+            m.supported_generation_methods
+                .iter()
+                .any(|method| method == "generateContent")
+        })
+        .filter_map(|m| {
+            let id = m
+                .name
+                .strip_prefix("models/")
+                .unwrap_or(&m.name)
+                .to_string();
+
+            if id.is_empty() {
+                return None;
+            }
+
+            Some(ModelInfo {
+                id: id.clone(),
+                name: m.display_name.unwrap_or(id),
+                provider: AIProviderType::Google,
+                logo_provider: None,
+            })
+        })
+        .collect();
+
+    Ok(models)
 }

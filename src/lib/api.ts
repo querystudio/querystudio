@@ -94,6 +94,15 @@ export const api = {
 
   aiChatStream: (request: ChatRequest) => invoke<void>("ai_chat_stream", { request }),
 
+  aiFetchAnthropicModels: (apiKey: string) =>
+    invoke<AIModelInfo[]>("ai_fetch_anthropic_models", { apiKey }),
+
+  aiFetchGeminiModels: (apiKey: string) =>
+    invoke<AIModelInfo[]>("ai_fetch_gemini_models", { apiKey }),
+
+  aiFetchOpenAIModels: (apiKey: string) =>
+    invoke<AIModelInfo[]>("ai_fetch_openai_models", { apiKey }),
+
   aiFetchOpenRouterModels: (apiKey: string) =>
     invoke<AIModelInfo[]>("ai_fetch_openrouter_models", { apiKey }),
 

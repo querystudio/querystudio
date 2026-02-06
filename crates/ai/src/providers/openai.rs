@@ -1,6 +1,6 @@
 use super::{
     AIModel, AIProvider, AIProviderError, AIProviderType, ChatMessage, ChatResponse, ChatRole,
-    FinishReason, StreamChunk, ToolCall, ToolDefinition,
+    FinishReason, ModelInfo, StreamChunk, ToolCall, ToolDefinition,
 };
 use async_trait::async_trait;
 use reqwest::Client;
@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 
 const OPENAI_API_URL: &str = "https://api.openai.com/v1/chat/completions";
+const OPENAI_MODELS_URL: &str = "https://api.openai.com/v1/models";
 
 pub struct OpenAIProvider {
     client: Client,
@@ -201,7 +202,7 @@ impl AIProvider for OpenAIProvider {
         let openai_tools: Vec<OpenAITool> = tools.iter().map(convert_tool).collect();
 
         let request = OpenAIRequest {
-            model: model.to_string(),
+            model: model.api_model_id(),
             messages: openai_messages,
             tools: openai_tools,
             tool_choice: if tools.is_empty() {
@@ -309,7 +310,7 @@ impl AIProvider for OpenAIProvider {
         let openai_tools: Vec<OpenAITool> = tools.iter().map(convert_tool).collect();
 
         let request = OpenAIRequest {
-            model: model.to_string(),
+            model: model.api_model_id(),
             messages: openai_messages,
             tools: openai_tools,
             tool_choice: if tools.is_empty() {
@@ -493,4 +494,101 @@ impl AIProvider for OpenAIProvider {
         println!("[OpenAI] Returning receiver");
         Ok(rx)
     }
+}
+
+// ============================================================================
+// Model Fetching
+// ============================================================================
+
+#[derive(Debug, Deserialize)]
+struct OpenAIModelsResponse {
+    data: Vec<OpenAIModelEntry>,
+}
+
+#[derive(Debug, Deserialize)]
+struct OpenAIModelEntry {
+    id: String,
+}
+
+fn is_chat_model_id(id: &str) -> bool {
+    // Include chat-capable families used by this app.
+    let is_supported_family = id.starts_with("gpt-")
+        || id.starts_with("o1")
+        || id.starts_with("o3")
+        || id.starts_with("o4")
+        || id.starts_with("codex-");
+
+    if !is_supported_family {
+        return false;
+    }
+
+    // Exclude obvious non-chat modalities.
+    !(id.starts_with("gpt-audio")
+        || id.starts_with("gpt-realtime")
+        || id.starts_with("gpt-image")
+        || id.contains("transcribe")
+        || id.starts_with("chatgpt-image")
+        || id.starts_with("omni-moderation")
+        || id.starts_with("sora-"))
+}
+
+/// Fetches available chat models from the OpenAI Models API.
+/// Returns them as `ModelInfo` with ids like `gpt-5`, `gpt-4o`, `o3`.
+pub async fn fetch_models(api_key: &str) -> Result<Vec<ModelInfo>, AIProviderError> {
+    let client = Client::new();
+    let response = client
+        .get(OPENAI_MODELS_URL)
+        .header("Authorization", format!("Bearer {}", api_key))
+        .send()
+        .await
+        .map_err(|e| AIProviderError::new(format!("Failed to fetch models: {}", e)))?;
+
+    let status = response.status();
+    let body = response.text().await.unwrap_or_default();
+
+    if !status.is_success() {
+        if let Ok(error_response) = serde_json::from_str::<serde_json::Value>(&body) {
+            if let Some(error) = error_response.get("error") {
+                let message = error
+                    .get("message")
+                    .and_then(|m| m.as_str())
+                    .unwrap_or("Unknown error");
+                let error_type = error
+                    .get("type")
+                    .and_then(|t| t.as_str())
+                    .map(|s| s.to_string());
+
+                let mut err = AIProviderError::new(message);
+                if let Some(t) = error_type {
+                    err = err.with_type(t);
+                }
+                if status.as_u16() == 429 || status.as_u16() >= 500 {
+                    err = err.retryable();
+                }
+                return Err(err);
+            }
+        }
+        return Err(AIProviderError::new(format!(
+            "Failed to fetch models ({}): {}",
+            status, body
+        )));
+    }
+
+    let models_response: OpenAIModelsResponse = serde_json::from_str(&body)
+        .map_err(|e| AIProviderError::new(format!("Failed to parse models response: {}", e)))?;
+
+    let mut models: Vec<ModelInfo> = models_response
+        .data
+        .into_iter()
+        .filter(|m| is_chat_model_id(&m.id))
+        .map(|m| ModelInfo {
+            id: m.id.clone(),
+            name: m.id,
+            provider: AIProviderType::OpenAI,
+            logo_provider: None,
+        })
+        .collect();
+
+    models.sort_by(|a, b| a.id.cmp(&b.id));
+    Ok(models)
 }
