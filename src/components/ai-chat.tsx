@@ -66,6 +66,7 @@ import { api } from "@/lib/api";
 import type { AIModelInfo } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { ProviderIcon, preloadProviderIcons } from "@/components/ui/provider-icon";
+import { Badge } from "./ui/badge";
 
 const OPENAI_API_KEY_STORAGE_KEY = "querystudio_openai_api_key";
 const ANTHROPIC_API_KEY_STORAGE_KEY = "querystudio_anthropic_api_key";
@@ -1216,7 +1217,9 @@ export const AIChat = memo(function AIChat() {
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="copilotEnabled">GitHub Copilot CLI</Label>
+                    <Label htmlFor="copilotEnabled">
+                      GitHub Copilot CLI <Badge variant="outline">Experimental</Badge>
+                    </Label>
                     <Switch
                       id="copilotEnabled"
                       checked={tempCopilotEnabled}
