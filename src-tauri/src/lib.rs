@@ -8,7 +8,8 @@ mod terminal;
 mod user_state;
 
 use ai_commands::{
-    ai_chat, ai_chat_stream, ai_fetch_openrouter_models, ai_fetch_vercel_models, ai_get_models,
+    ai_chat, ai_chat_stream, ai_fetch_anthropic_models, ai_fetch_gemini_models,
+    ai_fetch_openai_models, ai_fetch_openrouter_models, ai_fetch_vercel_models, ai_get_models,
     ai_validate_key,
 };
 use chat_storage::{get_chat_history, set_chat_history};
@@ -482,6 +483,9 @@ pub fn run() {
             ai_validate_key,
             ai_chat,
             ai_chat_stream,
+            ai_fetch_anthropic_models,
+            ai_fetch_gemini_models,
+            ai_fetch_openai_models,
             ai_fetch_openrouter_models,
             ai_fetch_vercel_models,
             // User state commands

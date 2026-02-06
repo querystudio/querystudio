@@ -4,19 +4,20 @@ description: A modern database client for developers.
 icon: Database
 ---
 
-QueryStudio is a fast, open-source database client built for developers who want a clean, keyboard-driven interface for working with their databases.
+QueryStudio is a fast, open-source database client with a keyboard-first workflow, AI-assisted querying, and support for multiple database engines.
 
 ## Features
 
 - **Multi-database support** - PostgreSQL, MySQL, SQLite, Redis, MongoDB
 - **Keyboard-first** - Navigate and query without leaving the keyboard
+- **AI query assistant** - Schema-aware chat + tool calling against your connected database
 - **Custom themes** - Personalize the UI with built-in or custom color themes
 - **Tab-based workflow** - Work with multiple queries and connections simultaneously
 - **Query history** - Never lose a query again
 
 ## Getting Started
 
-Download QueryStudio from the releases page or build from source:
+### Build from source
 
 ```bash
 git clone https://github.com/querystudio/querystudio
@@ -25,12 +26,52 @@ bun install
 bun run dev
 ```
 
-## Documentation
+### Important projects
+
+<Cards>
+  <Card
+    title="Desktop App (Tauri)"
+    description="Main app runtime and command surface"
+    href="https://github.com/querystudio/querystudio/tree/main/src-tauri"
+  />
+  <Card
+    title="AI Crate"
+    description="Provider adapters, agent loop, tool execution"
+    href="https://github.com/querystudio/querystudio/tree/main/crates/ai"
+  />
+  <Card
+    title="Web App"
+    description="Web product and server-side routes"
+    href="https://github.com/querystudio/querystudio/tree/main/web"
+  />
+</Cards>
+
+## Documentation Hub
 
 <Cards>
   <Card
     title="Custom Themes"
     href="/docs/custom-themes"
     description="Create and import custom color themes"
+  />
+  <Card
+    title="AI Crate Contributor Guide"
+    href="/docs/ai-crate-contributing"
+    description="Architecture, provider adapters, tools, and quickstarts"
+  />
+</Cards>
+
+## Contributor Paths
+
+<Cards>
+  <Card
+    title="Add an AI Provider"
+    href="/docs/ai-crate-contributing#quickstart-add-a-provider-in-10-minutes"
+    description="End-to-end checklist from adapter to model picker"
+  />
+  <Card
+    title="Add a Tool"
+    href="/docs/ai-crate-contributing#quickstart-add-a-new-tool-in-10-minutes"
+    description="Define schema, execute in agent loop, and validate"
   />
 </Cards>

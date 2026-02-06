@@ -549,9 +549,72 @@ export const AIChat = memo(function AIChat() {
   const [selectedModel, setSelectedModel] = useState<ModelId>(() => {
     return localStorage.getItem(SELECTED_MODEL_KEY) || "gpt-5";
   });
+  const [openaiModels, setOpenaiModels] = useState<AIModelInfo[]>([]);
+  const [geminiModels, setGeminiModels] = useState<AIModelInfo[]>([]);
+  const [anthropicModels, setAnthropicModels] = useState<AIModelInfo[]>([]);
   const [openrouterModels, setOpenrouterModels] = useState<AIModelInfo[]>([]);
   const [vercelModels, setVercelModels] = useState<AIModelInfo[]>([]);
   const [modelPickerOpen, setModelPickerOpen] = useState(false);
+
+  // Fetch OpenAI models when API key changes
+  useEffect(() => {
+    if (!openaiApiKey.trim()) {
+      setOpenaiModels([]);
+      return;
+    }
+    let cancelled = false;
+    api.aiFetchOpenAIModels(openaiApiKey).then(
+      (models) => {
+        if (!cancelled) setOpenaiModels(models);
+      },
+      () => {
+        if (!cancelled) setOpenaiModels([]);
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [openaiApiKey]);
+
+  // Fetch Gemini models when API key changes
+  useEffect(() => {
+    if (!googleApiKey.trim()) {
+      setGeminiModels([]);
+      return;
+    }
+    let cancelled = false;
+    api.aiFetchGeminiModels(googleApiKey).then(
+      (models) => {
+        if (!cancelled) setGeminiModels(models);
+      },
+      () => {
+        if (!cancelled) setGeminiModels([]);
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [googleApiKey]);
+
+  // Fetch Anthropic models when API key changes
+  useEffect(() => {
+    if (!anthropicApiKey.trim()) {
+      setAnthropicModels([]);
+      return;
+    }
+    let cancelled = false;
+    api.aiFetchAnthropicModels(anthropicApiKey).then(
+      (models) => {
+        if (!cancelled) setAnthropicModels(models);
+      },
+      () => {
+        if (!cancelled) setAnthropicModels([]);
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [anthropicApiKey]);
 
   // Fetch OpenRouter models when API key changes
   useEffect(() => {
@@ -593,10 +656,25 @@ export const AIChat = memo(function AIChat() {
     };
   }, [vercelApiKey]);
 
-  const allModels = useMemo(
-    () => [...AI_MODELS, ...openrouterModels, ...vercelModels],
-    [openrouterModels, vercelModels],
-  );
+  const allModels = useMemo(() => {
+    const merged = [
+      ...AI_MODELS,
+      ...openaiModels,
+      ...geminiModels,
+      ...anthropicModels,
+      ...openrouterModels,
+      ...vercelModels,
+    ];
+
+    const seen = new Set<string>();
+    return merged.filter((model) => {
+      if (seen.has(model.id)) {
+        return false;
+      }
+      seen.add(model.id);
+      return true;
+    });
+  }, [openaiModels, geminiModels, anthropicModels, openrouterModels, vercelModels]);
 
   const apiKeys = useMemo(
     () => ({
@@ -1013,8 +1091,8 @@ export const AIChat = memo(function AIChat() {
           <div className="space-y-2">
             <p className="text-lg font-medium text-foreground">API Key Required</p>
             <p className="text-sm text-muted-foreground">
-              To use AI features, you need to provide at least one API key (OpenAI, Google, or
-              OpenRouter). Your keys are stored locally.
+              To use AI features, you need to provide at least one API key (OpenAI, Anthropic,
+              Google, OpenRouter, or Vercel AI Gateway). Your keys are stored locally.
             </p>
           </div>
           <Button
@@ -1036,8 +1114,8 @@ export const AIChat = memo(function AIChat() {
               <DialogHeader>
                 <DialogTitle>API Keys</DialogTitle>
                 <DialogDescription>
-                  Enter your API keys to enable Querybuddy. You can use OpenAI, Google, OpenRouter,
-                  Vercel AI Gateway, or any combination.
+                  Enter your API keys to enable Querybuddy. You can use OpenAI, Anthropic, Google,
+                  OpenRouter, Vercel AI Gateway, or any combination.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
@@ -1051,6 +1129,17 @@ export const AIChat = memo(function AIChat() {
                     onChange={(e) => setTempOpenaiKey(e.target.value)}
                   />
                   <p className="text-xs text-muted-foreground">For GPT models</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="anthropicKey">Anthropic API Key</Label>
+                  <Input
+                    id="anthropicKey"
+                    type="password"
+                    placeholder="sk-ant-..."
+                    value={tempAnthropicKey}
+                    onChange={(e) => setTempAnthropicKey(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">For Claude models</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="googleKey">Google API Key</Label>
@@ -1392,6 +1481,17 @@ export const AIChat = memo(function AIChat() {
                 onChange={(e) => setTempOpenaiKey(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">For GPT models</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="anthropicKey2">Anthropic API Key</Label>
+              <Input
+                id="anthropicKey2"
+                type="password"
+                placeholder="sk-ant-..."
+                value={tempAnthropicKey}
+                onChange={(e) => setTempAnthropicKey(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">For Claude models</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="googleKey2">Google API Key</Label>

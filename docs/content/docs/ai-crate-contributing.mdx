@@ -1,0 +1,402 @@
+---
+title: AI Crate Contributor Guide
+description: Architecture and extension guide for `crates/ai`.
+icon: Bot
+---
+
+This guide is for developers contributing to `crates/ai`.
+
+`querystudio-ai` is the backend AI orchestration layer for QueryStudio. It handles:
+
+- Provider adapters (OpenAI, Anthropic, Gemini, OpenRouter, Vercel)
+- Model parsing and provider routing
+- Tool calling and tool execution loop
+- Streaming event normalization for the UI layer
+
+## Crate Layout
+
+- `crates/ai/src/lib.rs`: Public exports and crate surface area.
+- `crates/ai/src/agent.rs`: Main orchestration loop (`Agent`), history handling, tool execution.
+- `crates/ai/src/providers/mod.rs`: Shared provider types, `AIProvider` trait, model/provider enums, factory.
+- `crates/ai/src/providers/*.rs`: Provider-specific adapters and optional model-list fetchers.
+- `crates/ai/src/tools.rs`: Tool schema, system prompt, and query safety validation.
+- `crates/ai/src/types.rs`: `DatabaseOperations` trait + shared DB types.
+
+## Runtime Flow
+
+1. Caller builds an `Agent` with `api_key`, `db`, `connection_id`, `db_type`, and `AIModel`.
+2. `Agent` stores conversation in internal `Vec<ChatMessage>`.
+3. On chat:
+   - Calls provider `chat` or `chat_stream`.
+   - If provider returns tool calls, `Agent` executes tools via `DatabaseOperations`.
+   - Tool results are appended as `ChatRole::Tool` messages.
+   - Loop continues until finish reason is `Stop` (or non-tool terminal fallback).
+4. Stream output is normalized into `AgentEvent` for the frontend/Tauri event bridge.
+
+## Core Contracts
+
+### `DatabaseOperations`
+
+Defined in `crates/ai/src/types.rs`. This is the only DB boundary used by the AI crate.
+
+Required methods:
+
+- `list_tables`
+- `get_table_columns`
+- `execute_query`
+- `get_table_data`
+
+### `AIProvider`
+
+Defined in `crates/ai/src/providers/mod.rs`.
+
+Each provider must implement:
+
+- `provider_type()`
+- `chat(model, messages, tools) -> ChatResponse`
+- `chat_stream(model, messages, tools) -> Receiver<StreamChunk>`
+
+All provider-specific wire formats must be converted into shared structs:
+
+- `ChatMessage`
+- `ToolCall`
+- `ChatResponse`
+- `StreamChunk`
+- `FinishReason`
+
+## Models and Routing
+
+`AIModel` in `crates/ai/src/providers/mod.rs` supports:
+
+- Static built-ins: `gpt-5`, `gpt-5-mini`, `gemini-3-flash-preview`, `gemini-3-pro-preview`
+- Dynamic models for provider families (OpenAI, Anthropic, Gemini, OpenRouter, Vercel)
+
+Important helpers:
+
+- `AIModel::provider()` routes to `AIProviderType`
+- `AIModel::api_model_id()` returns raw provider model id (strips gateway prefixes)
+- `FromStr for AIModel` parses user-selected model IDs
+
+If you add a new model family, update all three.
+
+## Adding or Updating a Provider Adapter
+
+Use this checklist:
+
+1. Add provider file in `crates/ai/src/providers/`.
+2. Implement `AIProvider` trait:
+   - Convert shared messages/tools into provider request format
+   - Parse provider response/stream into shared response structs
+3. Map provider finish reasons into `FinishReason`.
+4. Return structured `AIProviderError` (set `error_type` and `retryable` when possible).
+5. Register provider in `crates/ai/src/providers/mod.rs`:
+   - `pub mod ...`
+   - `AIProviderType` variant
+   - `create_ai_provider` match arm
+6. If provider supports model listing, add:
+   - `pub async fn fetch_models(api_key: &str) -> Result<Vec<ModelInfo>, AIProviderError>`
+   - Model filtering for chat/text-capable models only
+7. Wire Tauri command in `src-tauri/src/ai_commands.rs` and command registration in `src-tauri/src/lib.rs`.
+8. Wire frontend API call in `src/lib/api.ts` and model fetching in `src/components/ai-chat.tsx`.
+
+## Quickstart: Add a Provider in 10 Minutes
+
+This is the fastest path to get a new provider adapter wired end-to-end.
+
+### 1. Create provider file
+
+Create `crates/ai/src/providers/<provider>.rs` with this shape:
+
+```rust
+use super::{
+    AIModel, AIProvider, AIProviderError, AIProviderType, ChatMessage, ChatResponse,
+    FinishReason, ModelInfo, StreamChunk, ToolDefinition,
+};
+use async_trait::async_trait;
+use reqwest::Client;
+use tokio::sync::mpsc;
+
+pub struct ExampleProvider {
+    client: Client,
+    api_key: String,
+}
+
+impl ExampleProvider {
+    pub fn new(api_key: String) -> Self {
+        Self { client: Client::new(), api_key }
+    }
+}
+
+#[async_trait]
+impl AIProvider for ExampleProvider {
+    fn provider_type(&self) -> AIProviderType {
+        AIProviderType::OpenAI // replace with your provider variant
+    }
+
+    async fn chat(
+        &self,
+        model: &AIModel,
+        messages: Vec<ChatMessage>,
+        tools: &[ToolDefinition],
+    ) -> Result<ChatResponse, AIProviderError> {
+        let _model_id = model.api_model_id();
+        let _ = (messages, tools);
+        Ok(ChatResponse {
+            content: Some("TODO".to_string()),
+            tool_calls: vec![],
+            finish_reason: FinishReason::Stop,
+        })
+    }
+
+    async fn chat_stream(
+        &self,
+        model: &AIModel,
+        messages: Vec<ChatMessage>,
+        tools: &[ToolDefinition],
+    ) -> Result<mpsc::Receiver<StreamChunk>, AIProviderError> {
+        let _ = (model, messages, tools);
+        let (_tx, rx) = mpsc::channel(100);
+        Ok(rx)
+    }
+}
+
+pub async fn fetch_models(api_key: &str) -> Result<Vec<ModelInfo>, AIProviderError> {
+    let _ = api_key;
+    Ok(vec![])
+}
+```
+
+### 2. Register it in `providers/mod.rs`
+
+Update:
+
+- `pub mod <provider>;`
+- `AIProviderType` enum
+- `fmt::Display for AIProviderType`
+- `create_ai_provider(...)` match
+- `AIModel` and `FromStr` if your provider has dynamic model IDs
+
+### 3. Add model list command in Tauri
+
+In `src-tauri/src/ai_commands.rs`:
+
+```rust
+#[tauri::command]
+pub async fn ai_fetch_example_models(api_key: String) -> Result<Vec<ModelInfo>, String> {
+    providers::example::fetch_models(&api_key).await.map_err(|e| e.to_string())
+}
+```
+
+In `src-tauri/src/lib.rs`:
+
+- Import `ai_fetch_example_models`
+- Add it to `tauri::generate_handler![ ... ]`
+
+### 4. Add frontend API method
+
+In `src/lib/api.ts`:
+
+```ts
+aiFetchExampleModels: (apiKey: string) =>
+  invoke<AIModelInfo[]>("ai_fetch_example_models", { apiKey });
+```
+
+### 5. Hook into model picker
+
+In `src/components/ai-chat.tsx`:
+
+- Add state: `const [exampleModels, setExampleModels] = useState<AIModelInfo[]>([])`
+- Add `useEffect` fetching models when that provider key changes
+- Merge into `allModels`
+- Ensure `getApiKeyForModel(...)` can select the right key by provider type
+
+### 6. Validate quickly
+
+```bash
+cargo check -p querystudio-ai --manifest-path src-tauri/Cargo.toml
+cargo check -p querystudio --manifest-path src-tauri/Cargo.toml
+```
+
+Smoke test in app:
+
+1. Add provider API key in AI settings.
+2. Verify models appear in model picker.
+3. Start a chat and confirm streaming/tool calls work.
+
+## Quickstart: Add a New Tool in 10 Minutes
+
+This is the fastest path to add a new database tool callable by the agent.
+
+### 1. Add tool schema in `tools.rs`
+
+Define a `ToolDefinition` and include argument schema:
+
+```rust
+fn count_rows_tool() -> ToolDefinition {
+    ToolDefinition {
+        name: "count_rows".to_string(),
+        description: "Return exact row count for a table.".to_string(),
+        parameters: ToolParameters {
+            param_type: "object".to_string(),
+            properties: json!({
+                "schema": { "type": "string" },
+                "table": { "type": "string" }
+            }),
+            required: vec!["schema".to_string(), "table".to_string()],
+        },
+    }
+}
+```
+
+### 2. Register tool in `get_tool_definitions`
+
+Add your tool to the returned vector:
+
+```rust
+pub fn get_tool_definitions(db_type: DatabaseType) -> Vec<ToolDefinition> {
+    vec![
+        list_tables_tool(),
+        get_table_columns_tool(db_type),
+        execute_select_query_tool(db_type),
+        get_table_sample_tool(db_type),
+        count_rows_tool(),
+    ]
+}
+```
+
+### 3. Add args/result wiring
+
+In `tools.rs`, add args struct:
+
+```rust
+#[derive(Debug, Deserialize)]
+pub struct CountRowsArgs {
+    pub schema: String,
+    pub table: String,
+}
+```
+
+If needed, add/extend `ToolResult` variants for your output shape.
+
+### 4. Execute tool in `agent.rs`
+
+Update dispatch in `Agent::execute_tool`:
+
+```rust
+"count_rows" => match serde_json::from_str::<CountRowsArgs>(&tool_call.arguments) {
+    Ok(args) => self.execute_count_rows(args).await,
+    Err(e) => ToolResult::Error(ToolError {
+        error: format!("Invalid arguments: {}", e),
+    }),
+},
+```
+
+Then implement the method on `Agent`:
+
+```rust
+async fn execute_count_rows(&self, args: CountRowsArgs) -> ToolResult {
+    let query = format!("SELECT COUNT(*) AS count FROM \"{}\".\"{}\"", args.schema, args.table);
+    match self.db.execute_query(&self.connection_id, &query).await {
+        Ok(result) => ToolResult::QueryData(QueryDataResult::from(result)),
+        Err(e) => ToolResult::Error(ToolError { error: e }),
+    }
+}
+```
+
+### 5. Update prompt guidance (optional but recommended)
+
+If this tool changes behavior significantly, update `get_system_prompt(...)` so the model knows when to use it.
+
+### 6. Validate quickly
+
+```bash
+cargo check -p querystudio-ai --manifest-path src-tauri/Cargo.toml
+cargo test -p querystudio-ai --manifest-path src-tauri/Cargo.toml
+```
+
+Smoke test:
+
+1. Ask Querybuddy to perform a task that should trigger your tool.
+2. Confirm tool call appears in streamed events.
+3. Confirm tool result is fed back into the next model turn.
+
+## Model Listing Rules
+
+When implementing `fetch_models`:
+
+- Always use the user-provided API key (no shared server key).
+- Return `Vec<ModelInfo>` with correct:
+  - `id` (what frontend stores/sends back to backend)
+  - `name` (display label)
+  - `provider` (`AIProviderType`)
+  - `logo_provider` (optional branding override)
+- Filter out non-chat/non-text models where relevant.
+
+Current providers with `fetch_models`:
+
+- `openai::fetch_models`
+- `anthropic::fetch_models`
+- `gemini::fetch_models`
+- `openrouter::fetch_models`
+- `vercel::fetch_models`
+
+## Tooling and Safety
+
+Tools are defined in `crates/ai/src/tools.rs`.
+
+Current tools:
+
+- `list_tables`
+- `get_table_columns`
+- `execute_select_query`
+- `get_table_sample`
+
+Safety gate:
+
+- `validate_select_query` only allows `SELECT`/`WITH` and rejects destructive keywords.
+
+If you add a new tool, update:
+
+- `get_tool_definitions`
+- Argument struct(s)
+- `Agent::execute_tool` dispatch
+- Serialization format expected by the frontend
+
+## Streaming Notes
+
+Provider streams must preserve tool-call integrity:
+
+- Emit `ToolCallStart` when call id/name are known.
+- Emit `ToolCallDelta` as arguments arrive.
+- Emit one terminal `Done` event with mapped `FinishReason`.
+
+`Agent` assembles full tool arguments by id and executes tools only after stream turn completion.
+
+## Local Validation
+
+Run these before opening a PR:
+
+```bash
+cargo check -p querystudio-ai --manifest-path src-tauri/Cargo.toml
+cargo test -p querystudio-ai --manifest-path src-tauri/Cargo.toml
+```
+
+If you changed Tauri command wiring too:
+
+```bash
+cargo check -p querystudio --manifest-path src-tauri/Cargo.toml
+```
+
+For frontend model picker/API wiring:
+
+```bash
+bun run dev
+```
+
+## Common Pitfalls
+
+- Adding a new dynamic model ID pattern in frontend only, but not `AIModel::from_str`.
+- Forgetting to use `model.api_model_id()` in provider requests.
+- Returning provider-native tool-call formats instead of shared `ToolCall`.
+- Not filtering out unsupported model families in `fetch_models`.
+- Missing Tauri command registration in `src-tauri/src/lib.rs`.
