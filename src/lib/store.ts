@@ -193,6 +193,10 @@ interface AIQueryState {
   // Debug settings (persisted)
   debugMode: boolean;
   setDebugMode: (enabled: boolean) => void;
+
+  // Custom UI font family (persisted)
+  customFontFamily: string;
+  setCustomFontFamily: (fontFamily: string) => void;
 }
 
 export const useAIQueryStore = create<AIQueryState>()((set, get) => ({
@@ -282,6 +286,12 @@ export const useAIQueryStore = create<AIQueryState>()((set, get) => ({
     set({ debugMode: enabled });
     void useSettingsStore.getState().updateSettings({ debugMode: enabled });
   },
+
+  customFontFamily: useSettingsStore.getState().customFontFamily,
+  setCustomFontFamily: (fontFamily: string) => {
+    set({ customFontFamily: fontFamily });
+    void useSettingsStore.getState().updateSettings({ customFontFamily: fontFamily });
+  },
 }));
 
 useSettingsStore.subscribe((state) => {
@@ -297,6 +307,7 @@ useSettingsStore.subscribe((state) => {
     experimentalTerminal: state.experimentalTerminal,
     experimentalPlugins: state.experimentalPlugins,
     debugMode: state.debugMode,
+    customFontFamily: state.customFontFamily,
   });
 });
 

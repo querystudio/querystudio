@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { settingsApi } from "./settings-api";
+import { applyCustomFontFamily } from "./app-font";
 import { defaultAppSettings, normalizeSettings, type AppSettings } from "./settings-schema";
 
 const LEGACY_UI_STATE_KEY = "querystudio_ui_state";
@@ -42,6 +43,7 @@ function pickSettings(state: SettingsStoreState): AppSettings {
     experimentalTerminal: state.experimentalTerminal,
     experimentalPlugins: state.experimentalPlugins,
     debugMode: state.debugMode,
+    customFontFamily: state.customFontFamily,
     migratedFromLegacy: state.migratedFromLegacy,
   };
 }
@@ -186,4 +188,15 @@ export function initializeSettingsStore(): Promise<void> {
   }
 
   return initializationPromise;
+}
+
+if (typeof document !== "undefined") {
+  let previousCustomFontFamily = useSettingsStore.getState().customFontFamily;
+  applyCustomFontFamily(previousCustomFontFamily);
+
+  useSettingsStore.subscribe((state) => {
+    if (state.customFontFamily === previousCustomFontFamily) return;
+    previousCustomFontFamily = state.customFontFamily;
+    applyCustomFontFamily(state.customFontFamily);
+  });
 }

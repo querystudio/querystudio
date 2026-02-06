@@ -1,13 +1,37 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
-import { ArrowLeft, LogOut, Loader2, ExternalLink } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  ArrowLeft,
+  Check,
+  ChevronsUpDown,
+  ExternalLink,
+  Loader2,
+  LogOut,
+  RefreshCw,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ThemeSelector } from "@/components/theme-selector";
 import { toast } from "sonner";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import {
+  discoverFontFamilies,
+  getFallbackFontFamilies,
+  normalizeCustomFontFamily,
+} from "@/lib/app-font";
 import { authClient, signInWithGithub } from "@/lib/auth-client";
 import { CommandPalette } from "@/components/command-palette";
 import { PluginSettings } from "@/components/plugin-settings";
@@ -16,6 +40,7 @@ import { useGlobalShortcuts } from "@/lib/use-global-shortcuts";
 import { useConnectionStore, useAIQueryStore } from "@/lib/store";
 import { useDisconnect } from "@/lib/hooks";
 import type { SavedConnection } from "@/lib/types";
+import { Badge } from "@/components/ui/badge";
 
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,
@@ -326,8 +351,77 @@ function GeneralSettings() {
 }
 
 function AppearanceSettings() {
+  const MAX_RENDERED_FONTS_DEFAULT = 80;
+  const MAX_RENDERED_FONTS_SEARCH = 180;
   const statusBarVisible = useAIQueryStore((s) => s.statusBarVisible);
   const setStatusBarVisible = useAIQueryStore((s) => s.setStatusBarVisible);
+  const customFontFamily = useAIQueryStore((s) => s.customFontFamily);
+  const setCustomFontFamily = useAIQueryStore((s) => s.setCustomFontFamily);
+  const [fontDraft, setFontDraft] = useState(customFontFamily);
+  const [fontPickerOpen, setFontPickerOpen] = useState(false);
+  const [fontSearchQuery, setFontSearchQuery] = useState("");
+  const [availableFonts, setAvailableFonts] = useState<string[]>(() => getFallbackFontFamilies());
+  const [fontSource, setFontSource] = useState<"local" | "fallback">("fallback");
+  const [isLoadingFonts, setIsLoadingFonts] = useState(false);
+  const [hasLoadedFonts, setHasLoadedFonts] = useState(false);
+
+  useEffect(() => {
+    setFontDraft(customFontFamily);
+  }, [customFontFamily]);
+
+  const normalizedDraft = normalizeCustomFontFamily(fontDraft);
+  const normalizedActiveFont = normalizeCustomFontFamily(customFontFamily);
+  const hasPendingFontChanges = normalizedDraft !== normalizedActiveFont;
+  const normalizedSearchQuery = fontSearchQuery.trim().toLowerCase();
+
+  const filteredFonts = useMemo(() => {
+    if (!normalizedSearchQuery) return availableFonts;
+    return availableFonts.filter((font) => font.toLowerCase().includes(normalizedSearchQuery));
+  }, [availableFonts, normalizedSearchQuery]);
+
+  const renderLimit = normalizedSearchQuery
+    ? MAX_RENDERED_FONTS_SEARCH
+    : MAX_RENDERED_FONTS_DEFAULT;
+  const visibleFonts = useMemo(
+    () => filteredFonts.slice(0, renderLimit),
+    [filteredFonts, renderLimit],
+  );
+
+  const detectFonts = async (forceRefresh = false) => {
+    if (isLoadingFonts) return;
+    setIsLoadingFonts(true);
+    const result = await discoverFontFamilies({ forceRefresh });
+    setAvailableFonts(result.families);
+    setFontSource(result.source);
+    setHasLoadedFonts(true);
+    setIsLoadingFonts(false);
+  };
+
+  const applyFontChanges = () => {
+    setCustomFontFamily(normalizedDraft);
+  };
+
+  const resetFontChanges = () => {
+    setFontDraft("");
+    setCustomFontFamily("");
+  };
+
+  const selectFont = (font: string) => {
+    const normalized = normalizeCustomFontFamily(font);
+    setFontDraft(normalized);
+    setCustomFontFamily(normalized);
+    setFontPickerOpen(false);
+  };
+
+  const handleFontPickerOpenChange = (open: boolean) => {
+    setFontPickerOpen(open);
+    if (!open) {
+      setFontSearchQuery("");
+    }
+    if (open && !hasLoadedFonts) {
+      void detectFonts();
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -341,6 +435,135 @@ function AppearanceSettings() {
         <h3 className="text-lg font-medium">Theme</h3>
         <div className="rounded-lg border p-4">
           <ThemeSelector />
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <h3 className="text-lg font-medium">Typography</h3>
+        <div className="space-y-3 rounded-lg border p-4">
+          <div className="space-y-1">
+            <Label htmlFor="custom-font-family" className="text-base">
+              Custom Font Family <Badge>BETA</Badge>
+            </Label>
+            <p className="text-sm text-muted-foreground">
+              Select from detected fonts or enter a CSS font-family list manually. Example:{" "}
+              <span className="font-mono text-xs">"SF Pro Text", "Segoe UI", "Helvetica Neue"</span>
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Popover open={fontPickerOpen} onOpenChange={handleFontPickerOpenChange}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={fontPickerOpen}
+                  className="h-9 flex-1 justify-between"
+                >
+                  <span className="truncate">{normalizedDraft || "Default (Geist)"}</span>
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[420px] max-w-[calc(100vw-2rem)] p-0" align="start">
+                <Command shouldFilter={false}>
+                  <CommandInput
+                    placeholder="Search fonts..."
+                    className="h-9"
+                    value={fontSearchQuery}
+                    onValueChange={setFontSearchQuery}
+                  />
+                  <CommandList className="max-h-64">
+                    <CommandEmpty>
+                      {isLoadingFonts ? "Detecting fonts..." : "No fonts found for this search."}
+                    </CommandEmpty>
+                    <CommandGroup heading="Fonts">
+                      <CommandItem
+                        value="Default Geist"
+                        onSelect={() => selectFont("")}
+                        className="text-xs"
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-3 w-3 shrink-0",
+                            normalizedDraft === "" ? "opacity-100" : "opacity-0",
+                          )}
+                        />
+                        Default (Geist)
+                      </CommandItem>
+                      {visibleFonts.map((font) => (
+                        <CommandItem
+                          key={font}
+                          value={font}
+                          onSelect={() => selectFont(font)}
+                          className="text-xs"
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-3 w-3 shrink-0",
+                              normalizedDraft === normalizeCustomFontFamily(font)
+                                ? "opacity-100"
+                                : "opacity-0",
+                            )}
+                          />
+                          <span className="truncate">{font}</span>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                    {filteredFonts.length > visibleFonts.length && (
+                      <div className="px-2 py-1.5 text-[11px] text-muted-foreground">
+                        Showing first {renderLimit} results. Keep typing to narrow down.
+                      </div>
+                    )}
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={() => void detectFonts(true)}
+              disabled={isLoadingFonts}
+              title="Refresh local fonts"
+              aria-label="Refresh local fonts"
+            >
+              <RefreshCw className={cn("h-4 w-4", isLoadingFonts && "animate-spin")} />
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {!hasLoadedFonts && "Open the picker or refresh to detect local fonts on this device."}
+            {hasLoadedFonts &&
+              fontSource === "local" &&
+              `Detected ${availableFonts.length} fonts from your system.`}
+            {hasLoadedFonts &&
+              fontSource === "fallback" &&
+              "Local font access is unavailable; showing a common font list."}
+          </p>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Input
+              id="custom-font-family"
+              placeholder="e.g. SF Pro Text, Segoe UI, Helvetica Neue"
+              value={fontDraft}
+              onChange={(event) => setFontDraft(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  applyFontChanges();
+                }
+              }}
+            />
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="default"
+                onClick={applyFontChanges}
+                disabled={!hasPendingFontChanges}
+              >
+                Apply
+              </Button>
+              <Button type="button" variant="outline" onClick={resetFontChanges}>
+                Reset
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
 

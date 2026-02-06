@@ -22,6 +22,7 @@ pub struct AppSettings {
     pub experimental_terminal: bool,
     pub experimental_plugins: bool,
     pub debug_mode: bool,
+    pub custom_font_family: String,
     pub migrated_from_legacy: bool,
 }
 
@@ -40,6 +41,7 @@ impl Default for AppSettings {
             experimental_terminal: false,
             experimental_plugins: false,
             debug_mode: false,
+            custom_font_family: String::new(),
             migrated_from_legacy: false,
         }
     }
@@ -53,6 +55,14 @@ impl AppSettings {
         if self.active_tab.trim().is_empty() {
             self.active_tab = "data".to_string();
         }
+
+        let filtered: String = self
+            .custom_font_family
+            .chars()
+            .filter(|ch| !matches!(ch, '{' | '}' | ';'))
+            .collect();
+        let compact = filtered.split_whitespace().collect::<Vec<_>>().join(" ");
+        self.custom_font_family = compact.chars().take(200).collect();
     }
 }
 
@@ -146,6 +156,7 @@ pub async fn load_settings_from_path(path: &Path) -> Result<AppSettings, String>
     if before.active_tab != settings.active_tab
         || before.ai_panel_width != settings.ai_panel_width
         || before.sidebar_width != settings.sidebar_width
+        || before.custom_font_family != settings.custom_font_family
         || before.schema_version != settings.schema_version
     {
         needs_write = true;

@@ -1,3 +1,5 @@
+import { normalizeCustomFontFamily } from "./app-font";
+
 export const SETTINGS_SCHEMA_VERSION = 1;
 
 export interface AppSettings {
@@ -13,6 +15,7 @@ export interface AppSettings {
   experimentalTerminal: boolean;
   experimentalPlugins: boolean;
   debugMode: boolean;
+  customFontFamily: string;
   migratedFromLegacy: boolean;
 }
 
@@ -29,6 +32,7 @@ export const defaultAppSettings: AppSettings = {
   experimentalTerminal: false,
   experimentalPlugins: false,
   debugMode: false,
+  customFontFamily: "",
   migratedFromLegacy: false,
 };
 
@@ -44,5 +48,6 @@ export function normalizeSettings(input: Partial<AppSettings>): AppSettings {
     activeTab: merged.activeTab?.trim() ? merged.activeTab : defaultAppSettings.activeTab,
     aiPanelWidth: Math.min(800, Math.max(320, merged.aiPanelWidth)),
     sidebarWidth: Math.min(400, Math.max(180, merged.sidebarWidth)),
+    customFontFamily: normalizeCustomFontFamily(merged.customFontFamily || ""),
   };
 }

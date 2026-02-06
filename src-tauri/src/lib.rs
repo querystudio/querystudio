@@ -2,6 +2,7 @@ mod ai_commands;
 mod chat_storage;
 mod database;
 mod debug;
+mod fonts;
 mod settings;
 mod storage;
 mod terminal;
@@ -15,6 +16,7 @@ use ai_commands::{
 use chat_storage::{get_chat_history, set_chat_history};
 use database::{test_connection, ConnectionConfig, ConnectionManager};
 use debug::{get_process_stats, DebugState};
+use fonts::list_local_fonts;
 use log::{debug, error, info, warn};
 use querystudio_providers::{ColumnInfo, QueryResult, TableInfo};
 use settings::{get_settings, load_settings, patch_settings, reset_settings, set_settings};
@@ -503,6 +505,7 @@ pub fn run() {
             get_process_stats,
             // App info commands
             get_app_version,
+            list_local_fonts,
             // Settings commands
             get_settings,
             set_settings,
