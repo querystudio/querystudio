@@ -21,7 +21,7 @@ const BUILTIN_THEMES: Record<string, Theme> = {
   "rose-pine": rosePineTheme as Theme,
   catppuccin: catppuccinTheme as Theme,
   vesper: vesper as Theme,
-  "cleak-dark-theme": cleanDarkTheme as Theme,
+  "clean-dark": cleanDarkTheme as Theme,
 };
 
 interface ThemeState extends ThemeRegistry {

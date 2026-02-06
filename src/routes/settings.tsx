@@ -443,7 +443,7 @@ function AppearanceSettings() {
         <div className="space-y-3 rounded-lg border p-4">
           <div className="space-y-1">
             <Label htmlFor="custom-font-family" className="text-base">
-              Custom Font Family <Badge>BETA</Badge>
+              Custom Font Family
             </Label>
             <p className="text-sm text-muted-foreground">
               Select from detected fonts or enter a CSS font-family list manually. Example:{" "}

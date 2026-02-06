@@ -138,6 +138,13 @@ export const TableViewer = memo(function TableViewer({
   const totalPages = totalCount ? Math.ceil(totalCount / PAGE_SIZE) : 0;
   const isLoading = columnsLoading || dataLoading;
   const isRefreshing = columnsFetching || dataFetching || countFetching;
+  const visibleRows = tableData?.rows.length ?? 0;
+  const normalizedTotalCount = typeof totalCount === "number" ? totalCount : null;
+  const hasTotalCount = normalizedTotalCount !== null;
+  const rangeStart = hasTotalCount && normalizedTotalCount > 0 ? page * PAGE_SIZE + 1 : 0;
+  const rangeEnd = hasTotalCount
+    ? Math.min((page + 1) * PAGE_SIZE, normalizedTotalCount)
+    : page * PAGE_SIZE + visibleRows;
 
   const handleRefresh = () => {
     if (!connectionId || !selectedTable) return;
@@ -275,176 +282,208 @@ export const TableViewer = memo(function TableViewer({
   };
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-border px-4 py-3">
-        <div className="flex items-center gap-3">
-          <h2 className="font-medium text-foreground">
-            {selectedTable.schema}.{selectedTable.name}
-          </h2>
-          {totalCount !== undefined && (
-            <Badge variant="secondary" className="text-xs">
-              {totalCount.toLocaleString()} rows
-            </Badge>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
-            <RefreshCw className={cn("mr-1 h-4 w-4", isRefreshing && "animate-spin")} />
-            Refresh
-          </Button>
-          {connection?.db_type === "redis" ? (
-            <>
-              <Button variant="outline" size="sm" onClick={() => setAddRedisKeyOpen(true)}>
-                <Plus className="mr-1 h-4 w-4" />
+    <div className="flex h-full flex-col bg-background">
+      <div className="border-b border-border/70 bg-gradient-to-b from-background to-card/30 px-3 py-2.5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="min-w-0 space-y-1">
+            <div className="flex items-center gap-2">
+              <h2 className="truncate text-lg font-semibold text-foreground">
+                {selectedTable.schema}.{selectedTable.name}
+              </h2>
+              <Badge variant="secondary" className="h-6 rounded-full px-2.5 text-[11px]">
+                {hasTotalCount ? `${normalizedTotalCount.toLocaleString()} rows` : "Rows"}
+              </Badge>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {rangeEnd > 0
+                ? `${rangeStart.toLocaleString()}-${rangeEnd.toLocaleString()} visible`
+                : "No rows visible"}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="h-9 rounded-xl border-border/70 bg-background/60 px-3"
+            >
+              <RefreshCw className={cn("mr-1.5 h-4 w-4", isRefreshing && "animate-spin")} />
+              Refresh
+            </Button>
+
+            {connection?.db_type === "redis" ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setAddRedisKeyOpen(true)}
+                className="h-9 rounded-xl border-border/70 bg-background/60 px-3"
+              >
+                <Plus className="mr-1.5 h-4 w-4" />
                 Add Key
               </Button>
-              <div className="mx-2 h-4 w-px bg-secondary" />
-            </>
-          ) : (
-            <>
-              <Button variant="outline" size="sm" onClick={() => setAddRowOpen(true)}>
-                <Plus className="mr-1 h-4 w-4" />
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setAddRowOpen(true)}
+                className="h-9 rounded-xl border-border/70 bg-background/60 px-3"
+              >
+                <Plus className="mr-1.5 h-4 w-4" />
                 Add Row
               </Button>
-              <div className="mx-2 h-4 w-px bg-secondary" />
-            </>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage((p) => Math.max(0, p - 1))}
-            disabled={page === 0 || isLoading}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <span className="text-sm text-muted-foreground">
-            Page {page + 1} of {totalPages || 1}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage((p) => p + 1)}
-            disabled={page >= totalPages - 1 || isLoading}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+            )}
+
+            <div className="ml-1 flex items-center gap-1 rounded-xl border border-border/70 bg-background/60 p-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={page === 0 || isLoading}
+                className="h-7 w-7 rounded-lg"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="px-2 text-xs text-muted-foreground">
+                Page {page + 1} of {totalPages || 1}
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setPage((p) => p + 1)}
+                disabled={page >= totalPages - 1 || isLoading}
+                className="h-7 w-7 rounded-lg"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto">
-        <motion.div
-          key={`${selectedTable}-${page}`}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.2 }}
-          className="min-w-max"
-        >
-          <Table>
-            <TableHeader>
-              <TableRow className="border-border hover:bg-transparent">
-                {columns?.map((col) => (
-                  <TableHead
-                    key={col.name}
-                    className="whitespace-nowrap border-r border-border last:border-r-0"
-                  >
-                    <div className="flex items-center gap-2">
-                      {col.is_primary_key && <Key className="h-3 w-3 text-yellow-500" />}
-                      <span>{col.name}</span>
-                      <span className="text-xs text-muted-foreground">{col.data_type}</span>
-                    </div>
-                  </TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                Array.from({ length: 10 }).map((_, i) => (
-                  <TableRow key={i} className="border-border">
-                    {Array.from({ length: columns?.length || 5 }).map((_, j) => (
-                      <TableCell key={j} className="border-r border-border last:border-r-0">
-                        <Skeleton className="h-4 w-full" />
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : tableData?.rows.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={columns?.length || 1}
-                    className="h-24 text-center text-muted-foreground"
-                  >
-                    No data
-                  </TableCell>
+      <div className="flex-1 overflow-hidden p-2">
+        <div className="h-full overflow-auto rounded-xl border border-border/70 bg-card/30">
+          <motion.div
+            key={`${selectedTable.schema}.${selectedTable.name}-${page}`}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.2 }}
+            className="min-w-max"
+          >
+            <Table className="text-[13px]">
+              <TableHeader>
+                <TableRow className="border-border/70 bg-card/80 hover:bg-card/80">
+                  {columns?.map((col) => (
+                    <TableHead
+                      key={col.name}
+                      className="sticky top-0 z-20 h-11 whitespace-nowrap border-r border-border/70 bg-card/95 px-3 last:border-r-0"
+                    >
+                      <div className="flex items-center gap-2">
+                        {col.is_primary_key && <Key className="h-3 w-3 text-yellow-500" />}
+                        <span className="font-semibold text-foreground">{col.name}</span>
+                        <span className="rounded-md bg-muted/50 px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                          {col.data_type}
+                        </span>
+                      </div>
+                    </TableHead>
+                  ))}
                 </TableRow>
-              ) : (
-                tableData?.rows.map((row, i) => (
-                  <TableRow
-                    key={i}
-                    className={cn(
-                      "border-border hover:bg-card/50",
-                      connection?.db_type !== "redis" && "cursor-pointer",
-                    )}
-                    onClick={() => connection?.db_type !== "redis" && handleEditRow(row)}
-                  >
-                    {row.map((cell, j) => {
-                      const isNull = cell === null;
-                      return (
-                        <ContextMenu key={j}>
-                          <ContextMenuTrigger asChild>
-                            <TableCell
-                              className={cn(
-                                "max-w-xs truncate border-r border-border font-mono text-xs last:border-r-0 cursor-default",
-                                isNull && "text-muted-foreground italic",
-                              )}
-                              title={formatValue(cell)}
-                            >
-                              {formatValue(cell)}
-                            </TableCell>
-                          </ContextMenuTrigger>
-                          <ContextMenuContent>
-                            <ContextMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleCopyCell(cell);
-                              }}
-                            >
-                              <Copy className="h-4 w-4" />
-                              Copy cell content
-                            </ContextMenuItem>
-                            {connection?.db_type !== "redis" && (
-                              <>
-                                <ContextMenuSeparator />
-                                <ContextMenuItem
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleEditRow(row);
-                                  }}
-                                >
-                                  <Pencil className="h-4 w-4" />
-                                  Edit row
-                                </ContextMenuItem>
-                                <ContextMenuItem
-                                  variant="destructive"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteRowClick(row);
-                                  }}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                  Delete row
-                                </ContextMenuItem>
-                              </>
-                            )}
-                          </ContextMenuContent>
-                        </ContextMenu>
-                      );
-                    })}
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  Array.from({ length: 10 }).map((_, i) => (
+                    <TableRow key={i} className="border-border/60">
+                      {Array.from({ length: columns?.length || 5 }).map((_, j) => (
+                        <TableCell
+                          key={j}
+                          className="border-r border-border/60 px-3 last:border-r-0"
+                        >
+                          <Skeleton className="h-4 w-full" />
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : tableData?.rows.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns?.length || 1}
+                      className="h-36 text-center text-sm text-muted-foreground"
+                    >
+                      No data in this table
+                    </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </motion.div>
+                ) : (
+                  tableData?.rows.map((row, i) => (
+                    <TableRow
+                      key={i}
+                      className={cn(
+                        "border-border/60 hover:bg-muted/20",
+                        i % 2 === 0 ? "bg-background/10" : "bg-background/30",
+                        connection?.db_type !== "redis" && "cursor-pointer",
+                      )}
+                      onClick={() => connection?.db_type !== "redis" && handleEditRow(row)}
+                    >
+                      {row.map((cell, j) => {
+                        const isNull = cell === null;
+                        return (
+                          <ContextMenu key={j}>
+                            <ContextMenuTrigger asChild>
+                              <TableCell
+                                className={cn(
+                                  "max-w-sm truncate border-r border-border/60 px-3 font-mono text-xs text-foreground last:border-r-0 cursor-default",
+                                  isNull && "text-muted-foreground italic",
+                                )}
+                                title={formatValue(cell)}
+                              >
+                                {formatValue(cell)}
+                              </TableCell>
+                            </ContextMenuTrigger>
+                            <ContextMenuContent>
+                              <ContextMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCopyCell(cell);
+                                }}
+                              >
+                                <Copy className="h-4 w-4" />
+                                Copy cell content
+                              </ContextMenuItem>
+                              {connection?.db_type !== "redis" && (
+                                <>
+                                  <ContextMenuSeparator />
+                                  <ContextMenuItem
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEditRow(row);
+                                    }}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                    Edit row
+                                  </ContextMenuItem>
+                                  <ContextMenuItem
+                                    variant="destructive"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteRowClick(row);
+                                    }}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                    Delete row
+                                  </ContextMenuItem>
+                                </>
+                              )}
+                            </ContextMenuContent>
+                          </ContextMenu>
+                        );
+                      })}
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </motion.div>
+        </div>
       </div>
 
       {connectionId && columns && (

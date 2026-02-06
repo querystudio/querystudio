@@ -23,6 +23,7 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -57,6 +58,7 @@ import {
   type Message,
   type ModelId,
   type ChatSession,
+  type ToolCall,
   loadChatHistory,
   saveChatHistory,
   createChatSession,
@@ -299,6 +301,88 @@ const ToolThinkingSkeleton = memo(function ToolThinkingSkeleton() {
   );
 });
 
+const TOOL_PAYLOAD_MAX_CHARS = 6000;
+
+function formatToolPayload(payload?: string): string {
+  if (!payload || !payload.trim()) {
+    return "No data.";
+  }
+
+  const trimmed = payload.trim();
+  let formatted = trimmed;
+
+  try {
+    const parsed = JSON.parse(trimmed);
+    formatted = JSON.stringify(parsed, null, 2);
+  } catch {
+    // Keep raw payload if not JSON.
+  }
+
+  if (formatted.length > TOOL_PAYLOAD_MAX_CHARS) {
+    return `${formatted.slice(0, TOOL_PAYLOAD_MAX_CHARS)}\n\n…truncated`;
+  }
+
+  return formatted;
+}
+
+const ToolCallChip = memo(function ToolCallChip({ toolCall }: { toolCall: ToolCall }) {
+  const formattedArguments = useMemo(
+    () => formatToolPayload(toolCall.arguments),
+    [toolCall.arguments],
+  );
+  const formattedResult = useMemo(() => formatToolPayload(toolCall.result), [toolCall.result]);
+  const isCompleted = toolCall.result !== undefined;
+  const toolName = toolCall.name?.trim() || "Tool Call";
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="flex items-center gap-1 rounded-md border border-border/60 bg-muted/35 px-1.5 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+          title="Click to inspect tool logs"
+        >
+          <Wrench className="h-2.5 w-2.5" />
+          <span>{toolName}</span>
+          {isCompleted ? (
+            <span className="text-emerald-400">done</span>
+          ) : (
+            <span className="text-amber-400">running</span>
+          )}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        sideOffset={8}
+        className="w-[460px] max-w-[calc(100vw-2rem)] space-y-2 p-3"
+      >
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-semibold">{toolName}</p>
+          <span className="font-mono text-[10px] text-muted-foreground">#{toolCall.id}</span>
+        </div>
+
+        <div className="space-y-1">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            Arguments
+          </p>
+          <pre className="max-h-40 overflow-auto rounded-md border border-border/60 bg-muted/25 p-2 font-mono text-[11px] leading-relaxed">
+            {formattedArguments}
+          </pre>
+        </div>
+
+        <div className="space-y-1">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            Result
+          </p>
+          <pre className="max-h-44 overflow-auto rounded-md border border-border/60 bg-muted/25 p-2 font-mono text-[11px] leading-relaxed">
+            {formattedResult}
+          </pre>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+});
+
 const MessageBubble = memo(function MessageBubble({
   message,
   onAppendToRunner,
@@ -440,12 +524,19 @@ const MessageBubble = memo(function MessageBubble({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
-      className={cn("flex gap-2", isUser && "justify-end")}
+      className={cn("flex w-full gap-2", isUser && "justify-end")}
     >
+      {!isUser && (
+        <div className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 text-primary">
+          <Bot className="h-3.5 w-3.5" />
+        </div>
+      )}
       <div
         className={cn(
-          "max-w-[90%] rounded-xl px-3 py-2 text-sm",
-          isUser ? "bg-primary text-primary-foreground" : "bg-transparent text-foreground",
+          "max-w-[90%] rounded-2xl border px-3 py-2.5 text-sm",
+          isUser
+            ? "border-primary/30 bg-primary/95 text-primary-foreground"
+            : "border-border/70 bg-card/75 text-foreground backdrop-blur-sm",
         )}
       >
         {/* Loading state - waiting for first content */}
@@ -455,7 +546,10 @@ const MessageBubble = memo(function MessageBubble({
               <div>
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   <Loader className="h-3 w-3 animate-spin" />
-                  <span>{message.toolCalls[message.toolCalls.length - 1].name}...</span>
+                  <span>
+                    {(message.toolCalls[message.toolCalls.length - 1].name?.trim() || "Tool Call") +
+                      "..."}
+                  </span>
                 </div>
                 <ToolThinkingSkeleton />
               </div>
@@ -473,13 +567,7 @@ const MessageBubble = memo(function MessageBubble({
             {message.toolCalls && message.toolCalls.length > 0 && (
               <div className="mb-1.5 flex flex-wrap gap-1">
                 {message.toolCalls.map((tc) => (
-                  <div
-                    key={tc.id}
-                    className="flex items-center gap-1 text-[11px] text-muted-foreground bg-muted/50 rounded px-1.5 py-0.5"
-                  >
-                    <Wrench className="h-2.5 w-2.5" />
-                    <span>{tc.name}</span>
-                  </div>
+                  <ToolCallChip key={tc.id} toolCall={tc} />
                 ))}
               </div>
             )}
@@ -495,13 +583,7 @@ const MessageBubble = memo(function MessageBubble({
             {message.toolCalls && message.toolCalls.length > 0 && (
               <div className="mb-1.5 flex flex-wrap gap-1">
                 {message.toolCalls.map((tc) => (
-                  <div
-                    key={tc.id}
-                    className="flex items-center gap-1 text-[11px] text-muted-foreground bg-muted/50 rounded px-1.5 py-0.5"
-                  >
-                    <Wrench className="h-2.5 w-2.5" />
-                    <span>{tc.name}</span>
-                  </div>
+                  <ToolCallChip key={tc.id} toolCall={tc} />
                 ))}
               </div>
             )}
@@ -725,6 +807,8 @@ export const AIChat = memo(function AIChat() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const [lastUserMessage, setLastUserMessage] = useState<string | null>(null);
+  const queuedMessagesRef = useRef<Array<{ text: string; addUserMessage: boolean }>>([]);
+  const [queuedMessageCount, setQueuedMessageCount] = useState(0);
 
   // Debug request from query editor
   const debugRequest = useAIQueryStore((s) => s.debugRequest);
@@ -976,6 +1060,11 @@ export const AIChat = memo(function AIChat() {
     }
   }, []);
 
+  const enqueueMessage = useCallback((text: string, addUserMessage: boolean) => {
+    queuedMessagesRef.current.push({ text, addUserMessage });
+    setQueuedMessageCount(queuedMessagesRef.current.length);
+  }, []);
+
   const sendMessage = useCallback(
     async (userText: string, addUserMessage: boolean = true) => {
       if (!agentRef.current) return;
@@ -1003,20 +1092,41 @@ export const AIChat = memo(function AIChat() {
       ]);
 
       try {
-        const stream = agentRef.current.chatStream(userText, (toolName, args) => {
+        const stream = agentRef.current.chatStream(userText, (toolUpdate) => {
           setMessages((prev) =>
             prev.map((m) =>
               m.id === loadingId
                 ? {
                     ...m,
-                    toolCalls: [
-                      ...(m.toolCalls || []),
-                      {
-                        id: crypto.randomUUID(),
-                        name: toolName,
-                        arguments: args,
-                      },
-                    ],
+                    toolCalls: (() => {
+                      const existing = [...(m.toolCalls || [])];
+                      const existingIndex = existing.findIndex((tc) => tc.id === toolUpdate.id);
+
+                      if (existingIndex === -1) {
+                        existing.push({
+                          id: toolUpdate.id,
+                          name: toolUpdate.name?.trim() || "Tool Call",
+                          arguments: toolUpdate.arguments || "",
+                          result: toolUpdate.result,
+                        });
+                        return existing;
+                      }
+
+                      const current = existing[existingIndex];
+                      existing[existingIndex] = {
+                        ...current,
+                        name: toolUpdate.name?.trim() || current.name || "Tool Call",
+                        arguments:
+                          toolUpdate.arguments !== undefined
+                            ? toolUpdate.arguments
+                            : current.arguments,
+                        result:
+                          toolUpdate.status === "result"
+                            ? (toolUpdate.result ?? "")
+                            : current.result,
+                      };
+                      return existing;
+                    })(),
                   }
                 : m,
             ),
@@ -1062,6 +1172,12 @@ export const AIChat = memo(function AIChat() {
       } finally {
         setIsLoading(false);
         abortControllerRef.current = null;
+
+        const next = queuedMessagesRef.current.shift();
+        setQueuedMessageCount(queuedMessagesRef.current.length);
+        if (next && agentRef.current) {
+          void sendMessage(next.text, next.addUserMessage);
+        }
       }
     },
     [scrollToBottom, saveCurrentSession],
@@ -1069,8 +1185,22 @@ export const AIChat = memo(function AIChat() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading || !agentRef.current) return;
-    await sendMessage(input.trim(), true);
+    const trimmedInput = input.trim();
+    if (!trimmedInput || !agentRef.current) return;
+
+    if (isLoading) {
+      const queuedUserMessage: Message = {
+        id: crypto.randomUUID(),
+        role: "user",
+        content: trimmedInput,
+      };
+      setMessages((prev) => [...prev, queuedUserMessage]);
+      setInput("");
+      enqueueMessage(trimmedInput, false);
+      return;
+    }
+
+    await sendMessage(trimmedInput, true);
   };
 
   const handleRetry = useCallback(() => {
@@ -1261,120 +1391,136 @@ export const AIChat = memo(function AIChat() {
   // ============================================================================
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="relative flex h-full flex-col overflow-hidden bg-background">
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0">
-        <div className="flex items-center gap-2">
-          <span className="font-medium text-sm">Querybuddy</span>
-        </div>
-        <div className="flex items-center gap-0.5">
-          {/* Chat History Dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-6 w-6" title="Chat History">
-                <History className="h-3.5 w-3.5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-72">
-              <div className="px-2 py-1.5">
-                <p className="text-xs font-medium text-muted-foreground">Recent Chats</p>
-              </div>
-              <DropdownMenuSeparator />
-              <ScrollArea className="max-h-64">
-                {connectionSessions.length === 0 ? (
-                  <div className="px-2 py-4 text-center text-xs text-muted-foreground">
-                    No chat history yet
-                  </div>
-                ) : (
-                  connectionSessions
-                    .sort((a, b) => b.updatedAt - a.updatedAt)
-                    .slice(0, 20)
-                    .map((session) => (
-                      <DropdownMenuItem
-                        key={session.id}
-                        className="flex items-center justify-between gap-2 cursor-pointer"
-                        onClick={() => handleSelectSession(session.id)}
-                      >
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
-                          <MessageSquare className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                          <span className="truncate text-sm">{session.title}</span>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0 shrink-0 opacity-50 hover:opacity-100"
-                          onClick={(e) => handleDeleteSession(session.id, e)}
+      <div className="z-10 shrink-0 border-b border-border/70 bg-background/80 px-3 py-2 backdrop-blur-sm">
+        <div className="flex items-center justify-between">
+          <div className="min-w-0 space-y-0.5">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold tracking-tight">Querybuddy</span>
+            </div>
+          </div>
+          <div className="ml-3 flex items-center gap-1">
+            {/* Chat History Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 rounded-lg border border-transparent hover:border-border/60 hover:bg-muted/70"
+                  title="Chat History"
+                >
+                  <History className="h-3.5 w-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-72">
+                <div className="px-2 py-1.5">
+                  <p className="text-xs font-medium text-muted-foreground">Recent Chats</p>
+                </div>
+                <DropdownMenuSeparator />
+                <ScrollArea className="max-h-64">
+                  {connectionSessions.length === 0 ? (
+                    <div className="px-2 py-4 text-center text-xs text-muted-foreground">
+                      No chat history yet
+                    </div>
+                  ) : (
+                    connectionSessions
+                      .sort((a, b) => b.updatedAt - a.updatedAt)
+                      .slice(0, 20)
+                      .map((session) => (
+                        <DropdownMenuItem
+                          key={session.id}
+                          className="flex cursor-pointer items-center justify-between gap-2"
+                          onClick={() => handleSelectSession(session.id)}
                         >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </DropdownMenuItem>
-                    ))
-                )}
-              </ScrollArea>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                          <div className="flex min-w-0 flex-1 items-center gap-2">
+                            <MessageSquare className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                            <span className="truncate text-sm">{session.title}</span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 shrink-0 p-0 opacity-50 hover:opacity-100"
+                            onClick={(e) => handleDeleteSession(session.id, e)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </DropdownMenuItem>
+                      ))
+                  )}
+                </ScrollArea>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-          {/* New Chat */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={handleNewChat}
-            title="New Chat"
-          >
-            <Plus className="h-3.5 w-3.5" />
-          </Button>
+            {/* New Chat */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 rounded-lg border border-transparent hover:border-border/60 hover:bg-muted/70"
+              onClick={handleNewChat}
+              title="New Chat"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </Button>
 
-          {/* Clear Chat */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={handleClearChat}
-            disabled={messages.length === 0}
-            title="Clear Chat"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
+            {/* Clear Chat */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 rounded-lg border border-transparent hover:border-border/60 hover:bg-muted/70"
+              onClick={handleClearChat}
+              disabled={messages.length === 0}
+              title="Clear Chat"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
 
-          {/* Settings */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={() => {
-              setTempOpenaiKey(openaiApiKey);
-              setTempAnthropicKey(anthropicApiKey);
-              setTempGoogleKey(googleApiKey);
-              setTempOpenrouterKey(openrouterApiKey);
-              setTempVercelKey(vercelApiKey);
-              setTempCopilotEnabled(copilotEnabled);
-              setShowSettings(true);
-            }}
-          >
-            <Settings className="h-3.5 w-3.5" />
-          </Button>
+            {/* Settings */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 rounded-lg border border-transparent hover:border-border/60 hover:bg-muted/70"
+              onClick={() => {
+                setTempOpenaiKey(openaiApiKey);
+                setTempAnthropicKey(anthropicApiKey);
+                setTempGoogleKey(googleApiKey);
+                setTempOpenrouterKey(openrouterApiKey);
+                setTempVercelKey(vercelApiKey);
+                setTempCopilotEnabled(copilotEnabled);
+                setShowSettings(true);
+              }}
+            >
+              <Settings className="h-3.5 w-3.5" />
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-3 py-3" ref={scrollRef}>
+      <div className="z-10 flex-1 overflow-y-auto px-3 py-3" ref={scrollRef}>
         {messages.length === 0 ? (
           <div className="flex h-full items-center justify-center">
-            <div className="text-center space-y-3 max-w-xs">
+            <div className="max-w-sm space-y-4 rounded-2xl border border-border/70 bg-card/55 p-5 text-center backdrop-blur-sm">
               <div className="flex justify-center">
-                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Bot className="h-6 w-6 text-primary/40" />
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10">
+                  <Bot className="h-5 w-5 text-primary/60" />
                 </div>
               </div>
-              <p className="text-sm text-muted-foreground">Ask me anything about your database</p>
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-foreground">
+                  Ask anything about your database
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  I can inspect schema, debug SQL, and generate queries.
+                </p>
+              </div>
               <div className="flex flex-wrap justify-center gap-2">
                 {["What tables do I have?", "Show me recent data", "Describe the schema"].map(
                   (suggestion) => (
                     <button
                       key={suggestion}
                       onClick={() => setInput(suggestion)}
-                      className="text-[11px] px-2.5 py-1 rounded-full bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors"
+                      className="rounded-md border border-border/70 bg-muted/40 px-2.5 py-1 text-[11px] text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground"
                     >
                       {suggestion}
                     </button>
@@ -1384,7 +1530,7 @@ export const AIChat = memo(function AIChat() {
             </div>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="mx-auto w-full max-w-4xl space-y-3">
             {messages.map((message) => (
               <MessageBubble
                 key={message.id}
@@ -1397,134 +1543,161 @@ export const AIChat = memo(function AIChat() {
       </div>
 
       {/* Input Area */}
-      <div className="border-t border-border p-4">
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <div className="relative">
-            <Input
+      <div className="z-10 border-t border-border/50 bg-background/85 px-3 pb-3 pt-2 backdrop-blur-sm">
+        <form onSubmit={handleSubmit}>
+          <div className="mx-auto w-full max-w-4xl rounded-[28px] border border-white/10 bg-card/55 p-3 supports-[backdrop-filter]:bg-card/45">
+            <Textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
+                  if (e.shiftKey) return;
                   e.preventDefault();
-                  if (input.trim() && !isLoading) {
+                  if (input.trim()) {
                     handleSubmit(e);
                   }
                 }
               }}
               placeholder="Ask about your database..."
-              disabled={isLoading}
-              className="pr-24 rounded-xl"
+              className="min-h-[92px] max-h-56 rounded-2xl border-transparent bg-transparent px-2 py-1.5 text-[15px] leading-relaxed placeholder:text-muted-foreground/70 shadow-none focus-visible:border-transparent focus-visible:ring-0"
             />
-            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-              {!isLoading && lastUserMessage && messages.length > 0 && (
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  onClick={handleRetry}
-                  className="h-8 w-8"
-                  title="Retry last message"
-                >
-                  <RotateCcw className="h-4 w-4" />
-                </Button>
-              )}
-              {isLoading ? (
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  onClick={handleCancel}
-                  className="h-8 w-8"
-                  title="Stop generating"
-                >
-                  <span className="relative flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-destructive"></span>
-                  </span>
-                </Button>
-              ) : (
-                <Button type="submit" size="icon" disabled={!input.trim()} className="h-8 w-8">
-                  <Send className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-          </div>
 
-          <div className="flex items-center justify-between">
-            <Popover
-              open={modelPickerOpen}
-              onOpenChange={(open) => {
-                setModelPickerOpen(open);
-                if (open && copilotEnabled && !copilotModelsLoading && copilotModels.length === 0) {
-                  void fetchCopilotModels();
-                }
-              }}
-            >
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={modelPickerOpen}
-                  className="h-8 w-64 justify-between text-xs rounded-xl"
+            <div className="mt-2 flex items-center justify-between gap-2 border-t border-white/10 pt-2.5">
+              <div className="flex min-w-0 items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <Popover
+                  open={modelPickerOpen}
+                  onOpenChange={(open) => {
+                    setModelPickerOpen(open);
+                    if (
+                      open &&
+                      copilotEnabled &&
+                      !copilotModelsLoading &&
+                      copilotModels.length === 0
+                    ) {
+                      void fetchCopilotModels();
+                    }
+                  }}
                 >
-                  <div className="flex items-center gap-2 truncate">
-                    <ProviderIcon
-                      provider={
-                        allModels.find((m) => m.id === selectedModel)?.logo_provider ||
-                        allModels.find((m) => m.id === selectedModel)?.provider ||
-                        "openai"
-                      }
-                      size={14}
-                    />
-                    <span className="truncate">
-                      {allModels.find((m) => m.id === selectedModel)?.name ?? selectedModel}
-                    </span>
-                  </div>
-                  <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-80 p-0" align="start">
-                <Command>
-                  <CommandInput placeholder="Search models..." className="h-9" />
-                  <CommandList className="max-h-64">
-                    <CommandEmpty>
-                      {copilotModelsLoading ? "Loading models..." : "No models found."}
-                    </CommandEmpty>
-                    <CommandGroup>
-                      {allModels
-                        .filter((model) => isModelAvailable(model.id, allModels, apiKeys))
-                        .map((model) => (
-                          <CommandItem
-                            key={model.id}
-                            value={`${model.name} ${model.provider} ${model.logo_provider || ""}`}
-                            onSelect={() => {
-                              handleModelChange(model.id);
-                              setModelPickerOpen(false);
-                            }}
-                            className="text-xs"
-                          >
-                            <Check
-                              className={cn(
-                                "h-3 w-3 shrink-0",
-                                selectedModel === model.id ? "opacity-100" : "opacity-0",
-                              )}
-                            />
-                            <ProviderIcon
-                              provider={model.logo_provider || model.provider}
-                              size={14}
-                            />
-                            <span className="truncate">
-                              {model.name}
-                              <span className="ml-1 text-muted-foreground">({model.provider})</span>
-                            </span>
-                          </CommandItem>
-                        ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
-            <span className="text-xs text-muted-foreground">↵ to send</span>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={modelPickerOpen}
+                      className="h-9 min-w-[220px] justify-between rounded-2xl border-border/50 bg-background/30 px-3 text-xs hover:bg-background/40"
+                    >
+                      <div className="flex items-center gap-2 truncate">
+                        <ProviderIcon
+                          provider={
+                            allModels.find((m) => m.id === selectedModel)?.logo_provider ||
+                            allModels.find((m) => m.id === selectedModel)?.provider ||
+                            "openai"
+                          }
+                          size={14}
+                        />
+                        <span className="truncate">
+                          {allModels.find((m) => m.id === selectedModel)?.name ?? selectedModel}
+                        </span>
+                      </div>
+                      <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80 p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search models..." className="h-9" />
+                      <CommandList className="max-h-64">
+                        <CommandEmpty>
+                          {copilotModelsLoading ? "Loading models..." : "No models found."}
+                        </CommandEmpty>
+                        <CommandGroup>
+                          {allModels
+                            .filter((model) => isModelAvailable(model.id, allModels, apiKeys))
+                            .map((model) => (
+                              <CommandItem
+                                key={model.id}
+                                value={`${model.name} ${model.provider} ${model.logo_provider || ""}`}
+                                onSelect={() => {
+                                  handleModelChange(model.id);
+                                  setModelPickerOpen(false);
+                                }}
+                                className="text-xs"
+                              >
+                                <Check
+                                  className={cn(
+                                    "h-3 w-3 shrink-0",
+                                    selectedModel === model.id ? "opacity-100" : "opacity-0",
+                                  )}
+                                />
+                                <ProviderIcon
+                                  provider={model.logo_provider || model.provider}
+                                  size={14}
+                                />
+                                <span className="truncate">
+                                  {model.name}
+                                  <span className="ml-1 text-muted-foreground">
+                                    ({model.provider})
+                                  </span>
+                                </span>
+                              </CommandItem>
+                            ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+
+                {!isLoading && lastUserMessage && messages.length > 0 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleRetry}
+                    className="h-9 rounded-2xl border-border/50 bg-background/30 px-3 text-xs hover:bg-background/40"
+                    title="Retry last message"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+
+                {queuedMessageCount > 0 && (
+                  <span className="rounded-xl border border-border/50 bg-background/30 px-2 py-1 text-[10px] text-muted-foreground">
+                    Queue: {queuedMessageCount}
+                  </span>
+                )}
+              </div>
+
+              <div className="flex shrink-0 items-center gap-1.5">
+                {isLoading ? (
+                  <>
+                    <Button
+                      type="submit"
+                      size="icon"
+                      disabled={!input.trim()}
+                      className="h-10 w-10 rounded-2xl border border-border/60 bg-background/35 text-muted-foreground hover:bg-background/50 disabled:opacity-50"
+                      title="Queue message"
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={handleCancel}
+                      className="h-10 rounded-2xl border border-border/60 bg-background/35 px-3 text-xs text-muted-foreground hover:bg-background/50"
+                      title="Generating... Click to stop"
+                    >
+                      <Loader className="mr-1.5 h-4 w-4 animate-spin" />
+                      Stop
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    type="submit"
+                    size="icon"
+                    disabled={!input.trim()}
+                    className="h-10 w-10 rounded-2xl bg-primary/90 text-primary-foreground hover:bg-primary disabled:bg-muted disabled:text-muted-foreground"
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
           </div>
         </form>
       </div>

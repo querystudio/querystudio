@@ -1,6 +1,19 @@
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::BTreeSet;
+use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::time::{SystemTime, UNIX_EPOCH};
+use tauri::{path::BaseDirectory, AppHandle, Manager};
+
+const FONT_CACHE_FILE_NAME: &str = "fonts-cache.json";
+const FONT_CACHE_TTL_SECS: u64 = 60 * 60 * 24 * 7;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct FontCache {
+    generated_at_unix: u64,
+    fonts: Vec<String>,
+}
 
 fn normalize_font_name(name: &str) -> Option<String> {
     let normalized = name.split_whitespace().collect::<Vec<_>>().join(" ");
@@ -122,8 +135,64 @@ fn list_fonts_unsupported() -> Result<Vec<String>, String> {
     Err("font enumeration is not supported on this platform".to_string())
 }
 
-#[tauri::command]
-pub fn list_local_fonts() -> Result<Vec<String>, String> {
+fn current_unix_seconds() -> u64 {
+    match SystemTime::now().duration_since(UNIX_EPOCH) {
+        Ok(duration) => duration.as_secs(),
+        Err(_) => 0,
+    }
+}
+
+fn cache_path(app: &AppHandle) -> Result<PathBuf, String> {
+    app.path()
+        .resolve(FONT_CACHE_FILE_NAME, BaseDirectory::AppConfig)
+        .map_err(|error| format!("failed to resolve font cache path: {error}"))
+}
+
+async fn ensure_parent_dir(path: &Path) -> Result<(), String> {
+    let parent = path
+        .parent()
+        .ok_or_else(|| "font cache path has no parent directory".to_string())?;
+    tokio::fs::create_dir_all(parent)
+        .await
+        .map_err(|error| format!("failed to create font cache directory: {error}"))
+}
+
+async fn read_font_cache(path: &Path) -> Result<Option<FontCache>, String> {
+    if !path.exists() {
+        return Ok(None);
+    }
+
+    let raw = tokio::fs::read_to_string(path)
+        .await
+        .map_err(|error| format!("failed to read font cache file: {error}"))?;
+
+    match serde_json::from_str::<FontCache>(&raw) {
+        Ok(parsed) => Ok(Some(parsed)),
+        Err(_) => Ok(None),
+    }
+}
+
+async fn write_font_cache(path: &Path, fonts: &[String]) -> Result<(), String> {
+    ensure_parent_dir(path).await?;
+    let payload = FontCache {
+        generated_at_unix: current_unix_seconds(),
+        fonts: fonts.to_vec(),
+    };
+
+    let json = serde_json::to_vec_pretty(&payload)
+        .map_err(|error| format!("failed to serialize font cache file: {error}"))?;
+
+    tokio::fs::write(path, json)
+        .await
+        .map_err(|error| format!("failed to write font cache file: {error}"))
+}
+
+fn is_cache_fresh(cache: &FontCache) -> bool {
+    let age = current_unix_seconds().saturating_sub(cache.generated_at_unix);
+    age <= FONT_CACHE_TTL_SECS
+}
+
+fn list_local_fonts_platform() -> Result<Vec<String>, String> {
     #[cfg(target_os = "macos")]
     {
         return list_fonts_macos();
@@ -143,4 +212,65 @@ pub fn list_local_fonts() -> Result<Vec<String>, String> {
     {
         list_fonts_unsupported()
     }
+}
+
+async fn enumerate_local_fonts() -> Result<Vec<String>, String> {
+    tauri::async_runtime::spawn_blocking(list_local_fonts_platform)
+        .await
+        .map_err(|error| format!("failed to join font enumeration task: {error}"))?
+}
+
+pub async fn warm_font_cache(app: &AppHandle) -> Result<(), String> {
+    let path = cache_path(app)?;
+    if let Some(cache) = read_font_cache(&path).await? {
+        if is_cache_fresh(&cache) && !cache.fonts.is_empty() {
+            return Ok(());
+        }
+    }
+
+    let fonts = enumerate_local_fonts().await?;
+    if fonts.is_empty() {
+        return Ok(());
+    }
+
+    write_font_cache(&path, &fonts).await
+}
+
+#[tauri::command]
+pub async fn list_local_fonts(app: AppHandle) -> Result<Vec<String>, String> {
+    let path = cache_path(&app)?;
+    let cached = read_font_cache(&path).await?;
+
+    if let Some(cache) = cached.as_ref() {
+        if is_cache_fresh(cache) && !cache.fonts.is_empty() {
+            return Ok(cache.fonts.clone());
+        }
+    }
+
+    match enumerate_local_fonts().await {
+        Ok(fonts) => {
+            if !fonts.is_empty() {
+                let _ = write_font_cache(&path, &fonts).await;
+            }
+            Ok(fonts)
+        }
+        Err(error) => {
+            if let Some(cache) = cached {
+                if !cache.fonts.is_empty() {
+                    return Ok(cache.fonts);
+                }
+            }
+            Err(error)
+        }
+    }
+}
+
+#[tauri::command]
+pub async fn refresh_local_fonts_cache(app: AppHandle) -> Result<Vec<String>, String> {
+    let path = cache_path(&app)?;
+    let fonts = enumerate_local_fonts().await?;
+    if !fonts.is_empty() {
+        let _ = write_font_cache(&path, &fonts).await;
+    }
+    Ok(fonts)
 }

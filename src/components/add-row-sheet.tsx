@@ -30,6 +30,11 @@ interface AddRowSheetProps {
   onSuccess?: () => void;
 }
 
+function isBooleanType(dataType: string): boolean {
+  const lower = dataType.toLowerCase();
+  return lower === "boolean" || lower === "bool";
+}
+
 export function AddRowSheet({
   open,
   onOpenChange,
@@ -54,7 +59,7 @@ export function AddRowSheet({
       const initial: Record<string, string> = {};
       const initialDefaults = new Set<string>();
       columns.forEach((col) => {
-        initial[col.name] = "";
+        initial[col.name] = isBooleanType(col.data_type) ? "false" : "";
         // Default to "use default" for columns with defaults (like SERIAL) or nullable columns
         if (col.has_default || col.is_nullable) {
           initialDefaults.add(col.name);
@@ -284,6 +289,8 @@ export function AddRowSheet({
                   const inputType = getInputType(col.data_type);
                   const useTextarea = shouldUseTextarea(col.data_type);
                   const canUseDefault = col.has_default || col.is_nullable;
+                  const isBoolean = isBooleanType(col.data_type);
+                  const boolValue = (formData[col.name] || "false").toLowerCase() === "true";
 
                   return (
                     <div key={col.name} className="space-y-2">
@@ -319,7 +326,22 @@ export function AddRowSheet({
                           </div>
                         )}
                       </div>
-                      {useTextarea ? (
+                      {isBoolean ? (
+                        <div className="flex items-center justify-between rounded-md border border-input bg-background px-3 py-2.5">
+                          <span
+                            className={useDefault ? "text-sm text-muted-foreground" : "text-sm"}
+                          >
+                            {boolValue ? "True" : "False"}
+                          </span>
+                          <Switch
+                            checked={boolValue}
+                            onCheckedChange={(checked) =>
+                              updateField(col.name, checked ? "true" : "false")
+                            }
+                            disabled={useDefault}
+                          />
+                        </div>
+                      ) : useTextarea ? (
                         <Textarea
                           id={col.name}
                           value={useDefault ? "" : formData[col.name] || ""}

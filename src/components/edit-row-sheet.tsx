@@ -32,6 +32,11 @@ interface EditRowSheetProps {
   onSuccess?: () => void;
 }
 
+function isBooleanType(dataType: string): boolean {
+  const lower = dataType.toLowerCase();
+  return lower === "boolean" || lower === "bool";
+}
+
 export function EditRowSheet({
   open,
   onOpenChange,
@@ -338,6 +343,8 @@ export function EditRowSheet({
                   const isNull = nullFields.has(col.name);
                   const inputType = getInputType(col.data_type);
                   const useTextarea = shouldUseTextarea(col.data_type);
+                  const isBoolean = isBooleanType(col.data_type);
+                  const boolValue = (formData[col.name] || "false").toLowerCase() === "true";
 
                   return (
                     <div key={col.name} className="space-y-2">
@@ -363,7 +370,20 @@ export function EditRowSheet({
                           </div>
                         )}
                       </div>
-                      {useTextarea ? (
+                      {isBoolean ? (
+                        <div className="flex items-center justify-between rounded-md border border-input bg-background px-3 py-2.5">
+                          <span className={cn("text-sm", isNull && "text-muted-foreground")}>
+                            {isNull ? "NULL" : boolValue ? "True" : "False"}
+                          </span>
+                          <Switch
+                            checked={boolValue}
+                            onCheckedChange={(checked) =>
+                              updateField(col.name, checked ? "true" : "false")
+                            }
+                            disabled={isNull}
+                          />
+                        </div>
+                      ) : useTextarea ? (
                         <div className="group/input relative">
                           <Textarea
                             id={col.name}
