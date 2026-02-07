@@ -165,6 +165,12 @@ function AccountSettings() {
   const { data: session, isPending } = authClient.useSession();
   const [isSigningIn, setIsSigningIn] = useState(false);
 
+  useEffect(() => {
+    if (session && isSigningIn) {
+      setIsSigningIn(false);
+    }
+  }, [session, isSigningIn]);
+
   const handleSignInWithGithub = async () => {
     try {
       setIsSigningIn(true);
@@ -180,6 +186,7 @@ function AccountSettings() {
   const handleSignOut = async () => {
     try {
       await authClient.signOut();
+      setIsSigningIn(false);
       toast.success("Signed out successfully");
     } catch (error) {
       console.error("Sign out error:", error);
