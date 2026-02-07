@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useConnect, useCanConnect } from "@/lib/hooks";
 import { useAIQueryStore } from "@/lib/store";
+import { openSettingsWindow } from "@/lib/settings-window";
 import { toast } from "sonner";
 import type { SavedConnection } from "@/lib/types";
 import { useNavigate } from "@tanstack/react-router";
@@ -160,7 +161,7 @@ export function PasswordPromptDialog({
                 size="sm"
                 onClick={() => {
                   onOpenChange(false);
-                  navigate({ to: "/settings" });
+                  void openSettingsWindow({ fallback: () => navigate({ to: "/settings" }) });
                 }}
                 className="gap-1.5"
               >

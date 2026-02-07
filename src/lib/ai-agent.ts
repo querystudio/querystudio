@@ -25,6 +25,14 @@ export type {
 
 export type ModelId = AIModelId;
 
+export interface ToolCallUpdate {
+  id: string;
+  name: string;
+  status: "start" | "result";
+  arguments?: string;
+  result?: string;
+}
+
 export const AI_MODELS: AIModelInfo[] = [
   { id: "gpt-5", name: "GPT-5", provider: "openai" },
   { id: "gpt-5-mini", name: "GPT-5 Mini", provider: "openai" },
@@ -221,7 +229,7 @@ export class AIAgent {
 
   async *chatStream(
     userMessage: string,
-    onToolCall?: (toolName: string, args: string) => void,
+    onToolCall?: (update: ToolCallUpdate) => void,
   ): AsyncGenerator<string, void, unknown> {
     const sessionId = crypto.randomUUID();
     this.isCancelled = false;
@@ -252,7 +260,12 @@ export class AIAgent {
 
         case "ToolCallStart":
           pendingToolCalls.set(data.id, { id: data.id, name: data.name, arguments: "" });
-          onToolCall?.(data.name, "");
+          onToolCall?.({
+            id: data.id,
+            name: data.name,
+            status: "start",
+            arguments: "",
+          });
           break;
 
         case "ToolCallDelta":
@@ -266,7 +279,12 @@ export class AIAgent {
             resultTc.result = data.result;
             completedToolCalls.push(resultTc);
             pendingToolCalls.delete(data.id);
-            onToolCall?.(data.name, data.result);
+            onToolCall?.({
+              id: data.id,
+              name: data.name,
+              status: "result",
+              result: data.result,
+            });
           }
           break;
 

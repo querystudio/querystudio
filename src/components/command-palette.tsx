@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import {
   Database,
   Plus,
@@ -16,6 +16,7 @@ import {
   Check,
   ArrowLeft,
   ClipboardPaste,
+  Loader2,
 } from "lucide-react";
 import {
   CommandDialog,
@@ -40,6 +41,7 @@ import type { SavedConnection } from "@/lib/types";
 import { useUpdateChecker } from "@/hooks/use-update-checker";
 import { useAuthDeepLink } from "@/hooks/use-auth-deep-link";
 import { getVersion } from "@tauri-apps/api/app";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 interface CommandPaletteProps {
@@ -76,7 +78,7 @@ export function CommandPalette({
   const [page, setPage] = useState<"main" | "themes">("main");
   const [appVersion, setAppVersion] = useState<string | null>(null);
   const { canSave, maxSaved } = useCanSaveConnection();
-  const { checking, checkForUpdates } = useUpdateChecker();
+  const { checking, checkForUpdates } = useUpdateChecker({ autoCheckOnMount: false });
   const { handleAuthCallback } = useAuthDeepLink();
   const [isProcessingAuth, setIsProcessingAuth] = useState(false);
 
@@ -159,13 +161,31 @@ export function CommandPalette({
   };
 
   const getConnectionDescription = (connection: SavedConnection) => {
+    const dbLabel =
+      connection.db_type === "mysql"
+        ? "MySQL"
+        : connection.db_type === "redis"
+          ? "Redis"
+          : connection.db_type === "sqlite"
+            ? "SQLite"
+            : connection.db_type === "mongodb"
+              ? "MongoDB"
+              : "PostgreSQL";
+
     if ("connection_string" in connection.config) {
-      return "Connection string";
+      return `${dbLabel} · Connection string`;
     }
-    return `${connection.config.host}:${connection.config.port}/${connection.config.database}`;
+    return `${dbLabel} · ${connection.config.host}:${connection.config.port}/${connection.config.database}`;
   };
 
-  const themes = getAllThemes();
+  const themes = useMemo(() => getAllThemes(), [getAllThemes]);
+  const sortedConnections = useMemo(
+    () => [...(savedConnections ?? [])].sort((a, b) => a.name.localeCompare(b.name)),
+    [savedConnections],
+  );
+  const itemClassName =
+    "group rounded-lg border border-transparent px-2.5 py-2 data-[selected=true]:border-border/60 data-[selected=true]:bg-muted/60";
+  const iconClassName = "h-4 w-4 text-muted-foreground";
 
   return (
     <CommandDialog
@@ -178,20 +198,25 @@ export function CommandPalette({
         }
       }}
     >
-      <CommandInput placeholder="Search commands..." value={search} onValueChange={setSearch} />
-      <CommandList>
+      <CommandInput
+        placeholder="Type a command, connection, or theme..."
+        value={search}
+        onValueChange={setSearch}
+      />
+      <CommandList className="max-h-[420px]">
         <CommandEmpty>No results found.</CommandEmpty>
 
         {page === "themes" ? (
           <>
             <CommandGroup heading="Navigation">
               <CommandItem
+                className={itemClassName}
                 onSelect={() => {
                   setPage("main");
                   setSearch("");
                 }}
               >
-                <ArrowLeft className="h-4 w-4" />
+                <ArrowLeft className={iconClassName} />
                 <span>Back to Commands</span>
                 <CommandShortcut>Esc</CommandShortcut>
               </CommandItem>
@@ -201,13 +226,14 @@ export function CommandPalette({
               {themes.map((theme) => (
                 <CommandItem
                   key={theme.id}
+                  className={itemClassName}
                   value={theme.displayName || theme.name}
                   onSelect={() => {
                     setActiveTheme(theme.id);
                     // Don't close palette when switching themes so user can try multiple
                   }}
                 >
-                  <Palette className="h-4 w-4" />
+                  <Palette className={iconClassName} />
                   <div className="flex flex-1 items-center justify-between">
                     <span>{theme.displayName || theme.name}</span>
                     {activeTheme === theme.id && <Check className="h-4 w-4" />}
@@ -221,18 +247,20 @@ export function CommandPalette({
             {/* Quick Actions - only when connected */}
             {connection && (
               <>
-                <CommandGroup heading="Quick Actions">
+                <CommandGroup heading="Workspace">
                   <CommandItem
+                    className={itemClassName}
                     onSelect={() => {
                       onRefresh?.();
                       onOpenChange(false);
                     }}
                   >
-                    <RefreshCw className="h-4 w-4" />
+                    <RefreshCw className={iconClassName} />
                     <span>Refresh Data</span>
                     <CommandShortcut>⌘R</CommandShortcut>
                   </CommandItem>
                   <CommandItem
+                    className={itemClassName}
                     onSelect={() => {
                       if (connectionId) {
                         const leafPanes = getAllLeafPanes(connectionId);
@@ -254,11 +282,12 @@ export function CommandPalette({
                       onOpenChange(false);
                     }}
                   >
-                    <LayoutGrid className="h-4 w-4" />
+                    <LayoutGrid className={iconClassName} />
                     <span>Go to Table Data</span>
                     <CommandShortcut>⌘1</CommandShortcut>
                   </CommandItem>
                   <CommandItem
+                    className={itemClassName}
                     onSelect={() => {
                       if (connectionId) {
                         const leafPanes = getAllLeafPanes(connectionId);
@@ -280,27 +309,29 @@ export function CommandPalette({
                       onOpenChange(false);
                     }}
                   >
-                    <Terminal className="h-4 w-4" />
+                    <Terminal className={iconClassName} />
                     <span>Go to Query Editor</span>
                     <CommandShortcut>⌘2</CommandShortcut>
                   </CommandItem>
                   <CommandItem
+                    className={itemClassName}
                     onSelect={() => {
                       setAiPanelOpen(true);
                       onOpenChange(false);
                     }}
                   >
-                    <Sparkles className="h-4 w-4" />
+                    <Sparkles className={iconClassName} />
                     <span>Go to Querybuddy</span>
                     <CommandShortcut>⌘3</CommandShortcut>
                   </CommandItem>
                   <CommandItem
+                    className={itemClassName}
                     onSelect={() => {
-                      disconnect.mutate();
+                      disconnect.mutate(undefined);
                       onOpenChange(false);
                     }}
                   >
-                    <LogOut className="h-4 w-4" />
+                    <LogOut className={iconClassName} />
                     <span>Disconnect</span>
                   </CommandItem>
                 </CommandGroup>
@@ -308,32 +339,32 @@ export function CommandPalette({
               </>
             )}
 
-            {savedConnections && savedConnections.length > 0 && (
-              <CommandGroup heading="Saved Connections">
-                {savedConnections.map((conn) => (
+            {sortedConnections.length > 0 && (
+              <CommandGroup heading="Connections">
+                {sortedConnections.map((conn) => (
                   <CommandItem
                     key={conn.id}
-                    value={conn.name}
+                    className={itemClassName}
+                    value={`${conn.name} ${getConnectionDescription(conn)}`}
                     onSelect={() => handleSelect(conn)}
-                    className="group"
                   >
-                    <Database className="h-4 w-4" />
+                    <Database className={iconClassName} />
                     <div className="flex flex-1 flex-col">
-                      <span>{conn.name}</span>
+                      <span className="font-medium">{conn.name}</span>
                       <span className="text-xs text-muted-foreground">
                         {getConnectionDescription(conn)}
                       </span>
                     </div>
                     <button
                       onClick={(e) => handleEdit(e, conn)}
-                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-secondary rounded"
+                      className="rounded p-1 opacity-0 transition-opacity hover:bg-secondary/70 group-hover:opacity-100"
                       title="Edit connection"
                     >
                       <Pencil className="h-3 w-3 text-muted-foreground" />
                     </button>
                     <button
                       onClick={(e) => handleDelete(e, conn.id)}
-                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-secondary rounded"
+                      className="rounded p-1 opacity-0 transition-opacity hover:bg-secondary/70 group-hover:opacity-100"
                       title="Delete connection"
                     >
                       <Trash2 className="h-3 w-3 text-muted-foreground" />
@@ -347,20 +378,21 @@ export function CommandPalette({
 
             <CommandGroup heading="Actions">
               <CommandItem
+                className={itemClassName}
                 onSelect={() => {
                   setPage("themes");
                   setSearch("");
                 }}
               >
-                <Palette className="h-4 w-4" />
+                <Palette className={iconClassName} />
                 <span>Choose Theme</span>
               </CommandItem>
               <CommandItem
                 onSelect={handleNewConnection}
                 disabled={!canSave}
-                className={!canSave ? "opacity-50" : ""}
+                className={cn(itemClassName, !canSave && "opacity-50")}
               >
-                {canSave ? <Plus className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                {canSave ? <Plus className={iconClassName} /> : <Lock className={iconClassName} />}
                 <span>New Connection</span>
                 {!canSave && (
                   <span className="text-xs text-muted-foreground ml-auto">Limit: {maxSaved}</span>
@@ -368,27 +400,37 @@ export function CommandPalette({
                 {canSave && <CommandShortcut>⌘N</CommandShortcut>}
               </CommandItem>
               <CommandItem
+                className={itemClassName}
                 onSelect={() => {
                   checkForUpdates(false);
                   onOpenChange(false);
                 }}
                 disabled={checking}
               >
-                <Download className="h-4 w-4" />
+                {checking ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                ) : (
+                  <Download className={iconClassName} />
+                )}
                 <span>{checking ? "Checking..." : "Check for Updates"}</span>
               </CommandItem>
               <CommandItem
+                className={itemClassName}
                 onSelect={async () => {
                   await handlePasteAuthUrl();
                   onOpenChange(false);
                 }}
                 disabled={isProcessingAuth}
               >
-                <ClipboardPaste className="h-4 w-4" />
+                {isProcessingAuth ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                ) : (
+                  <ClipboardPaste className={iconClassName} />
+                )}
                 <span>{isProcessingAuth ? "Processing..." : "Paste Auth URL (Dev)"}</span>
               </CommandItem>
-              <CommandItem disabled className="opacity-70">
-                <Info className="h-4 w-4" />
+              <CommandItem disabled className={cn(itemClassName, "opacity-70")}>
+                <Info className={iconClassName} />
                 <span>{appVersion ? `Version ${appVersion}` : "Version ..."}</span>
               </CommandItem>
             </CommandGroup>

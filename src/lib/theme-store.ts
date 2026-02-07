@@ -21,8 +21,10 @@ const BUILTIN_THEMES: Record<string, Theme> = {
   "rose-pine": rosePineTheme as Theme,
   catppuccin: catppuccinTheme as Theme,
   vesper: vesper as Theme,
-  "cleak-dark-theme": cleanDarkTheme as Theme,
+  "clean-dark": cleanDarkTheme as Theme,
 };
+
+const DEFAULT_THEME_ID = "clean-dark";
 
 interface ThemeState extends ThemeRegistry {
   // Theme management
@@ -47,7 +49,7 @@ export const useThemeStore = create<ThemeState>()(
     (set, get) => ({
       // Initial state
       themes: { ...BUILTIN_THEMES },
-      activeTheme: "dark",
+      activeTheme: DEFAULT_THEME_ID,
       customThemes: {},
 
       // Theme management
@@ -66,7 +68,7 @@ export const useThemeStore = create<ThemeState>()(
 
       getActiveTheme: () => {
         const { themes, activeTheme } = get();
-        return themes[activeTheme] || themes.default;
+        return themes[activeTheme] || themes[DEFAULT_THEME_ID] || themes.default;
       },
 
       getAllThemes: () => {
@@ -104,7 +106,7 @@ export const useThemeStore = create<ThemeState>()(
 
         // Switch to default theme if removing active theme
         if (activeTheme === themeId) {
-          get().setActiveTheme("default");
+          get().setActiveTheme(DEFAULT_THEME_ID);
         }
 
         set((state) => {

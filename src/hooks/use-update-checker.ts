@@ -3,7 +3,28 @@ import { check, type Update } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { toast } from "sonner";
 
-export function useUpdateChecker() {
+const UPDATE_AVAILABLE_TOAST_ID = "update-available";
+const UPDATE_DOWNLOAD_TOAST_ID = "update-download";
+
+let autoCheckTriggeredThisSession = false;
+let activeCheckPromise: Promise<Update | null> | null = null;
+let notifiedUpdateVersion: string | null = null;
+
+async function runUpdateCheck(): Promise<Update | null> {
+  if (!activeCheckPromise) {
+    activeCheckPromise = check().finally(() => {
+      activeCheckPromise = null;
+    });
+  }
+  return activeCheckPromise;
+}
+
+interface UseUpdateCheckerOptions {
+  autoCheckOnMount?: boolean;
+}
+
+export function useUpdateChecker(options: UseUpdateCheckerOptions = {}) {
+  const autoCheckOnMount = options.autoCheckOnMount ?? true;
   const [checking, setChecking] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -12,18 +33,29 @@ export function useUpdateChecker() {
   const checkForUpdates = async (silent = false) => {
     try {
       setChecking(true);
-      const availableUpdate = await check();
+      const availableUpdate = await runUpdateCheck();
       setUpdate(availableUpdate);
 
       if (availableUpdate) {
-        toast.info(`Update ${availableUpdate.version} available`, {
-          description: "A new version is ready to install.",
-          action: {
-            label: "Install",
-            onClick: () => installUpdate(availableUpdate),
-          },
-          duration: 10000,
-        });
+        // Avoid spamming the same availability toast repeatedly.
+        if (notifiedUpdateVersion !== availableUpdate.version) {
+          notifiedUpdateVersion = availableUpdate.version;
+          toast.info(`Update ${availableUpdate.version} available`, {
+            id: UPDATE_AVAILABLE_TOAST_ID,
+            description: "A new version is ready to install.",
+            action: {
+              label: "Install",
+              onClick: () => installUpdate(availableUpdate),
+            },
+            duration: 10000,
+          });
+        } else if (!silent) {
+          toast.info(`Update ${availableUpdate.version} is still available`, {
+            id: UPDATE_AVAILABLE_TOAST_ID,
+            description: "You can install it from the previous notification.",
+            duration: 3000,
+          });
+        }
       } else if (!silent) {
         toast.success("You're up to date!");
       }
@@ -49,7 +81,7 @@ export function useUpdateChecker() {
         switch (event.event) {
           case "Started":
             contentLength = event.data.contentLength ?? 0;
-            toast.loading("Downloading update...", { id: "update-download" });
+            toast.loading("Downloading update...", { id: UPDATE_DOWNLOAD_TOAST_ID });
             break;
           case "Progress":
             downloaded += event.data.chunkLength;
@@ -57,13 +89,13 @@ export function useUpdateChecker() {
               const percent = Math.round((downloaded / contentLength) * 100);
               setProgress(percent);
               toast.loading(`Downloading update... ${percent}%`, {
-                id: "update-download",
+                id: UPDATE_DOWNLOAD_TOAST_ID,
               });
             }
             break;
           case "Finished":
             toast.success("Update installed! Restarting...", {
-              id: "update-download",
+              id: UPDATE_DOWNLOAD_TOAST_ID,
             });
             break;
         }
@@ -80,13 +112,17 @@ export function useUpdateChecker() {
 
   // Check for updates on mount (silently)
   useEffect(() => {
+    if (!autoCheckOnMount) return;
+    if (autoCheckTriggeredThisSession) return;
+    autoCheckTriggeredThisSession = true;
+
     // Delay check to not block app startup
     const timeout = setTimeout(() => {
-      checkForUpdates(true);
+      void checkForUpdates(true);
     }, 3000);
 
     return () => clearTimeout(timeout);
-  }, []);
+  }, [autoCheckOnMount]);
 
   return {
     checking,

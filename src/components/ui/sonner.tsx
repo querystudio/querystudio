@@ -4,13 +4,12 @@ const Toaster = ({ ...props }: ToasterProps) => {
   return (
     <Sonner
       theme="dark"
-      position="bottom-right"
-      closeButton
+      position="bottom-center"
       toastOptions={{
         unstyled: true,
         classNames: {
           toast:
-            "group pointer-events-auto relative flex w-full items-start gap-3 overflow-hidden rounded-2xl border border-border/70 bg-background/80 px-3 py-3 text-xs text-foreground shadow-[0_12px_28px_rgba(0,0,0,0.28)] backdrop-blur-xl supports-[backdrop-filter]:bg-background/65",
+            "group pointer-events-auto relative flex w-full items-start items-center gap-3 overflow-hidden rounded-2xl border border-border/70 bg-background/80 px-3 py-3 text-xs text-foreground shadow-[0_12px_28px_rgba(0,0,0,0.28)] backdrop-blur-xl supports-[backdrop-filter]:bg-background/65",
           title: "font-semibold tracking-tight text-foreground",
           description: "text-[11px] leading-relaxed text-muted-foreground",
           actionButton:

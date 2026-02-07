@@ -162,12 +162,14 @@ interface AIQueryState {
   aiPanelWidth: number;
   setAiPanelOpen: (open: boolean) => void;
   setAiPanelWidth: (width: number) => void;
+  persistAiPanelWidth: (width?: number) => void;
   toggleAiPanel: () => void;
 
   // Sidebar state (persisted)
   sidebarWidth: number;
   sidebarCollapsed: boolean;
   setSidebarWidth: (width: number) => void;
+  persistSidebarWidth: (width?: number) => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
   toggleSidebar: () => void;
 
@@ -193,6 +195,29 @@ interface AIQueryState {
   // Debug settings (persisted)
   debugMode: boolean;
   setDebugMode: (enabled: boolean) => void;
+
+  // Custom UI font family (persisted)
+  customFontFamily: string;
+  setCustomFontFamily: (fontFamily: string) => void;
+
+  // Global UI font scaling (persisted)
+  uiFontScale: "small" | "default" | "large";
+  setUiFontScale: (scale: "small" | "default" | "large") => void;
+
+  // Selected row context for AI actions (ephemeral)
+  selectedRowsContext: {
+    schema: string;
+    table: string;
+    count: number;
+    preview: string;
+  } | null;
+  setSelectedRowsContext: (context: {
+    schema: string;
+    table: string;
+    count: number;
+    preview: string;
+  }) => void;
+  clearSelectedRowsContext: () => void;
 }
 
 export const useAIQueryStore = create<AIQueryState>()((set, get) => ({
@@ -217,8 +242,10 @@ export const useAIQueryStore = create<AIQueryState>()((set, get) => ({
     void useSettingsStore.getState().updateSettings({ aiPanelOpen: open });
   },
   setAiPanelWidth: (width: number) => {
-    set({ aiPanelWidth: width });
-    void useSettingsStore.getState().updateSettings({ aiPanelWidth: width });
+    set((state) => (state.aiPanelWidth === width ? state : { aiPanelWidth: width }));
+  },
+  persistAiPanelWidth: (width) => {
+    void useSettingsStore.getState().updateSettings({ aiPanelWidth: width ?? get().aiPanelWidth });
   },
   toggleAiPanel: () => {
     const next = !get().aiPanelOpen;
@@ -229,8 +256,10 @@ export const useAIQueryStore = create<AIQueryState>()((set, get) => ({
   sidebarWidth: useSettingsStore.getState().sidebarWidth,
   sidebarCollapsed: useSettingsStore.getState().sidebarCollapsed,
   setSidebarWidth: (width: number) => {
-    set({ sidebarWidth: width });
-    void useSettingsStore.getState().updateSettings({ sidebarWidth: width });
+    set((state) => (state.sidebarWidth === width ? state : { sidebarWidth: width }));
+  },
+  persistSidebarWidth: (width) => {
+    void useSettingsStore.getState().updateSettings({ sidebarWidth: width ?? get().sidebarWidth });
   },
   setSidebarCollapsed: (collapsed: boolean) => {
     set({ sidebarCollapsed: collapsed });
@@ -282,6 +311,22 @@ export const useAIQueryStore = create<AIQueryState>()((set, get) => ({
     set({ debugMode: enabled });
     void useSettingsStore.getState().updateSettings({ debugMode: enabled });
   },
+
+  customFontFamily: useSettingsStore.getState().customFontFamily,
+  setCustomFontFamily: (fontFamily: string) => {
+    set({ customFontFamily: fontFamily });
+    void useSettingsStore.getState().updateSettings({ customFontFamily: fontFamily });
+  },
+
+  uiFontScale: useSettingsStore.getState().uiFontScale,
+  setUiFontScale: (scale) => {
+    set({ uiFontScale: scale });
+    void useSettingsStore.getState().updateSettings({ uiFontScale: scale });
+  },
+
+  selectedRowsContext: null,
+  setSelectedRowsContext: (context) => set({ selectedRowsContext: context }),
+  clearSelectedRowsContext: () => set({ selectedRowsContext: null }),
 }));
 
 useSettingsStore.subscribe((state) => {
@@ -297,6 +342,8 @@ useSettingsStore.subscribe((state) => {
     experimentalTerminal: state.experimentalTerminal,
     experimentalPlugins: state.experimentalPlugins,
     debugMode: state.debugMode,
+    customFontFamily: state.customFontFamily,
+    uiFontScale: state.uiFontScale,
   });
 });
 

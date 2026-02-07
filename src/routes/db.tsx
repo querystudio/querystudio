@@ -13,6 +13,7 @@ import { PaneContainer } from "@/components/pane-container";
 import { useConnectionStore, useAIQueryStore } from "@/lib/store";
 import { useSavedConnections, useConnect } from "@/lib/hooks";
 import { useGlobalShortcuts } from "@/lib/use-global-shortcuts";
+import { openSettingsWindow } from "@/lib/settings-window";
 import type { SavedConnection } from "@/lib/types";
 import { FpsCounter } from "@/components/fps-counter";
 import {
@@ -51,6 +52,7 @@ function DatabaseStudio() {
   const setAiPanelOpen = useAIQueryStore((s) => s.setAiPanelOpen);
   const aiPanelWidth = useAIQueryStore((s) => s.aiPanelWidth);
   const setAiPanelWidth = useAIQueryStore((s) => s.setAiPanelWidth);
+  const persistAiPanelWidth = useAIQueryStore((s) => s.persistAiPanelWidth);
   const toggleAiPanel = useAIQueryStore((s) => s.toggleAiPanel);
 
   const sidebarCollapsed = useAIQueryStore((s) => s.sidebarCollapsed);
@@ -64,25 +66,70 @@ function DatabaseStudio() {
   const debugMode = useAIQueryStore((s) => s.debugMode);
 
   const [isResizing, setIsResizing] = useState(false);
+  const aiPanelContainerRef = useRef<HTMLDivElement | null>(null);
+  const aiPanelAsideRef = useRef<HTMLElement | null>(null);
+  const resizeRafRef = useRef<number | null>(null);
+  const pendingMouseXRef = useRef(0);
+  const aiPanelWidthRef = useRef(aiPanelWidth);
   const minWidth = 320;
   const maxWidth = 800;
 
   const handleResizeStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    pendingMouseXRef.current = e.clientX;
     setIsResizing(true);
   }, []);
+
+  useEffect(() => {
+    aiPanelWidthRef.current = aiPanelWidth;
+    if (!isResizing) {
+      if (aiPanelContainerRef.current) {
+        aiPanelContainerRef.current.style.width = aiPanelOpen ? `${aiPanelWidth}px` : "0px";
+      }
+      if (aiPanelAsideRef.current) {
+        aiPanelAsideRef.current.style.width = `${aiPanelWidth}px`;
+      }
+    }
+  }, [aiPanelWidth, aiPanelOpen, isResizing]);
+
+  const applyAiPanelWidth = useCallback(
+    (mouseX: number) => {
+      const nextWidth = Math.min(maxWidth, Math.max(minWidth, window.innerWidth - mouseX));
+      if (nextWidth !== aiPanelWidthRef.current) {
+        aiPanelWidthRef.current = nextWidth;
+        if (aiPanelContainerRef.current) {
+          aiPanelContainerRef.current.style.width = `${nextWidth}px`;
+        }
+        if (aiPanelAsideRef.current) {
+          aiPanelAsideRef.current.style.width = `${nextWidth}px`;
+        }
+      }
+    },
+    [maxWidth, minWidth],
+  );
 
   useEffect(() => {
     if (!isResizing) return;
 
     const handleMouseMove = (e: MouseEvent) => {
       e.preventDefault();
-      const newWidth = window.innerWidth - e.clientX;
-      setAiPanelWidth(Math.min(maxWidth, Math.max(minWidth, newWidth)));
+      pendingMouseXRef.current = e.clientX;
+      if (resizeRafRef.current !== null) return;
+      resizeRafRef.current = window.requestAnimationFrame(() => {
+        resizeRafRef.current = null;
+        applyAiPanelWidth(pendingMouseXRef.current);
+      });
     };
 
     const handleMouseUp = () => {
+      if (resizeRafRef.current !== null) {
+        window.cancelAnimationFrame(resizeRafRef.current);
+        resizeRafRef.current = null;
+      }
+      applyAiPanelWidth(pendingMouseXRef.current);
+      setAiPanelWidth(aiPanelWidthRef.current);
+      persistAiPanelWidth(aiPanelWidthRef.current);
       setIsResizing(false);
     };
 
@@ -92,12 +139,16 @@ function DatabaseStudio() {
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
     return () => {
+      if (resizeRafRef.current !== null) {
+        window.cancelAnimationFrame(resizeRafRef.current);
+        resizeRafRef.current = null;
+      }
       document.body.style.cursor = "";
       document.body.style.userSelect = "";
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isResizing]);
+  }, [isResizing, applyAiPanelWidth, persistAiPanelWidth, setAiPanelWidth]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -140,7 +191,7 @@ function DatabaseStudio() {
     onNewConnection: handleNewConnection,
     onOpenCommandPalette: () => setCommandPaletteOpen(true),
     onOpenSettings: () => {
-      navigate({ to: "/settings" });
+      void openSettingsWindow({ fallback: () => navigate({ to: "/settings" }) });
     },
   });
 
@@ -272,7 +323,9 @@ function DatabaseStudio() {
             variant="ghost"
             size="icon"
             className="h-7 w-7 text-muted-foreground hover:text-foreground"
-            onClick={() => navigate({ to: "/settings" })}
+            onClick={() =>
+              void openSettingsWindow({ fallback: () => navigate({ to: "/settings" }) })
+            }
             title="Settings"
           >
             <Settings className="h-4 w-4" />
@@ -324,6 +377,7 @@ function DatabaseStudio() {
           </main>
 
           <div
+            ref={aiPanelContainerRef}
             className="relative shrink-0 overflow-hidden"
             style={{
               width: aiPanelOpen ? aiPanelWidth : 0,
@@ -331,6 +385,7 @@ function DatabaseStudio() {
             }}
           >
             <aside
+              ref={aiPanelAsideRef}
               className="absolute inset-y-0 right-0 flex flex-col border-l border-border bg-background"
               style={{ width: aiPanelWidth }}
             >

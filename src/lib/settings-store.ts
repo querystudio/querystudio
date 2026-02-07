@@ -1,5 +1,7 @@
 import { create } from "zustand";
 import { settingsApi } from "./settings-api";
+import { applyCustomFontFamily } from "./app-font";
+import { applyUiFontScale } from "./app-ui-scale";
 import { defaultAppSettings, normalizeSettings, type AppSettings } from "./settings-schema";
 
 const LEGACY_UI_STATE_KEY = "querystudio_ui_state";
@@ -42,6 +44,8 @@ function pickSettings(state: SettingsStoreState): AppSettings {
     experimentalTerminal: state.experimentalTerminal,
     experimentalPlugins: state.experimentalPlugins,
     debugMode: state.debugMode,
+    customFontFamily: state.customFontFamily,
+    uiFontScale: state.uiFontScale,
     migratedFromLegacy: state.migratedFromLegacy,
   };
 }
@@ -186,4 +190,22 @@ export function initializeSettingsStore(): Promise<void> {
   }
 
   return initializationPromise;
+}
+
+if (typeof document !== "undefined") {
+  let previousCustomFontFamily = useSettingsStore.getState().customFontFamily;
+  let previousUiFontScale = useSettingsStore.getState().uiFontScale;
+  applyCustomFontFamily(previousCustomFontFamily);
+  applyUiFontScale(previousUiFontScale);
+
+  useSettingsStore.subscribe((state) => {
+    if (state.customFontFamily !== previousCustomFontFamily) {
+      previousCustomFontFamily = state.customFontFamily;
+      applyCustomFontFamily(state.customFontFamily);
+    }
+    if (state.uiFontScale !== previousUiFontScale) {
+      previousUiFontScale = state.uiFontScale;
+      applyUiFontScale(state.uiFontScale);
+    }
+  });
 }

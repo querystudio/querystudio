@@ -23,6 +23,7 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -50,6 +51,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useConnectionStore, useAIQueryStore, useLastChatStore } from "@/lib/store";
 import {
   AIAgent,
@@ -57,15 +59,17 @@ import {
   type Message,
   type ModelId,
   type ChatSession,
+  type ToolCall,
   loadChatHistory,
   saveChatHistory,
   createChatSession,
   generateSessionTitle,
 } from "@/lib/ai-agent";
 import { api } from "@/lib/api";
-import type { AIModelInfo } from "@/lib/types";
+import type { AIModelInfo, MessageUsage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { ProviderIcon, preloadProviderIcons } from "@/components/ui/provider-icon";
+import { Badge } from "./ui/badge";
 
 const OPENAI_API_KEY_STORAGE_KEY = "querystudio_openai_api_key";
 const ANTHROPIC_API_KEY_STORAGE_KEY = "querystudio_anthropic_api_key";
@@ -101,6 +105,88 @@ function getApiKeyForModel(model: ModelId, allModels: AIModelInfo[], keys: Provi
 function isModelAvailable(model: ModelId, allModels: AIModelInfo[], keys: ProviderKeys): boolean {
   const key = getApiKeyForModel(model, allModels, keys);
   return !!key.trim();
+}
+
+const DEFAULT_MODEL_MAX_CONTEXT_TOKENS = 128_000;
+
+function inferModelMaxContextTokens(modelId: string, provider?: string): number {
+  const id = modelId.toLowerCase();
+  const normalizedProvider = provider?.toLowerCase();
+
+  // OpenAI family
+  if (id === "gpt-5" || id === "gpt-5-mini") return 400_000;
+  if (
+    id.startsWith("gpt-4.1") ||
+    id.startsWith("gpt-4o") ||
+    id.startsWith("o1") ||
+    id.startsWith("o3") ||
+    id.startsWith("o4")
+  ) {
+    return 128_000;
+  }
+
+  // Anthropic family
+  if (id.includes("claude")) return 200_000;
+
+  // Gemini family
+  if (id.includes("gemini-2.5") || id.includes("gemini-3")) return 1_000_000;
+
+  // OpenRouter/Vercel/Copilot are mixed catalogs; keep a safe fallback.
+  if (
+    normalizedProvider === "openrouter" ||
+    normalizedProvider === "vercel" ||
+    normalizedProvider === "copilot"
+  ) {
+    if (id.includes("claude")) return 200_000;
+    if (id.includes("gemini")) return 1_000_000;
+    return DEFAULT_MODEL_MAX_CONTEXT_TOKENS;
+  }
+
+  // Provider-level defaults
+  if (normalizedProvider === "google") return 1_000_000;
+  if (normalizedProvider === "anthropic") return 200_000;
+  if (normalizedProvider === "openai") return 128_000;
+
+  return DEFAULT_MODEL_MAX_CONTEXT_TOKENS;
+}
+
+function estimateTextTokens(text: string): number {
+  if (!text) return 0;
+  // UTF-8 bytes / 4 gives a reasonable rough token estimate across providers.
+  const byteLength = new TextEncoder().encode(text).length;
+  return Math.max(1, Math.round(byteLength / 4));
+}
+
+function estimateToolCallsTokens(toolCalls?: ToolCall[]): number {
+  if (!toolCalls?.length) return 0;
+  let total = 0;
+  for (const tc of toolCalls) {
+    total += estimateTextTokens(tc.name);
+    total += estimateTextTokens(tc.arguments);
+    total += estimateTextTokens(tc.result ?? "");
+    total += 12; // structural overhead
+  }
+  return total;
+}
+
+function estimateMessageTokens(message: Pick<Message, "content" | "toolCalls">): number {
+  return estimateTextTokens(message.content) + estimateToolCallsTokens(message.toolCalls) + 8;
+}
+
+function estimateConversationTokens(messages: Message[]): number {
+  return messages.reduce((sum, message) => sum + estimateMessageTokens(message), 18);
+}
+
+function formatTokenCount(tokens: number): string {
+  if (tokens >= 1_000_000) return `${(tokens / 1_000_000).toFixed(2)}M`;
+  if (tokens >= 1_000) return `${(tokens / 1_000).toFixed(1)}k`;
+  return String(tokens);
+}
+
+function getContextUsageColorClass(percent: number): string {
+  if (percent >= 90) return "text-red-500";
+  if (percent >= 75) return "text-amber-500";
+  return "text-emerald-500";
 }
 
 // ============================================================================
@@ -191,7 +277,7 @@ const CodeBlock = memo(function CodeBlock({
 
 const InlineCode = memo(function InlineCode({ children }: { children: React.ReactNode }) {
   return (
-    <code className="bg-muted px-1.5 py-0.5 rounded text-primary text-sm font-mono">
+    <code className="bg-muted px-1.5 py-0.5 rounded text-primary text-xs font-mono">
       {children}
     </code>
   );
@@ -270,7 +356,7 @@ const StreamingText = memo(function StreamingText({
   const displayedContent = content.slice(0, displayedLength);
 
   return (
-    <div className="text-sm leading-relaxed">
+    <div className="text-[13px] leading-relaxed">
       <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
         {displayedContent}
       </ReactMarkdown>
@@ -288,6 +374,62 @@ interface MessageBubbleProps {
   onAppendToRunner: (code: string) => void;
 }
 
+interface ContextUsageRingProps {
+  percent: number;
+  size?: number;
+  strokeWidth?: number;
+  label?: string;
+}
+
+const ContextUsageRing = memo(function ContextUsageRing({
+  percent,
+  size = 36,
+  strokeWidth = 3,
+  label,
+}: ContextUsageRingProps) {
+  const normalizedPercent = Math.min(100, Math.max(0, percent));
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const dashOffset = circumference - (normalizedPercent / 100) * circumference;
+  const colorClass = getContextUsageColorClass(normalizedPercent);
+  const resolvedLabel = label ?? `${Math.round(normalizedPercent)}%`;
+
+  return (
+    <div
+      className="relative inline-flex items-center justify-center"
+      style={{ width: size, height: size }}
+    >
+      <svg width={size} height={size} className="-rotate-90">
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke="currentColor"
+          strokeWidth={strokeWidth}
+          className="text-muted/50"
+          fill="none"
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke="currentColor"
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          className={colorClass}
+          fill="none"
+          strokeDasharray={circumference}
+          strokeDashoffset={dashOffset}
+          style={{ transition: "stroke-dashoffset 180ms ease-out" }}
+        />
+      </svg>
+      {resolvedLabel.length > 0 && (
+        <span className={cn("absolute text-[9px] font-medium", colorClass)}>{resolvedLabel}</span>
+      )}
+    </div>
+  );
+});
+
 const ToolThinkingSkeleton = memo(function ToolThinkingSkeleton() {
   return (
     <div className="mt-2 space-y-1.5">
@@ -298,11 +440,94 @@ const ToolThinkingSkeleton = memo(function ToolThinkingSkeleton() {
   );
 });
 
+const TOOL_PAYLOAD_MAX_CHARS = 6000;
+
+function formatToolPayload(payload?: string): string {
+  if (!payload || !payload.trim()) {
+    return "No data.";
+  }
+
+  const trimmed = payload.trim();
+  let formatted = trimmed;
+
+  try {
+    const parsed = JSON.parse(trimmed);
+    formatted = JSON.stringify(parsed, null, 2);
+  } catch {
+    // Keep raw payload if not JSON.
+  }
+
+  if (formatted.length > TOOL_PAYLOAD_MAX_CHARS) {
+    return `${formatted.slice(0, TOOL_PAYLOAD_MAX_CHARS)}\n\n…truncated`;
+  }
+
+  return formatted;
+}
+
+const ToolCallChip = memo(function ToolCallChip({ toolCall }: { toolCall: ToolCall }) {
+  const formattedArguments = useMemo(
+    () => formatToolPayload(toolCall.arguments),
+    [toolCall.arguments],
+  );
+  const formattedResult = useMemo(() => formatToolPayload(toolCall.result), [toolCall.result]);
+  const isCompleted = toolCall.result !== undefined;
+  const toolName = toolCall.name?.trim() || "Tool Call";
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="flex items-center gap-1 rounded-md border border-border/60 bg-muted/35 px-1.5 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+          title="Click to inspect tool logs"
+        >
+          <Wrench className="h-2.5 w-2.5" />
+          <span>{toolName}</span>
+          {isCompleted ? (
+            <span className="text-emerald-400">done</span>
+          ) : (
+            <span className="text-amber-400">running</span>
+          )}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        sideOffset={8}
+        className="w-[460px] max-w-[calc(100vw-2rem)] space-y-2 p-3"
+      >
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-semibold">{toolName}</p>
+          <span className="font-mono text-[10px] text-muted-foreground">#{toolCall.id}</span>
+        </div>
+
+        <div className="space-y-1">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            Arguments
+          </p>
+          <pre className="max-h-40 overflow-auto rounded-md border border-border/60 bg-muted/25 p-2 font-mono text-[11px] leading-relaxed">
+            {formattedArguments}
+          </pre>
+        </div>
+
+        <div className="space-y-1">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            Result
+          </p>
+          <pre className="max-h-44 overflow-auto rounded-md border border-border/60 bg-muted/25 p-2 font-mono text-[11px] leading-relaxed">
+            {formattedResult}
+          </pre>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+});
+
 const MessageBubble = memo(function MessageBubble({
   message,
   onAppendToRunner,
 }: MessageBubbleProps) {
   const isUser = message.role === "user";
+  const usage = message.usage;
 
   // Memoize the markdown components to ensure stable references
   // This prevents React from seeing different component trees during streaming
@@ -326,26 +551,28 @@ const MessageBubble = memo(function MessageBubble({
       // Headings
       h1({ children }: { children?: React.ReactNode }) {
         return (
-          <h1 className="text-lg font-semibold text-foreground mt-4 mb-2 first:mt-0">{children}</h1>
+          <h1 className="text-base font-semibold text-foreground mt-4 mb-2 first:mt-0">
+            {children}
+          </h1>
         );
       },
       h2({ children }: { children?: React.ReactNode }) {
         return (
-          <h2 className="text-base font-semibold text-foreground mt-3 mb-1.5 first:mt-0">
+          <h2 className="text-sm font-semibold text-foreground mt-3 mb-1.5 first:mt-0">
             {children}
           </h2>
         );
       },
       h3({ children }: { children?: React.ReactNode }) {
         return (
-          <h3 className="text-sm font-semibold text-foreground mt-2.5 mb-1 first:mt-0">
+          <h3 className="text-xs font-semibold text-foreground mt-2.5 mb-1 first:mt-0">
             {children}
           </h3>
         );
       },
       h4({ children }: { children?: React.ReactNode }) {
         return (
-          <h4 className="text-sm font-medium text-foreground mt-2 mb-1 first:mt-0">{children}</h4>
+          <h4 className="text-xs font-medium text-foreground mt-2 mb-1 first:mt-0">{children}</h4>
         );
       },
       // Paragraphs
@@ -439,12 +666,19 @@ const MessageBubble = memo(function MessageBubble({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
-      className={cn("flex gap-2", isUser && "justify-end")}
+      className={cn("flex w-full gap-2", isUser && "justify-end")}
     >
+      {!isUser && (
+        <div className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 text-primary">
+          <Bot className="h-3.5 w-3.5" />
+        </div>
+      )}
       <div
         className={cn(
-          "max-w-[90%] rounded-xl px-3 py-2 text-sm",
-          isUser ? "bg-primary text-primary-foreground" : "bg-transparent text-foreground",
+          "max-w-[90%] rounded-2xl border px-3 py-2.5 text-[13px]",
+          isUser
+            ? "border-primary/30 bg-primary/95 text-primary-foreground"
+            : "border-border/70 bg-card/75 text-foreground backdrop-blur-sm",
         )}
       >
         {/* Loading state - waiting for first content */}
@@ -452,9 +686,12 @@ const MessageBubble = memo(function MessageBubble({
           <div className="space-y-1.5">
             {message.toolCalls?.length ? (
               <div>
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
                   <Loader className="h-3 w-3 animate-spin" />
-                  <span>{message.toolCalls[message.toolCalls.length - 1].name}...</span>
+                  <span>
+                    {(message.toolCalls[message.toolCalls.length - 1].name?.trim() || "Tool Call") +
+                      "..."}
+                  </span>
                 </div>
                 <ToolThinkingSkeleton />
               </div>
@@ -472,13 +709,7 @@ const MessageBubble = memo(function MessageBubble({
             {message.toolCalls && message.toolCalls.length > 0 && (
               <div className="mb-1.5 flex flex-wrap gap-1">
                 {message.toolCalls.map((tc) => (
-                  <div
-                    key={tc.id}
-                    className="flex items-center gap-1 text-[11px] text-muted-foreground bg-muted/50 rounded px-1.5 py-0.5"
-                  >
-                    <Wrench className="h-2.5 w-2.5" />
-                    <span>{tc.name}</span>
-                  </div>
+                  <ToolCallChip key={tc.id} toolCall={tc} />
                 ))}
               </div>
             )}
@@ -494,24 +725,41 @@ const MessageBubble = memo(function MessageBubble({
             {message.toolCalls && message.toolCalls.length > 0 && (
               <div className="mb-1.5 flex flex-wrap gap-1">
                 {message.toolCalls.map((tc) => (
-                  <div
-                    key={tc.id}
-                    className="flex items-center gap-1 text-[11px] text-muted-foreground bg-muted/50 rounded px-1.5 py-0.5"
-                  >
-                    <Wrench className="h-2.5 w-2.5" />
-                    <span>{tc.name}</span>
-                  </div>
+                  <ToolCallChip key={tc.id} toolCall={tc} />
                 ))}
               </div>
             )}
             {message.content ? (
-              <div className="text-sm leading-relaxed">
+              <div className="text-[13px] leading-relaxed">
                 <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                   {message.content}
                 </ReactMarkdown>
               </div>
             ) : null}
           </>
+        )}
+        {!isUser && usage && !message.isLoading && (
+          <div
+            className={cn(
+              "mt-2 flex flex-wrap items-center gap-1.5 border-t pt-1.5 text-[10px]",
+              isUser
+                ? "border-primary-foreground/20 text-primary-foreground/80"
+                : "border-border/45 text-muted-foreground",
+            )}
+          >
+            <span>
+              ctx {formatTokenCount(usage.contextTokens)}/{formatTokenCount(usage.maxContextTokens)}
+            </span>
+            <span>{usage.contextPercent.toFixed(1)}%</span>
+            {usage.promptTokens !== undefined && (
+              <span>in {formatTokenCount(usage.promptTokens)}</span>
+            )}
+            {usage.completionTokens !== undefined && (
+              <span>out {formatTokenCount(usage.completionTokens)}</span>
+            )}
+            <span>msg {formatTokenCount(usage.messageTokens)}</span>
+            {usage.estimated && <span>est.</span>}
+          </div>
         )}
       </div>
     </motion.div>
@@ -524,6 +772,8 @@ const MessageBubble = memo(function MessageBubble({
 
 export const AIChat = memo(function AIChat() {
   const connection = useConnectionStore((s) => s.getActiveConnection());
+  const selectedTable = useConnectionStore((s) => s.selectedTable);
+  const selectedRowsContext = useAIQueryStore((s) => s.selectedRowsContext);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -708,6 +958,15 @@ export const AIChat = memo(function AIChat() {
     });
   }, [openaiModels, geminiModels, anthropicModels, openrouterModels, vercelModels, copilotModels]);
 
+  const selectedModelInfo = useMemo(
+    () => allModels.find((m) => m.id === selectedModel),
+    [allModels, selectedModel],
+  );
+  const selectedModelMaxContext = useMemo(
+    () => inferModelMaxContextTokens(selectedModel, selectedModelInfo?.provider),
+    [selectedModel, selectedModelInfo?.provider],
+  );
+
   const apiKeys = useMemo(
     () => ({
       openai: openaiApiKey,
@@ -723,7 +982,11 @@ export const AIChat = memo(function AIChat() {
   const agentRef = useRef<AIAgent | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const streamFlushRafRef = useRef<number | null>(null);
+  const messagesRef = useRef<Message[]>([]);
   const [lastUserMessage, setLastUserMessage] = useState<string | null>(null);
+  const queuedMessagesRef = useRef<Array<{ text: string; addUserMessage: boolean }>>([]);
+  const [queuedMessageCount, setQueuedMessageCount] = useState(0);
 
   // Debug request from query editor
   const debugRequest = useAIQueryStore((s) => s.debugRequest);
@@ -809,6 +1072,74 @@ export const AIChat = memo(function AIChat() {
   useEffect(() => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
+
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
+  useEffect(() => {
+    return () => {
+      if (streamFlushRafRef.current !== null) {
+        cancelAnimationFrame(streamFlushRafRef.current);
+        streamFlushRafRef.current = null;
+      }
+    };
+  }, []);
+
+  const buildUsage = useCallback(
+    ({
+      conversationMessages,
+      messageTokens,
+      promptTokens,
+      completionTokens,
+    }: {
+      conversationMessages: Message[];
+      messageTokens: number;
+      promptTokens?: number;
+      completionTokens?: number;
+    }): MessageUsage => {
+      const contextTokens = estimateConversationTokens(conversationMessages);
+      const contextPercent = (contextTokens / selectedModelMaxContext) * 100;
+      const totalTokens = (promptTokens ?? 0) + (completionTokens ?? 0);
+
+      return {
+        model: selectedModel,
+        maxContextTokens: selectedModelMaxContext,
+        messageTokens,
+        contextTokens,
+        contextPercent,
+        totalTokens,
+        promptTokens,
+        completionTokens,
+        estimated: true,
+      };
+    },
+    [selectedModel, selectedModelMaxContext],
+  );
+
+  const finalizedMessages = useMemo(() => messages.filter((m) => !m.isLoading), [messages]);
+  const finalizedMessagesSignature = useMemo(
+    () =>
+      finalizedMessages
+        .map((message) => {
+          const toolCallsLength = message.toolCalls?.length ?? 0;
+          const firstChar = message.content.charCodeAt(0) || 0;
+          const lastChar = message.content.charCodeAt(message.content.length - 1) || 0;
+          const toolResultLength = message.toolCalls?.reduce(
+            (sum, toolCall) => sum + (toolCall.result?.length ?? 0),
+            0,
+          );
+          return `${message.id}:${message.content.length}:${firstChar}:${lastChar}:${toolCallsLength}:${toolResultLength ?? 0}`;
+        })
+        .join("|"),
+    [finalizedMessages],
+  );
+  const currentContextTokens = useMemo(
+    () => estimateConversationTokens(finalizedMessages),
+    [finalizedMessagesSignature],
+  );
+  const currentContextPercent = (currentContextTokens / selectedModelMaxContext) * 100;
+  const currentContextRemainingTokens = Math.max(0, selectedModelMaxContext - currentContextTokens);
 
   // Handle debug request from query editor
   useEffect(() => {
@@ -975,6 +1306,65 @@ export const AIChat = memo(function AIChat() {
     }
   }, []);
 
+  const enqueueMessage = useCallback((text: string, addUserMessage: boolean) => {
+    queuedMessagesRef.current.push({ text, addUserMessage });
+    setQueuedMessageCount(queuedMessagesRef.current.length);
+  }, []);
+
+  const composePromptWithContext = useCallback(
+    (userText: string) => {
+      const contextLines: string[] = [];
+
+      if (selectedTable) {
+        contextLines.push(`Active table: ${selectedTable.schema}.${selectedTable.name}`);
+      }
+
+      if (selectedRowsContext?.preview) {
+        contextLines.push(
+          `Selected row context (${selectedRowsContext.schema}.${selectedRowsContext.table}, ${selectedRowsContext.count} row):\n${selectedRowsContext.preview}`,
+        );
+      }
+
+      if (contextLines.length === 0) {
+        return userText;
+      }
+
+      return `Database context:\n${contextLines.join("\n\n")}\n\nUser request:\n${userText}`;
+    },
+    [selectedTable, selectedRowsContext],
+  );
+
+  const quickActions = useMemo(() => {
+    const activeTableRef = selectedTable
+      ? `${selectedTable.schema}.${selectedTable.name}`
+      : "the active table";
+
+    const actions = [
+      {
+        label: "Schema Summary",
+        prompt: `Give me a concise schema summary for ${activeTableRef}.`,
+      },
+      {
+        label: "Generate Update SQL",
+        prompt: `Generate a safe SQL UPDATE statement for ${activeTableRef} with best practices and a WHERE clause.`,
+      },
+      {
+        label: "Find Anomalies",
+        prompt: `What are the best anomaly checks I should run on ${activeTableRef}? Include SQL examples.`,
+      },
+    ];
+
+    if (selectedRowsContext?.preview) {
+      actions.unshift({
+        label: "Explain Selected Row",
+        prompt:
+          "Explain the currently selected row, highlight suspicious values, and suggest follow-up SQL checks.",
+      });
+    }
+
+    return actions;
+  }, [selectedTable, selectedRowsContext]);
+
   const sendMessage = useCallback(
     async (userText: string, addUserMessage: boolean = true) => {
       if (!agentRef.current) return;
@@ -982,10 +1372,16 @@ export const AIChat = memo(function AIChat() {
       // Create abort controller for this request
       abortControllerRef.current = new AbortController();
       setLastUserMessage(userText);
+      const promptWithContext = composePromptWithContext(userText);
+      const baseMessages = messagesRef.current.filter((m) => !m.isLoading);
+
+      const promptTokensEstimate =
+        estimateConversationTokens(baseMessages) + estimateTextTokens(promptWithContext);
 
       if (addUserMessage) {
+        const userMessageId = crypto.randomUUID();
         const userMessage: Message = {
-          id: crypto.randomUUID(),
+          id: userMessageId,
           role: "user",
           content: userText,
         };
@@ -1002,20 +1398,41 @@ export const AIChat = memo(function AIChat() {
       ]);
 
       try {
-        const stream = agentRef.current.chatStream(userText, (toolName, args) => {
+        const stream = agentRef.current.chatStream(promptWithContext, (toolUpdate) => {
           setMessages((prev) =>
             prev.map((m) =>
               m.id === loadingId
                 ? {
                     ...m,
-                    toolCalls: [
-                      ...(m.toolCalls || []),
-                      {
-                        id: crypto.randomUUID(),
-                        name: toolName,
-                        arguments: args,
-                      },
-                    ],
+                    toolCalls: (() => {
+                      const existing = [...(m.toolCalls || [])];
+                      const existingIndex = existing.findIndex((tc) => tc.id === toolUpdate.id);
+
+                      if (existingIndex === -1) {
+                        existing.push({
+                          id: toolUpdate.id,
+                          name: toolUpdate.name?.trim() || "Tool Call",
+                          arguments: toolUpdate.arguments || "",
+                          result: toolUpdate.result,
+                        });
+                        return existing;
+                      }
+
+                      const current = existing[existingIndex];
+                      existing[existingIndex] = {
+                        ...current,
+                        name: toolUpdate.name?.trim() || current.name || "Tool Call",
+                        arguments:
+                          toolUpdate.arguments !== undefined
+                            ? toolUpdate.arguments
+                            : current.arguments,
+                        result:
+                          toolUpdate.status === "result"
+                            ? (toolUpdate.result ?? "")
+                            : current.result,
+                      };
+                      return existing;
+                    })(),
                   }
                 : m,
             ),
@@ -1023,53 +1440,126 @@ export const AIChat = memo(function AIChat() {
         });
 
         let fullContent = "";
+        let latestFlushedContent = "";
+        const flushStreamingContent = () => {
+          if (latestFlushedContent === fullContent) return;
+          latestFlushedContent = fullContent;
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === loadingId ? { ...m, content: latestFlushedContent, isLoading: true } : m,
+            ),
+          );
+          scrollToBottom();
+        };
         for await (const chunk of stream) {
           // Check if aborted
           if (abortControllerRef.current?.signal.aborted) {
             throw new Error("Request cancelled");
           }
           fullContent += chunk;
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === loadingId ? { ...m, content: fullContent, isLoading: true } : m,
-            ),
-          );
-          scrollToBottom();
+          if (streamFlushRafRef.current !== null) continue;
+          streamFlushRafRef.current = requestAnimationFrame(() => {
+            streamFlushRafRef.current = null;
+            flushStreamingContent();
+          });
         }
+        if (streamFlushRafRef.current !== null) {
+          cancelAnimationFrame(streamFlushRafRef.current);
+          streamFlushRafRef.current = null;
+        }
+        flushStreamingContent();
 
         setMessages((prev) => {
-          const updated = prev.map((m) => (m.id === loadingId ? { ...m, isLoading: false } : m));
+          const currentLoadingMessage = prev.find((m) => m.id === loadingId);
+          const finalizedAssistant: Message = {
+            ...(currentLoadingMessage ?? {
+              id: loadingId,
+              role: "assistant",
+              content: fullContent,
+            }),
+            content: fullContent,
+            isLoading: false,
+          };
+          const conversationWithAssistant = [
+            ...prev.filter((m) => m.id !== loadingId && !m.isLoading),
+            finalizedAssistant,
+          ];
+          finalizedAssistant.usage = buildUsage({
+            conversationMessages: conversationWithAssistant,
+            messageTokens: estimateMessageTokens(finalizedAssistant),
+            promptTokens: promptTokensEstimate,
+            completionTokens: estimateTextTokens(fullContent),
+          });
+
+          const updated = prev.map((m) => (m.id === loadingId ? finalizedAssistant : m));
           saveCurrentSession(updated);
           return updated;
         });
       } catch (error) {
         const isCancelled = error instanceof Error && error.message === "Request cancelled";
         setMessages((prev) => {
-          const updated = prev.map((m) =>
-            m.id === loadingId
-              ? {
-                  ...m,
-                  content: isCancelled
-                    ? "_Response cancelled_"
-                    : `Error: ${error instanceof Error ? error.message : "Failed to get response"}`,
-                  isLoading: false,
-                }
-              : m,
-          );
+          const currentLoadingMessage = prev.find((m) => m.id === loadingId);
+          const errorContent = isCancelled
+            ? "_Response cancelled_"
+            : `Error: ${error instanceof Error ? error.message : "Failed to get response"}`;
+          const finalizedAssistant: Message = {
+            ...(currentLoadingMessage ?? {
+              id: loadingId,
+              role: "assistant",
+              content: errorContent,
+            }),
+            content: errorContent,
+            isLoading: false,
+          };
+          const conversationWithAssistant = [
+            ...prev.filter((m) => m.id !== loadingId && !m.isLoading),
+            finalizedAssistant,
+          ];
+          finalizedAssistant.usage = buildUsage({
+            conversationMessages: conversationWithAssistant,
+            messageTokens: estimateMessageTokens(finalizedAssistant),
+            promptTokens: promptTokensEstimate,
+            completionTokens: estimateTextTokens(errorContent),
+          });
+
+          const updated = prev.map((m) => (m.id === loadingId ? finalizedAssistant : m));
           return updated;
         });
       } finally {
         setIsLoading(false);
         abortControllerRef.current = null;
+
+        const next = queuedMessagesRef.current.shift();
+        setQueuedMessageCount(queuedMessagesRef.current.length);
+        if (next && agentRef.current) {
+          void sendMessage(next.text, next.addUserMessage);
+        }
       }
     },
-    [scrollToBottom, saveCurrentSession],
+    [scrollToBottom, saveCurrentSession, composePromptWithContext, buildUsage],
   );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading || !agentRef.current) return;
-    await sendMessage(input.trim(), true);
+    const trimmedInput = input.trim();
+    if (!trimmedInput || !agentRef.current) return;
+
+    if (isLoading) {
+      const queuedUserMessageId = crypto.randomUUID();
+      setMessages((prev) => {
+        const queuedUserMessage: Message = {
+          id: queuedUserMessageId,
+          role: "user",
+          content: trimmedInput,
+        };
+        return [...prev, queuedUserMessage];
+      });
+      setInput("");
+      enqueueMessage(trimmedInput, false);
+      return;
+    }
+
+    await sendMessage(trimmedInput, true);
   };
 
   const handleRetry = useCallback(() => {
@@ -1216,7 +1706,9 @@ export const AIChat = memo(function AIChat() {
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="copilotEnabled">GitHub Copilot CLI</Label>
+                    <Label htmlFor="copilotEnabled">
+                      GitHub Copilot CLI <Badge variant="outline">Experimental</Badge>
+                    </Label>
                     <Switch
                       id="copilotEnabled"
                       checked={tempCopilotEnabled}
@@ -1258,130 +1750,144 @@ export const AIChat = memo(function AIChat() {
   // ============================================================================
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="relative flex h-full flex-col overflow-hidden bg-background">
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0">
-        <div className="flex items-center gap-2">
-          <span className="font-medium text-sm">Querybuddy</span>
-        </div>
-        <div className="flex items-center gap-0.5">
-          {/* Chat History Dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-6 w-6" title="Chat History">
-                <History className="h-3.5 w-3.5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-72">
-              <div className="px-2 py-1.5">
-                <p className="text-xs font-medium text-muted-foreground">Recent Chats</p>
-              </div>
-              <DropdownMenuSeparator />
-              <ScrollArea className="max-h-64">
-                {connectionSessions.length === 0 ? (
-                  <div className="px-2 py-4 text-center text-xs text-muted-foreground">
-                    No chat history yet
-                  </div>
-                ) : (
-                  connectionSessions
-                    .sort((a, b) => b.updatedAt - a.updatedAt)
-                    .slice(0, 20)
-                    .map((session) => (
-                      <DropdownMenuItem
-                        key={session.id}
-                        className="flex items-center justify-between gap-2 cursor-pointer"
-                        onClick={() => handleSelectSession(session.id)}
-                      >
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
-                          <MessageSquare className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                          <span className="truncate text-sm">{session.title}</span>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0 shrink-0 opacity-50 hover:opacity-100"
-                          onClick={(e) => handleDeleteSession(session.id, e)}
+      <div className="z-10 shrink-0 border-b border-border/55 bg-background px-3 py-2">
+        <div className="flex items-center justify-between">
+          <div className="min-w-0 space-y-0.5">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold tracking-tight">Querybuddy</span>
+            </div>
+          </div>
+          <div className="ml-3 flex items-center gap-1">
+            {/* Chat History Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 rounded-lg border border-transparent hover:border-border/60 hover:bg-muted/70"
+                  title="Chat History"
+                >
+                  <History className="h-3.5 w-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-72">
+                <div className="px-2 py-1.5">
+                  <p className="text-xs font-medium text-muted-foreground">Recent Chats</p>
+                </div>
+                <DropdownMenuSeparator />
+                <ScrollArea className="max-h-64">
+                  {connectionSessions.length === 0 ? (
+                    <div className="px-2 py-4 text-center text-xs text-muted-foreground">
+                      No chat history yet
+                    </div>
+                  ) : (
+                    connectionSessions
+                      .sort((a, b) => b.updatedAt - a.updatedAt)
+                      .slice(0, 20)
+                      .map((session) => (
+                        <DropdownMenuItem
+                          key={session.id}
+                          className="flex cursor-pointer items-center justify-between gap-2"
+                          onClick={() => handleSelectSession(session.id)}
                         >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </DropdownMenuItem>
-                    ))
-                )}
-              </ScrollArea>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                          <div className="flex min-w-0 flex-1 items-center gap-2">
+                            <MessageSquare className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                            <span className="truncate text-sm">{session.title}</span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 shrink-0 p-0 opacity-50 hover:opacity-100"
+                            onClick={(e) => handleDeleteSession(session.id, e)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </DropdownMenuItem>
+                      ))
+                  )}
+                </ScrollArea>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-          {/* New Chat */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={handleNewChat}
-            title="New Chat"
-          >
-            <Plus className="h-3.5 w-3.5" />
-          </Button>
+            {/* New Chat */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 rounded-lg border border-transparent hover:border-border/60 hover:bg-muted/70"
+              onClick={handleNewChat}
+              title="New Chat"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </Button>
 
-          {/* Clear Chat */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={handleClearChat}
-            disabled={messages.length === 0}
-            title="Clear Chat"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
+            {/* Clear Chat */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 rounded-lg border border-transparent hover:border-border/60 hover:bg-muted/70"
+              onClick={handleClearChat}
+              disabled={messages.length === 0}
+              title="Clear Chat"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
 
-          {/* Settings */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={() => {
-              setTempOpenaiKey(openaiApiKey);
-              setTempAnthropicKey(anthropicApiKey);
-              setTempGoogleKey(googleApiKey);
-              setTempOpenrouterKey(openrouterApiKey);
-              setTempVercelKey(vercelApiKey);
-              setTempCopilotEnabled(copilotEnabled);
-              setShowSettings(true);
-            }}
-          >
-            <Settings className="h-3.5 w-3.5" />
-          </Button>
+            {/* Settings */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 rounded-lg border border-transparent hover:border-border/60 hover:bg-muted/70"
+              onClick={() => {
+                setTempOpenaiKey(openaiApiKey);
+                setTempAnthropicKey(anthropicApiKey);
+                setTempGoogleKey(googleApiKey);
+                setTempOpenrouterKey(openrouterApiKey);
+                setTempVercelKey(vercelApiKey);
+                setTempCopilotEnabled(copilotEnabled);
+                setShowSettings(true);
+              }}
+            >
+              <Settings className="h-3.5 w-3.5" />
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-3 py-3" ref={scrollRef}>
+      <div className="z-10 flex-1 overflow-y-auto px-3 py-3" ref={scrollRef}>
         {messages.length === 0 ? (
           <div className="flex h-full items-center justify-center">
-            <div className="text-center space-y-3 max-w-xs">
+            <div className="max-w-sm space-y-4 rounded-2xl border border-border/55 bg-card/60 p-5 text-center">
               <div className="flex justify-center">
-                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Bot className="h-6 w-6 text-primary/40" />
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10">
+                  <Bot className="h-5 w-5 text-primary/60" />
                 </div>
               </div>
-              <p className="text-sm text-muted-foreground">Ask me anything about your database</p>
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-foreground">
+                  Ask anything about your database
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  I can inspect schema, debug SQL, and generate queries.
+                </p>
+              </div>
               <div className="flex flex-wrap justify-center gap-2">
-                {["What tables do I have?", "Show me recent data", "Describe the schema"].map(
-                  (suggestion) => (
-                    <button
-                      key={suggestion}
-                      onClick={() => setInput(suggestion)}
-                      className="text-[11px] px-2.5 py-1 rounded-full bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {suggestion}
-                    </button>
-                  ),
-                )}
+                {quickActions.slice(0, 4).map((action) => (
+                  <button
+                    key={action.label}
+                    onClick={() => setInput(action.prompt)}
+                    className="rounded-md border border-border/55 bg-muted/30 px-2.5 py-1 text-[10px] text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+                  >
+                    {action.label}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="mx-auto w-full max-w-4xl space-y-3">
             {messages.map((message) => (
               <MessageBubble
                 key={message.id}
@@ -1394,134 +1900,210 @@ export const AIChat = memo(function AIChat() {
       </div>
 
       {/* Input Area */}
-      <div className="border-t border-border p-4">
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <div className="relative">
-            <Input
+      <div className="z-10 border-t border-border/45 bg-background px-3 pb-3 pt-2">
+        <form onSubmit={handleSubmit}>
+          <div className="mx-auto w-full max-w-4xl rounded-[28px] border border-border/60 bg-card p-3">
+            <Textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
+                  if (e.shiftKey) return;
                   e.preventDefault();
-                  if (input.trim() && !isLoading) {
+                  if (input.trim()) {
                     handleSubmit(e);
                   }
                 }
               }}
               placeholder="Ask about your database..."
-              disabled={isLoading}
-              className="pr-24 rounded-xl"
+              className="min-h-[92px] max-h-56 rounded-xl border-0 !bg-transparent px-2 py-1.5 text-[13px] leading-relaxed placeholder:text-muted-foreground/70 shadow-none dark:!bg-transparent focus-visible:border-transparent focus-visible:ring-0"
             />
-            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-              {!isLoading && lastUserMessage && messages.length > 0 && (
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  onClick={handleRetry}
-                  className="h-8 w-8"
-                  title="Retry last message"
-                >
-                  <RotateCcw className="h-4 w-4" />
-                </Button>
-              )}
-              {isLoading ? (
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  onClick={handleCancel}
-                  className="h-8 w-8"
-                  title="Stop generating"
-                >
-                  <span className="relative flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-destructive"></span>
-                  </span>
-                </Button>
-              ) : (
-                <Button type="submit" size="icon" disabled={!input.trim()} className="h-8 w-8">
-                  <Send className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-          </div>
 
-          <div className="flex items-center justify-between">
-            <Popover
-              open={modelPickerOpen}
-              onOpenChange={(open) => {
-                setModelPickerOpen(open);
-                if (open && copilotEnabled && !copilotModelsLoading && copilotModels.length === 0) {
-                  void fetchCopilotModels();
-                }
-              }}
-            >
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={modelPickerOpen}
-                  className="h-8 w-64 justify-between text-xs rounded-xl"
+            <div className="mt-2 flex items-center justify-between gap-2 border-t border-white/10 pt-2.5">
+              <div className="flex min-w-0 items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <Popover
+                  open={modelPickerOpen}
+                  onOpenChange={(open) => {
+                    setModelPickerOpen(open);
+                    if (
+                      open &&
+                      copilotEnabled &&
+                      !copilotModelsLoading &&
+                      copilotModels.length === 0
+                    ) {
+                      void fetchCopilotModels();
+                    }
+                  }}
                 >
-                  <div className="flex items-center gap-2 truncate">
-                    <ProviderIcon
-                      provider={
-                        allModels.find((m) => m.id === selectedModel)?.logo_provider ||
-                        allModels.find((m) => m.id === selectedModel)?.provider ||
-                        "openai"
-                      }
-                      size={14}
-                    />
-                    <span className="truncate">
-                      {allModels.find((m) => m.id === selectedModel)?.name ?? selectedModel}
-                    </span>
-                  </div>
-                  <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-80 p-0" align="start">
-                <Command>
-                  <CommandInput placeholder="Search models..." className="h-9" />
-                  <CommandList className="max-h-64">
-                    <CommandEmpty>
-                      {copilotModelsLoading ? "Loading models..." : "No models found."}
-                    </CommandEmpty>
-                    <CommandGroup>
-                      {allModels
-                        .filter((model) => isModelAvailable(model.id, allModels, apiKeys))
-                        .map((model) => (
-                          <CommandItem
-                            key={model.id}
-                            value={`${model.name} ${model.provider} ${model.logo_provider || ""}`}
-                            onSelect={() => {
-                              handleModelChange(model.id);
-                              setModelPickerOpen(false);
-                            }}
-                            className="text-xs"
-                          >
-                            <Check
-                              className={cn(
-                                "h-3 w-3 shrink-0",
-                                selectedModel === model.id ? "opacity-100" : "opacity-0",
-                              )}
-                            />
-                            <ProviderIcon
-                              provider={model.logo_provider || model.provider}
-                              size={14}
-                            />
-                            <span className="truncate">
-                              {model.name}
-                              <span className="ml-1 text-muted-foreground">({model.provider})</span>
-                            </span>
-                          </CommandItem>
-                        ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
-            <span className="text-xs text-muted-foreground">↵ to send</span>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={modelPickerOpen}
+                      className="h-9 min-w-[220px] justify-between rounded-xl border-border/55 bg-background/35 px-3 text-[11px] hover:bg-background/50"
+                    >
+                      <div className="flex items-center gap-2 truncate">
+                        <ProviderIcon
+                          provider={
+                            allModels.find((m) => m.id === selectedModel)?.logo_provider ||
+                            allModels.find((m) => m.id === selectedModel)?.provider ||
+                            "openai"
+                          }
+                          size={14}
+                        />
+                        <span className="truncate">
+                          {allModels.find((m) => m.id === selectedModel)?.name ?? selectedModel}
+                        </span>
+                        <span className="shrink-0 text-[10px] text-muted-foreground">
+                          {formatTokenCount(selectedModelMaxContext)}
+                        </span>
+                      </div>
+                      <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80 p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search models..." className="h-9" />
+                      <CommandList className="max-h-64">
+                        <CommandEmpty>
+                          {copilotModelsLoading ? "Loading models..." : "No models found."}
+                        </CommandEmpty>
+                        <CommandGroup>
+                          {allModels
+                            .filter((model) => isModelAvailable(model.id, allModels, apiKeys))
+                            .map((model) => (
+                              <CommandItem
+                                key={model.id}
+                                value={`${model.name} ${model.provider} ${model.logo_provider || ""}`}
+                                onSelect={() => {
+                                  handleModelChange(model.id);
+                                  setModelPickerOpen(false);
+                                }}
+                                className="text-[11px]"
+                              >
+                                <Check
+                                  className={cn(
+                                    "h-3 w-3 shrink-0",
+                                    selectedModel === model.id ? "opacity-100" : "opacity-0",
+                                  )}
+                                />
+                                <ProviderIcon
+                                  provider={model.logo_provider || model.provider}
+                                  size={14}
+                                />
+                                <span className="truncate">
+                                  {model.name}
+                                  <span className="ml-1 text-muted-foreground">
+                                    ({model.provider})
+                                  </span>
+                                </span>
+                                <span className="ml-auto text-[10px] text-muted-foreground">
+                                  {formatTokenCount(
+                                    inferModelMaxContextTokens(model.id, model.provider),
+                                  )}
+                                </span>
+                              </CommandItem>
+                            ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+
+                <TooltipProvider delayDuration={200}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        className="flex h-9 shrink-0 items-center gap-1.5 rounded-xl border border-border/55 bg-background/35 px-2 hover:bg-background/50 focus-visible:outline-hidden"
+                        aria-label="Context usage"
+                      >
+                        <ContextUsageRing
+                          percent={currentContextPercent}
+                          size={20}
+                          strokeWidth={2}
+                          label=""
+                        />
+                        <span
+                          className={cn(
+                            "text-[10px] font-medium",
+                            getContextUsageColorClass(currentContextPercent),
+                          )}
+                        >
+                          {Math.round(currentContextPercent)}%
+                        </span>
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-72 text-xs">
+                      <p className="font-medium">{selectedModelInfo?.name ?? selectedModel}</p>
+                      <p className="text-muted-foreground">
+                        Context used: {formatTokenCount(currentContextTokens)} /{" "}
+                        {formatTokenCount(selectedModelMaxContext)} (
+                        {currentContextPercent.toFixed(1)}%)
+                      </p>
+                      <p className="text-muted-foreground">
+                        Remaining: {formatTokenCount(currentContextRemainingTokens)}
+                      </p>
+                      <p className="text-muted-foreground">Estimated token usage</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+
+                {!isLoading && lastUserMessage && messages.length > 0 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleRetry}
+                    className="h-9 rounded-xl border-border/55 bg-background/35 px-3 text-[11px] hover:bg-background/50"
+                    title="Retry last message"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+
+                {queuedMessageCount > 0 && (
+                  <span className="rounded-xl border border-border/55 bg-background/35 px-2 py-1 text-[10px] text-muted-foreground">
+                    Queue: {queuedMessageCount}
+                  </span>
+                )}
+              </div>
+
+              <div className="flex shrink-0 items-center gap-1.5">
+                {isLoading ? (
+                  <>
+                    <Button
+                      type="submit"
+                      size="icon"
+                      variant="outline"
+                      disabled={!input.trim()}
+                      className="h-9 w-9 rounded-xl border border-border/60 bg-background/35 text-muted-foreground hover:bg-background/50 disabled:opacity-50"
+                      title="Queue message"
+                    >
+                      <Send className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleCancel}
+                      className="h-9 rounded-xl border border-border/60 bg-background/35 px-3 text-[11px] text-muted-foreground hover:bg-background/50"
+                      title="Generating... Click to stop"
+                    >
+                      <Loader className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                      Stop
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    type="submit"
+                    size="icon"
+                    disabled={!input.trim()}
+                    className="h-9 w-9 rounded-xl bg-primary/90 text-primary-foreground hover:bg-primary disabled:bg-muted disabled:text-muted-foreground"
+                  >
+                    <Send className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+              </div>
+            </div>
           </div>
         </form>
       </div>

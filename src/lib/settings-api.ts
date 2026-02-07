@@ -14,6 +14,8 @@ interface RustAppSettings {
   experimental_terminal: boolean;
   experimental_plugins: boolean;
   debug_mode: boolean;
+  custom_font_family: string;
+  ui_font_scale: "small" | "default" | "large";
   migrated_from_legacy: boolean;
 }
 
@@ -33,6 +35,8 @@ function fromRustSettings(settings: RustAppSettings): AppSettings {
     experimentalTerminal: settings.experimental_terminal,
     experimentalPlugins: settings.experimental_plugins,
     debugMode: settings.debug_mode,
+    customFontFamily: settings.custom_font_family,
+    uiFontScale: settings.ui_font_scale,
     migratedFromLegacy: settings.migrated_from_legacy,
   });
 }
@@ -52,6 +56,8 @@ function toRustSettings(settings: AppSettings): RustAppSettings {
     experimental_terminal: normalized.experimentalTerminal,
     experimental_plugins: normalized.experimentalPlugins,
     debug_mode: normalized.debugMode,
+    custom_font_family: normalized.customFontFamily,
+    ui_font_scale: normalized.uiFontScale,
     migrated_from_legacy: normalized.migratedFromLegacy,
   };
 }
@@ -77,6 +83,12 @@ function patchToRust(patch: Partial<AppSettings>): Partial<RustAppSettings> {
     rustPatch.experimental_plugins = patch.experimentalPlugins;
   }
   if (patch.debugMode !== undefined) rustPatch.debug_mode = patch.debugMode;
+  if (patch.customFontFamily !== undefined) {
+    rustPatch.custom_font_family = patch.customFontFamily;
+  }
+  if (patch.uiFontScale !== undefined) {
+    rustPatch.ui_font_scale = patch.uiFontScale;
+  }
   if (patch.migratedFromLegacy !== undefined) {
     rustPatch.migrated_from_legacy = patch.migratedFromLegacy;
   }

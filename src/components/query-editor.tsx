@@ -128,12 +128,16 @@ export const QueryEditor = memo(function QueryEditor({
   const completionProviderRef = useRef<{ dispose: () => void } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const executeHandlerRef = useRef<() => void>(() => {});
+  const resizeRafRef = useRef<number | null>(null);
+  const pendingClientYRef = useRef<number>(0);
+  const editorHeightRef = useRef(editorHeight);
 
   // AI Query store for communication with AI chat
   const pendingSql = useAIQueryStore((s) => s.pendingSql);
   const clearPendingSql = useAIQueryStore((s) => s.clearPendingSql);
   const requestDebug = useAIQueryStore((s) => s.requestDebug);
   const setAiPanelOpen = useAIQueryStore((s) => s.setAiPanelOpen);
+  const uiFontScale = useAIQueryStore((s) => s.uiFontScale);
 
   // Status bar store for cursor position and query results
   const setQueryResult = useStatusBarStore((s) => s.setQueryResult);
@@ -147,6 +151,10 @@ export const QueryEditor = memo(function QueryEditor({
   }, [setCursorPosition]);
 
   const executeQueryMutation = useExecuteQuery(connectionId);
+
+  useEffect(() => {
+    editorHeightRef.current = editorHeight;
+  }, [editorHeight]);
 
   const applyMonacoTheme = useCallback(() => {
     if (!monacoRef.current) return;
@@ -256,34 +264,56 @@ export const QueryEditor = memo(function QueryEditor({
   // Resize handlers
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
+    pendingClientYRef.current = e.clientY;
     setIsResizing(true);
   }, []);
 
   useEffect(() => {
     if (!isResizing) return;
 
-    const handleMouseMove = (e: MouseEvent) => {
+    const applyHeight = (clientY: number) => {
       if (!containerRef.current) return;
       const containerRect = containerRef.current.getBoundingClientRect();
-      const newHeight = e.clientY - containerRect.top;
+      const newHeight = clientY - containerRect.top;
       const clampedHeight = Math.min(MAX_EDITOR_HEIGHT, Math.max(MIN_EDITOR_HEIGHT, newHeight));
-      setEditorHeight(clampedHeight);
+      if (clampedHeight !== editorHeightRef.current) {
+        editorHeightRef.current = clampedHeight;
+        setEditorHeight(clampedHeight);
+      }
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      pendingClientYRef.current = e.clientY;
+      if (resizeRafRef.current !== null) return;
+      resizeRafRef.current = window.requestAnimationFrame(() => {
+        resizeRafRef.current = null;
+        applyHeight(pendingClientYRef.current);
+      });
     };
 
     const handleMouseUp = () => {
+      if (resizeRafRef.current !== null) {
+        window.cancelAnimationFrame(resizeRafRef.current);
+        resizeRafRef.current = null;
+      }
+      applyHeight(pendingClientYRef.current);
       setIsResizing(false);
       // Save height to localStorage when done resizing
-      localStorage.setItem(EDITOR_HEIGHT_KEY, editorHeight.toString());
+      localStorage.setItem(EDITOR_HEIGHT_KEY, editorHeightRef.current.toString());
     };
 
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("mouseup", handleMouseUp);
 
     return () => {
+      if (resizeRafRef.current !== null) {
+        window.cancelAnimationFrame(resizeRafRef.current);
+        resizeRafRef.current = null;
+      }
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isResizing, editorHeight]);
+  }, [isResizing]);
 
   // Update table/column completions when tables change
   useEffect(() => {
@@ -611,10 +641,14 @@ export const QueryEditor = memo(function QueryEditor({
     return <RedisConsole tabId={tabId} paneId={paneId} connectionId={connectionId} />;
   }
 
+  const monacoFontSize = uiFontScale === "small" ? 13 : uiFontScale === "large" ? 15 : 14;
+  const statementCount = splitQueries(query).length;
+  const shortcutLabel = "Cmd+Enter / Ctrl+Enter";
+
   return (
-    <div className="flex h-full flex-col" ref={containerRef}>
-      <div className="border-b border-border">
-        <div style={{ height: editorHeight }} className="w-full">
+    <div className="flex h-full flex-col bg-background" ref={containerRef}>
+      <div className="border-b border-border/60 bg-card/10">
+        <div style={{ height: editorHeight }} className="w-full overflow-hidden rounded-none">
           <Editor
             height="100%"
             defaultLanguage={isRedis ? "plaintext" : "sql"}
@@ -625,7 +659,7 @@ export const QueryEditor = memo(function QueryEditor({
             theme={MONACO_THEME_NAME}
             options={{
               minimap: { enabled: false },
-              fontSize: 14,
+              fontSize: monacoFontSize,
               fontFamily: "JetBrains Mono, Menlo, Monaco, Consolas, monospace",
               lineNumbers: "on",
               scrollBeyondLastLine: false,
@@ -649,23 +683,31 @@ export const QueryEditor = memo(function QueryEditor({
         <div
           onMouseDown={handleMouseDown}
           className={cn(
-            "flex h-3 cursor-row-resize items-center justify-center border-t border-border bg-card hover:bg-secondary transition-colors",
-            isResizing && "bg-muted",
+            "flex h-3 cursor-row-resize items-center justify-center border-t border-border/60 bg-background/80 transition-colors hover:bg-muted/40",
+            isResizing && "bg-muted/70",
           )}
         >
-          <GripHorizontal className="h-3 w-3 text-muted-foreground" />
+          <GripHorizontal className="h-3 w-3 text-muted-foreground/90" />
         </div>
-        <div className="flex items-center justify-between px-4 py-2 border-t border-border">
-          <p className="text-xs text-muted-foreground">
-            {isRedis
-              ? "Enter Redis commands (one per line). Press Cmd+Enter to execute."
-              : "Press Cmd+Enter (Ctrl+Enter) to execute"}
-          </p>
+        <div className="flex items-center justify-between border-t border-border/60 px-3 py-2">
           <div className="flex items-center gap-2">
+            <span className="rounded-md border border-border/60 bg-background/70 px-2 py-1 text-[10px] text-muted-foreground">
+              {shortcutLabel}
+            </span>
+            <span className="rounded-md border border-border/60 bg-background/70 px-2 py-1 text-[10px] text-muted-foreground">
+              {statementCount} statement{statementCount === 1 ? "" : "s"}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5">
             <Popover open={historyOpen} onOpenChange={setHistoryOpen}>
               <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" title="Cmd+Shift+H">
-                  <History className="mr-2 h-4 w-4" />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  title="Cmd+Shift+H"
+                  className="h-8 rounded-xl border-border/60 bg-background/70 px-3 text-xs hover:bg-background"
+                >
+                  <History className="mr-1.5 h-3.5 w-3.5" />
                   History
                 </Button>
               </PopoverTrigger>
@@ -735,11 +777,12 @@ export const QueryEditor = memo(function QueryEditor({
               onClick={handleExecute}
               disabled={executeQueryMutation.isPending || !query.trim()}
               size="sm"
+              className="h-8 rounded-xl px-3 text-xs"
             >
               {executeQueryMutation.isPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
               ) : (
-                <Play className="mr-2 h-4 w-4" />
+                <Play className="mr-1.5 h-3.5 w-3.5" />
               )}
               Execute
             </Button>
@@ -747,18 +790,18 @@ export const QueryEditor = memo(function QueryEditor({
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden bg-gradient-to-b from-background to-card/10">
         {error && (
-          <div className="m-4 rounded-md border border-red-900 bg-red-950/50 p-4">
+          <div className="m-3 rounded-xl border border-red-500/30 bg-red-950/30 p-3">
             <div className="flex items-start justify-between gap-4">
-              <p className="text-sm text-red-400 flex-1">{error}</p>
+              <p className="flex-1 text-xs text-red-300">{error}</p>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleDebugWithAssistant}
-                className="shrink-0 border-red-800 text-red-400 hover:bg-red-950 hover:text-red-300"
+                className="h-8 shrink-0 rounded-lg border-red-500/40 bg-red-950/25 px-2.5 text-xs text-red-200 hover:bg-red-900/35 hover:text-red-100"
               >
-                <Bug className="mr-2 h-4 w-4" />
+                <Bug className="mr-1.5 h-3.5 w-3.5" />
                 Debug with AI
               </Button>
             </div>
@@ -772,23 +815,30 @@ export const QueryEditor = memo(function QueryEditor({
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.2 }}
-              className="min-w-max p-4 space-y-4"
+              className="min-w-max p-3 space-y-3"
             >
-              <div className="flex items-center justify-between">
-                {executionTime !== null && (
-                  <div className="text-xs text-muted-foreground">
-                    Executed in{" "}
-                    {executionTime < 1000
-                      ? `${executionTime.toFixed(1)}ms`
-                      : `${(executionTime / 1000).toFixed(2)}s`}
-                  </div>
-                )}
-                <div className="flex items-center gap-1 ml-auto">
+              <div className="flex items-center justify-between rounded-xl border border-border/60 bg-background/65 px-3 py-2">
+                <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                  {executionTime !== null && (
+                    <span>
+                      Executed in{" "}
+                      {executionTime < 1000
+                        ? `${executionTime.toFixed(1)}ms`
+                        : `${(executionTime / 1000).toFixed(2)}s`}
+                    </span>
+                  )}
+                  <span>•</span>
+                  <span>
+                    {results.reduce((sum, item) => sum + item.row_count, 0)} row
+                    {results.reduce((sum, item) => sum + item.row_count, 0) === 1 ? "" : "s"}
+                  </span>
+                </div>
+                <div className="ml-auto flex items-center gap-1 rounded-lg border border-border/60 bg-background/70 p-0.5">
                   <Button
                     variant={viewMode === "table" ? "secondary" : "ghost"}
                     size="sm"
                     onClick={() => setViewMode("table")}
-                    className="h-7 px-2"
+                    className="h-7 rounded-md px-2"
                   >
                     <TableIcon className="h-3.5 w-3.5" />
                   </Button>
@@ -796,7 +846,7 @@ export const QueryEditor = memo(function QueryEditor({
                     variant={viewMode === "json" ? "secondary" : "ghost"}
                     size="sm"
                     onClick={() => setViewMode("json")}
-                    className="h-7 px-2"
+                    className="h-7 rounded-md px-2"
                   >
                     <Braces className="h-3.5 w-3.5" />
                   </Button>
@@ -804,7 +854,7 @@ export const QueryEditor = memo(function QueryEditor({
               </div>
 
               {viewMode === "json" ? (
-                <pre className="text-xs font-mono text-foreground bg-card rounded-md p-4 overflow-auto">
+                <pre className="overflow-auto rounded-xl border border-border/60 bg-background/60 p-3 font-mono text-[11px] text-foreground">
                   {JSON.stringify(
                     results.map((result) => ({
                       columns: result.columns,
@@ -820,23 +870,26 @@ export const QueryEditor = memo(function QueryEditor({
               ) : (
                 <div className="space-y-6">
                   {results.map((result, resultIdx) => (
-                    <div key={resultIdx}>
+                    <div
+                      key={resultIdx}
+                      className="rounded-xl border border-border/60 bg-background/55 p-3"
+                    >
                       {results.length > 1 && (
-                        <div className="mb-2 text-xs font-medium text-muted-foreground uppercase">
+                        <div className="mb-2 text-[10px] font-medium uppercase text-muted-foreground">
                           Query {resultIdx + 1}
                         </div>
                       )}
-                      <div className="mb-2 text-sm text-muted-foreground">
+                      <div className="mb-2 text-xs text-muted-foreground">
                         {result.row_count} row
                         {result.row_count !== 1 ? "s" : ""} returned
                       </div>
-                      <Table>
+                      <Table className="text-[12px]">
                         <TableHeader>
-                          <TableRow className="border-border hover:bg-transparent">
+                          <TableRow className="border-border/60 bg-card/40 hover:bg-card/40">
                             {result.columns.map((col: string) => (
                               <TableHead
                                 key={col}
-                                className="whitespace-nowrap border-r border-border last:border-r-0"
+                                className="h-9 whitespace-nowrap border-r border-border/60 px-2.5 last:border-r-0"
                               >
                                 {col}
                               </TableHead>
@@ -855,14 +908,14 @@ export const QueryEditor = memo(function QueryEditor({
                             </TableRow>
                           ) : (
                             result.rows.map((row: unknown[], i: number) => (
-                              <TableRow key={i} className="border-border hover:bg-card/50">
+                              <TableRow key={i} className="border-border/55 hover:bg-muted/25">
                                 {row.map((cell: unknown, j: number) => {
                                   const isNull = cell === null;
                                   return (
                                     <TableCell
                                       key={j}
                                       className={cn(
-                                        "max-w-xs truncate border-r border-border font-mono text-xs last:border-r-0",
+                                        "max-w-xs truncate border-r border-border/55 px-2.5 font-mono text-[11px] last:border-r-0",
                                         isNull && "text-muted-foreground italic",
                                       )}
                                       title={formatValue(cell)}
@@ -886,8 +939,13 @@ export const QueryEditor = memo(function QueryEditor({
         )}
 
         {!error && results.length === 0 && (
-          <div className="flex h-full items-center justify-center text-muted-foreground">
-            <p>Execute a query to see results</p>
+          <div className="flex h-full items-center justify-center p-6">
+            <div className="rounded-xl border border-dashed border-border/60 bg-background/40 px-4 py-6 text-center">
+              <p className="text-sm font-medium text-foreground">No results yet</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Run a query to view returned rows here.
+              </p>
+            </div>
           </div>
         )}
       </div>
