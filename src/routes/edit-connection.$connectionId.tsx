@@ -13,6 +13,7 @@ import type { ConnectionConfig, DatabaseType, SavedConnection } from "@/lib/type
 import { CommandPalette } from "@/components/command-palette";
 import { PasswordPromptDialog } from "@/components/password-prompt-dialog";
 import { useGlobalShortcuts } from "@/lib/use-global-shortcuts";
+import { openSettingsWindow } from "@/lib/settings-window";
 
 export const Route = createFileRoute("/edit-connection/$connectionId")({
   component: EditConnectionPage,
@@ -115,7 +116,7 @@ function EditConnectionPage() {
     },
     onOpenCommandPalette: () => setCommandPaletteOpen((prev) => !prev),
     onOpenSettings: () => {
-      navigate({ to: "/settings" });
+      void openSettingsWindow({ fallback: () => navigate({ to: "/settings" }) });
     },
   });
 

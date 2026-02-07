@@ -23,6 +23,7 @@ pub struct AppSettings {
     pub experimental_plugins: bool,
     pub debug_mode: bool,
     pub custom_font_family: String,
+    pub ui_font_scale: String,
     pub migrated_from_legacy: bool,
 }
 
@@ -42,6 +43,7 @@ impl Default for AppSettings {
             experimental_plugins: false,
             debug_mode: false,
             custom_font_family: String::new(),
+            ui_font_scale: "default".to_string(),
             migrated_from_legacy: false,
         }
     }
@@ -63,6 +65,12 @@ impl AppSettings {
             .collect();
         let compact = filtered.split_whitespace().collect::<Vec<_>>().join(" ");
         self.custom_font_family = compact.chars().take(200).collect();
+
+        self.ui_font_scale = match self.ui_font_scale.as_str() {
+            "small" => "small".to_string(),
+            "large" => "large".to_string(),
+            _ => "default".to_string(),
+        };
     }
 }
 
@@ -157,6 +165,7 @@ pub async fn load_settings_from_path(path: &Path) -> Result<AppSettings, String>
         || before.ai_panel_width != settings.ai_panel_width
         || before.sidebar_width != settings.sidebar_width
         || before.custom_font_family != settings.custom_font_family
+        || before.ui_font_scale != settings.ui_font_scale
         || before.schema_version != settings.schema_version
     {
         needs_write = true;

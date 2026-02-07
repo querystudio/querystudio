@@ -1,5 +1,7 @@
 import { Outlet, createRootRoute } from "@tanstack/react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { isTauri } from "@tauri-apps/api/core";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Toaster } from "@/components/ui/sonner";
 import { useUpdateChecker } from "@/hooks/use-update-checker";
 import { useAuthDeepLink } from "@/hooks/use-auth-deep-link";
@@ -18,9 +20,25 @@ export const Route = createRootRoute({
   component: RootComponent,
 });
 
-function UpdateChecker() {
+function shouldRunGlobalUpdateChecker(): boolean {
+  if (!isTauri()) return true;
+  try {
+    return getCurrentWindow().label === "main";
+  } catch {
+    return true;
+  }
+}
+
+function ActiveUpdateChecker() {
   useUpdateChecker();
   return null;
+}
+
+function UpdateChecker() {
+  if (!shouldRunGlobalUpdateChecker()) {
+    return null;
+  }
+  return <ActiveUpdateChecker />;
 }
 
 function AuthDeepLinkHandler() {

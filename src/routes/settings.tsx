@@ -38,9 +38,9 @@ import { PluginSettings } from "@/components/plugin-settings";
 import { PasswordPromptDialog } from "@/components/password-prompt-dialog";
 import { useGlobalShortcuts } from "@/lib/use-global-shortcuts";
 import { useConnectionStore, useAIQueryStore } from "@/lib/store";
+import { closeSettingsWindow } from "@/lib/settings-window";
 import { useDisconnect } from "@/lib/hooks";
 import type { SavedConnection } from "@/lib/types";
-import { Badge } from "@/components/ui/badge";
 
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,
@@ -110,7 +110,7 @@ function SettingsPage() {
               variant="ghost"
               size="sm"
               className="w-full justify-start gap-2"
-              onClick={() => navigate({ to: "/" })}
+              onClick={() => void closeSettingsWindow({ fallback: () => navigate({ to: "/" }) })}
             >
               <ArrowLeft className="h-4 w-4" />
               Back
@@ -357,6 +357,8 @@ function AppearanceSettings() {
   const setStatusBarVisible = useAIQueryStore((s) => s.setStatusBarVisible);
   const customFontFamily = useAIQueryStore((s) => s.customFontFamily);
   const setCustomFontFamily = useAIQueryStore((s) => s.setCustomFontFamily);
+  const uiFontScale = useAIQueryStore((s) => s.uiFontScale);
+  const setUiFontScale = useAIQueryStore((s) => s.setUiFontScale);
   const [fontDraft, setFontDraft] = useState(customFontFamily);
   const [fontPickerOpen, setFontPickerOpen] = useState(false);
   const [fontSearchQuery, setFontSearchQuery] = useState("");
@@ -441,6 +443,39 @@ function AppearanceSettings() {
       <div className="space-y-4">
         <h3 className="text-lg font-medium">Typography</h3>
         <div className="space-y-3 rounded-lg border p-4">
+          <div className="space-y-2">
+            <Label className="text-base">UI Font Size</Label>
+            <p className="text-sm text-muted-foreground">
+              Scale text across the application interface.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {(
+                [
+                  { value: "small", label: "Small", preview: "92%" },
+                  { value: "default", label: "Default", preview: "100%" },
+                  { value: "large", label: "Large", preview: "108%" },
+                ] as const
+              ).map((option) => {
+                const isActive = uiFontScale === option.value;
+                return (
+                  <Button
+                    key={option.value}
+                    type="button"
+                    variant={isActive ? "default" : "outline"}
+                    className={cn(
+                      "h-9 min-w-24 justify-between gap-2",
+                      !isActive && "text-muted-foreground",
+                    )}
+                    onClick={() => setUiFontScale(option.value)}
+                  >
+                    <span>{option.label}</span>
+                    <span className="text-[10px] opacity-80">{option.preview}</span>
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
+          <Separator />
           <div className="space-y-1">
             <Label htmlFor="custom-font-family" className="text-base">
               Custom Font Family

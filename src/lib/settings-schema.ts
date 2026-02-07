@@ -2,6 +2,8 @@ import { normalizeCustomFontFamily } from "./app-font";
 
 export const SETTINGS_SCHEMA_VERSION = 1;
 
+export type UIFontScale = "small" | "default" | "large";
+
 export interface AppSettings {
   schemaVersion: number;
   activeTab: string;
@@ -16,6 +18,7 @@ export interface AppSettings {
   experimentalPlugins: boolean;
   debugMode: boolean;
   customFontFamily: string;
+  uiFontScale: UIFontScale;
   migratedFromLegacy: boolean;
 }
 
@@ -33,6 +36,7 @@ export const defaultAppSettings: AppSettings = {
   experimentalPlugins: false,
   debugMode: false,
   customFontFamily: "",
+  uiFontScale: "default",
   migratedFromLegacy: false,
 };
 
@@ -49,5 +53,9 @@ export function normalizeSettings(input: Partial<AppSettings>): AppSettings {
     aiPanelWidth: Math.min(800, Math.max(320, merged.aiPanelWidth)),
     sidebarWidth: Math.min(400, Math.max(180, merged.sidebarWidth)),
     customFontFamily: normalizeCustomFontFamily(merged.customFontFamily || ""),
+    uiFontScale:
+      merged.uiFontScale === "small" || merged.uiFontScale === "large"
+        ? merged.uiFontScale
+        : "default",
   };
 }

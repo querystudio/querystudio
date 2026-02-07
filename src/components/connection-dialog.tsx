@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useConnect, useTestConnection, useCanSaveConnection } from "@/lib/hooks";
+import { openSettingsWindow } from "@/lib/settings-window";
 import { toast } from "sonner";
 import type { ConnectionConfig, DatabaseType } from "@/lib/types";
 import { useNavigate } from "@tanstack/react-router";
@@ -288,7 +289,7 @@ export function ConnectionDialog({ open, onOpenChange }: ConnectionDialogProps) 
                 size="sm"
                 onClick={() => {
                   onOpenChange(false);
-                  navigate({ to: "/settings" });
+                  void openSettingsWindow({ fallback: () => navigate({ to: "/settings" }) });
                 }}
                 className="mt-2"
               >

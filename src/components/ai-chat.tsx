@@ -16,7 +16,6 @@ import {
   History,
   RotateCcw,
   Loader,
-  Sparkles,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -52,6 +51,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useConnectionStore, useAIQueryStore, useLastChatStore } from "@/lib/store";
 import {
   AIAgent,
@@ -66,7 +66,7 @@ import {
   generateSessionTitle,
 } from "@/lib/ai-agent";
 import { api } from "@/lib/api";
-import type { AIModelInfo } from "@/lib/types";
+import type { AIModelInfo, MessageUsage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { ProviderIcon, preloadProviderIcons } from "@/components/ui/provider-icon";
 import { Badge } from "./ui/badge";
@@ -105,6 +105,88 @@ function getApiKeyForModel(model: ModelId, allModels: AIModelInfo[], keys: Provi
 function isModelAvailable(model: ModelId, allModels: AIModelInfo[], keys: ProviderKeys): boolean {
   const key = getApiKeyForModel(model, allModels, keys);
   return !!key.trim();
+}
+
+const DEFAULT_MODEL_MAX_CONTEXT_TOKENS = 128_000;
+
+function inferModelMaxContextTokens(modelId: string, provider?: string): number {
+  const id = modelId.toLowerCase();
+  const normalizedProvider = provider?.toLowerCase();
+
+  // OpenAI family
+  if (id === "gpt-5" || id === "gpt-5-mini") return 400_000;
+  if (
+    id.startsWith("gpt-4.1") ||
+    id.startsWith("gpt-4o") ||
+    id.startsWith("o1") ||
+    id.startsWith("o3") ||
+    id.startsWith("o4")
+  ) {
+    return 128_000;
+  }
+
+  // Anthropic family
+  if (id.includes("claude")) return 200_000;
+
+  // Gemini family
+  if (id.includes("gemini-2.5") || id.includes("gemini-3")) return 1_000_000;
+
+  // OpenRouter/Vercel/Copilot are mixed catalogs; keep a safe fallback.
+  if (
+    normalizedProvider === "openrouter" ||
+    normalizedProvider === "vercel" ||
+    normalizedProvider === "copilot"
+  ) {
+    if (id.includes("claude")) return 200_000;
+    if (id.includes("gemini")) return 1_000_000;
+    return DEFAULT_MODEL_MAX_CONTEXT_TOKENS;
+  }
+
+  // Provider-level defaults
+  if (normalizedProvider === "google") return 1_000_000;
+  if (normalizedProvider === "anthropic") return 200_000;
+  if (normalizedProvider === "openai") return 128_000;
+
+  return DEFAULT_MODEL_MAX_CONTEXT_TOKENS;
+}
+
+function estimateTextTokens(text: string): number {
+  if (!text) return 0;
+  // UTF-8 bytes / 4 gives a reasonable rough token estimate across providers.
+  const byteLength = new TextEncoder().encode(text).length;
+  return Math.max(1, Math.round(byteLength / 4));
+}
+
+function estimateToolCallsTokens(toolCalls?: ToolCall[]): number {
+  if (!toolCalls?.length) return 0;
+  let total = 0;
+  for (const tc of toolCalls) {
+    total += estimateTextTokens(tc.name);
+    total += estimateTextTokens(tc.arguments);
+    total += estimateTextTokens(tc.result ?? "");
+    total += 12; // structural overhead
+  }
+  return total;
+}
+
+function estimateMessageTokens(message: Pick<Message, "content" | "toolCalls">): number {
+  return estimateTextTokens(message.content) + estimateToolCallsTokens(message.toolCalls) + 8;
+}
+
+function estimateConversationTokens(messages: Message[]): number {
+  return messages.reduce((sum, message) => sum + estimateMessageTokens(message), 18);
+}
+
+function formatTokenCount(tokens: number): string {
+  if (tokens >= 1_000_000) return `${(tokens / 1_000_000).toFixed(2)}M`;
+  if (tokens >= 1_000) return `${(tokens / 1_000).toFixed(1)}k`;
+  return String(tokens);
+}
+
+function getContextUsageColorClass(percent: number): string {
+  if (percent >= 90) return "text-red-500";
+  if (percent >= 75) return "text-amber-500";
+  return "text-emerald-500";
 }
 
 // ============================================================================
@@ -195,7 +277,7 @@ const CodeBlock = memo(function CodeBlock({
 
 const InlineCode = memo(function InlineCode({ children }: { children: React.ReactNode }) {
   return (
-    <code className="bg-muted px-1.5 py-0.5 rounded text-primary text-sm font-mono">
+    <code className="bg-muted px-1.5 py-0.5 rounded text-primary text-xs font-mono">
       {children}
     </code>
   );
@@ -274,7 +356,7 @@ const StreamingText = memo(function StreamingText({
   const displayedContent = content.slice(0, displayedLength);
 
   return (
-    <div className="text-sm leading-relaxed">
+    <div className="text-[13px] leading-relaxed">
       <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
         {displayedContent}
       </ReactMarkdown>
@@ -291,6 +373,62 @@ interface MessageBubbleProps {
   message: Message;
   onAppendToRunner: (code: string) => void;
 }
+
+interface ContextUsageRingProps {
+  percent: number;
+  size?: number;
+  strokeWidth?: number;
+  label?: string;
+}
+
+const ContextUsageRing = memo(function ContextUsageRing({
+  percent,
+  size = 36,
+  strokeWidth = 3,
+  label,
+}: ContextUsageRingProps) {
+  const normalizedPercent = Math.min(100, Math.max(0, percent));
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const dashOffset = circumference - (normalizedPercent / 100) * circumference;
+  const colorClass = getContextUsageColorClass(normalizedPercent);
+  const resolvedLabel = label ?? `${Math.round(normalizedPercent)}%`;
+
+  return (
+    <div
+      className="relative inline-flex items-center justify-center"
+      style={{ width: size, height: size }}
+    >
+      <svg width={size} height={size} className="-rotate-90">
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke="currentColor"
+          strokeWidth={strokeWidth}
+          className="text-muted/50"
+          fill="none"
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke="currentColor"
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          className={colorClass}
+          fill="none"
+          strokeDasharray={circumference}
+          strokeDashoffset={dashOffset}
+          style={{ transition: "stroke-dashoffset 180ms ease-out" }}
+        />
+      </svg>
+      {resolvedLabel.length > 0 && (
+        <span className={cn("absolute text-[9px] font-medium", colorClass)}>{resolvedLabel}</span>
+      )}
+    </div>
+  );
+});
 
 const ToolThinkingSkeleton = memo(function ToolThinkingSkeleton() {
   return (
@@ -389,6 +527,7 @@ const MessageBubble = memo(function MessageBubble({
   onAppendToRunner,
 }: MessageBubbleProps) {
   const isUser = message.role === "user";
+  const usage = message.usage;
 
   // Memoize the markdown components to ensure stable references
   // This prevents React from seeing different component trees during streaming
@@ -412,26 +551,28 @@ const MessageBubble = memo(function MessageBubble({
       // Headings
       h1({ children }: { children?: React.ReactNode }) {
         return (
-          <h1 className="text-lg font-semibold text-foreground mt-4 mb-2 first:mt-0">{children}</h1>
+          <h1 className="text-base font-semibold text-foreground mt-4 mb-2 first:mt-0">
+            {children}
+          </h1>
         );
       },
       h2({ children }: { children?: React.ReactNode }) {
         return (
-          <h2 className="text-base font-semibold text-foreground mt-3 mb-1.5 first:mt-0">
+          <h2 className="text-sm font-semibold text-foreground mt-3 mb-1.5 first:mt-0">
             {children}
           </h2>
         );
       },
       h3({ children }: { children?: React.ReactNode }) {
         return (
-          <h3 className="text-sm font-semibold text-foreground mt-2.5 mb-1 first:mt-0">
+          <h3 className="text-xs font-semibold text-foreground mt-2.5 mb-1 first:mt-0">
             {children}
           </h3>
         );
       },
       h4({ children }: { children?: React.ReactNode }) {
         return (
-          <h4 className="text-sm font-medium text-foreground mt-2 mb-1 first:mt-0">{children}</h4>
+          <h4 className="text-xs font-medium text-foreground mt-2 mb-1 first:mt-0">{children}</h4>
         );
       },
       // Paragraphs
@@ -534,7 +675,7 @@ const MessageBubble = memo(function MessageBubble({
       )}
       <div
         className={cn(
-          "max-w-[90%] rounded-2xl border px-3 py-2.5 text-sm",
+          "max-w-[90%] rounded-2xl border px-3 py-2.5 text-[13px]",
           isUser
             ? "border-primary/30 bg-primary/95 text-primary-foreground"
             : "border-border/70 bg-card/75 text-foreground backdrop-blur-sm",
@@ -545,7 +686,7 @@ const MessageBubble = memo(function MessageBubble({
           <div className="space-y-1.5">
             {message.toolCalls?.length ? (
               <div>
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
                   <Loader className="h-3 w-3 animate-spin" />
                   <span>
                     {(message.toolCalls[message.toolCalls.length - 1].name?.trim() || "Tool Call") +
@@ -589,13 +730,36 @@ const MessageBubble = memo(function MessageBubble({
               </div>
             )}
             {message.content ? (
-              <div className="text-sm leading-relaxed">
+              <div className="text-[13px] leading-relaxed">
                 <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                   {message.content}
                 </ReactMarkdown>
               </div>
             ) : null}
           </>
+        )}
+        {!isUser && usage && !message.isLoading && (
+          <div
+            className={cn(
+              "mt-2 flex flex-wrap items-center gap-1.5 border-t pt-1.5 text-[10px]",
+              isUser
+                ? "border-primary-foreground/20 text-primary-foreground/80"
+                : "border-border/45 text-muted-foreground",
+            )}
+          >
+            <span>
+              ctx {formatTokenCount(usage.contextTokens)}/{formatTokenCount(usage.maxContextTokens)}
+            </span>
+            <span>{usage.contextPercent.toFixed(1)}%</span>
+            {usage.promptTokens !== undefined && (
+              <span>in {formatTokenCount(usage.promptTokens)}</span>
+            )}
+            {usage.completionTokens !== undefined && (
+              <span>out {formatTokenCount(usage.completionTokens)}</span>
+            )}
+            <span>msg {formatTokenCount(usage.messageTokens)}</span>
+            {usage.estimated && <span>est.</span>}
+          </div>
         )}
       </div>
     </motion.div>
@@ -794,6 +958,15 @@ export const AIChat = memo(function AIChat() {
     });
   }, [openaiModels, geminiModels, anthropicModels, openrouterModels, vercelModels, copilotModels]);
 
+  const selectedModelInfo = useMemo(
+    () => allModels.find((m) => m.id === selectedModel),
+    [allModels, selectedModel],
+  );
+  const selectedModelMaxContext = useMemo(
+    () => inferModelMaxContextTokens(selectedModel, selectedModelInfo?.provider),
+    [selectedModel, selectedModelInfo?.provider],
+  );
+
   const apiKeys = useMemo(
     () => ({
       openai: openaiApiKey,
@@ -809,6 +982,8 @@ export const AIChat = memo(function AIChat() {
   const agentRef = useRef<AIAgent | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const streamFlushRafRef = useRef<number | null>(null);
+  const messagesRef = useRef<Message[]>([]);
   const [lastUserMessage, setLastUserMessage] = useState<string | null>(null);
   const queuedMessagesRef = useRef<Array<{ text: string; addUserMessage: boolean }>>([]);
   const [queuedMessageCount, setQueuedMessageCount] = useState(0);
@@ -897,6 +1072,74 @@ export const AIChat = memo(function AIChat() {
   useEffect(() => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
+
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
+  useEffect(() => {
+    return () => {
+      if (streamFlushRafRef.current !== null) {
+        cancelAnimationFrame(streamFlushRafRef.current);
+        streamFlushRafRef.current = null;
+      }
+    };
+  }, []);
+
+  const buildUsage = useCallback(
+    ({
+      conversationMessages,
+      messageTokens,
+      promptTokens,
+      completionTokens,
+    }: {
+      conversationMessages: Message[];
+      messageTokens: number;
+      promptTokens?: number;
+      completionTokens?: number;
+    }): MessageUsage => {
+      const contextTokens = estimateConversationTokens(conversationMessages);
+      const contextPercent = (contextTokens / selectedModelMaxContext) * 100;
+      const totalTokens = (promptTokens ?? 0) + (completionTokens ?? 0);
+
+      return {
+        model: selectedModel,
+        maxContextTokens: selectedModelMaxContext,
+        messageTokens,
+        contextTokens,
+        contextPercent,
+        totalTokens,
+        promptTokens,
+        completionTokens,
+        estimated: true,
+      };
+    },
+    [selectedModel, selectedModelMaxContext],
+  );
+
+  const finalizedMessages = useMemo(() => messages.filter((m) => !m.isLoading), [messages]);
+  const finalizedMessagesSignature = useMemo(
+    () =>
+      finalizedMessages
+        .map((message) => {
+          const toolCallsLength = message.toolCalls?.length ?? 0;
+          const firstChar = message.content.charCodeAt(0) || 0;
+          const lastChar = message.content.charCodeAt(message.content.length - 1) || 0;
+          const toolResultLength = message.toolCalls?.reduce(
+            (sum, toolCall) => sum + (toolCall.result?.length ?? 0),
+            0,
+          );
+          return `${message.id}:${message.content.length}:${firstChar}:${lastChar}:${toolCallsLength}:${toolResultLength ?? 0}`;
+        })
+        .join("|"),
+    [finalizedMessages],
+  );
+  const currentContextTokens = useMemo(
+    () => estimateConversationTokens(finalizedMessages),
+    [finalizedMessagesSignature],
+  );
+  const currentContextPercent = (currentContextTokens / selectedModelMaxContext) * 100;
+  const currentContextRemainingTokens = Math.max(0, selectedModelMaxContext - currentContextTokens);
 
   // Handle debug request from query editor
   useEffect(() => {
@@ -1129,10 +1372,16 @@ export const AIChat = memo(function AIChat() {
       // Create abort controller for this request
       abortControllerRef.current = new AbortController();
       setLastUserMessage(userText);
+      const promptWithContext = composePromptWithContext(userText);
+      const baseMessages = messagesRef.current.filter((m) => !m.isLoading);
+
+      const promptTokensEstimate =
+        estimateConversationTokens(baseMessages) + estimateTextTokens(promptWithContext);
 
       if (addUserMessage) {
+        const userMessageId = crypto.randomUUID();
         const userMessage: Message = {
-          id: crypto.randomUUID(),
+          id: userMessageId,
           role: "user",
           content: userText,
         };
@@ -1149,7 +1398,6 @@ export const AIChat = memo(function AIChat() {
       ]);
 
       try {
-        const promptWithContext = composePromptWithContext(userText);
         const stream = agentRef.current.chatStream(promptWithContext, (toolUpdate) => {
           setMessages((prev) =>
             prev.map((m) =>
@@ -1192,39 +1440,89 @@ export const AIChat = memo(function AIChat() {
         });
 
         let fullContent = "";
+        let latestFlushedContent = "";
+        const flushStreamingContent = () => {
+          if (latestFlushedContent === fullContent) return;
+          latestFlushedContent = fullContent;
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === loadingId ? { ...m, content: latestFlushedContent, isLoading: true } : m,
+            ),
+          );
+          scrollToBottom();
+        };
         for await (const chunk of stream) {
           // Check if aborted
           if (abortControllerRef.current?.signal.aborted) {
             throw new Error("Request cancelled");
           }
           fullContent += chunk;
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === loadingId ? { ...m, content: fullContent, isLoading: true } : m,
-            ),
-          );
-          scrollToBottom();
+          if (streamFlushRafRef.current !== null) continue;
+          streamFlushRafRef.current = requestAnimationFrame(() => {
+            streamFlushRafRef.current = null;
+            flushStreamingContent();
+          });
         }
+        if (streamFlushRafRef.current !== null) {
+          cancelAnimationFrame(streamFlushRafRef.current);
+          streamFlushRafRef.current = null;
+        }
+        flushStreamingContent();
 
         setMessages((prev) => {
-          const updated = prev.map((m) => (m.id === loadingId ? { ...m, isLoading: false } : m));
+          const currentLoadingMessage = prev.find((m) => m.id === loadingId);
+          const finalizedAssistant: Message = {
+            ...(currentLoadingMessage ?? {
+              id: loadingId,
+              role: "assistant",
+              content: fullContent,
+            }),
+            content: fullContent,
+            isLoading: false,
+          };
+          const conversationWithAssistant = [
+            ...prev.filter((m) => m.id !== loadingId && !m.isLoading),
+            finalizedAssistant,
+          ];
+          finalizedAssistant.usage = buildUsage({
+            conversationMessages: conversationWithAssistant,
+            messageTokens: estimateMessageTokens(finalizedAssistant),
+            promptTokens: promptTokensEstimate,
+            completionTokens: estimateTextTokens(fullContent),
+          });
+
+          const updated = prev.map((m) => (m.id === loadingId ? finalizedAssistant : m));
           saveCurrentSession(updated);
           return updated;
         });
       } catch (error) {
         const isCancelled = error instanceof Error && error.message === "Request cancelled";
         setMessages((prev) => {
-          const updated = prev.map((m) =>
-            m.id === loadingId
-              ? {
-                  ...m,
-                  content: isCancelled
-                    ? "_Response cancelled_"
-                    : `Error: ${error instanceof Error ? error.message : "Failed to get response"}`,
-                  isLoading: false,
-                }
-              : m,
-          );
+          const currentLoadingMessage = prev.find((m) => m.id === loadingId);
+          const errorContent = isCancelled
+            ? "_Response cancelled_"
+            : `Error: ${error instanceof Error ? error.message : "Failed to get response"}`;
+          const finalizedAssistant: Message = {
+            ...(currentLoadingMessage ?? {
+              id: loadingId,
+              role: "assistant",
+              content: errorContent,
+            }),
+            content: errorContent,
+            isLoading: false,
+          };
+          const conversationWithAssistant = [
+            ...prev.filter((m) => m.id !== loadingId && !m.isLoading),
+            finalizedAssistant,
+          ];
+          finalizedAssistant.usage = buildUsage({
+            conversationMessages: conversationWithAssistant,
+            messageTokens: estimateMessageTokens(finalizedAssistant),
+            promptTokens: promptTokensEstimate,
+            completionTokens: estimateTextTokens(errorContent),
+          });
+
+          const updated = prev.map((m) => (m.id === loadingId ? finalizedAssistant : m));
           return updated;
         });
       } finally {
@@ -1238,7 +1536,7 @@ export const AIChat = memo(function AIChat() {
         }
       }
     },
-    [scrollToBottom, saveCurrentSession, composePromptWithContext],
+    [scrollToBottom, saveCurrentSession, composePromptWithContext, buildUsage],
   );
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1247,12 +1545,15 @@ export const AIChat = memo(function AIChat() {
     if (!trimmedInput || !agentRef.current) return;
 
     if (isLoading) {
-      const queuedUserMessage: Message = {
-        id: crypto.randomUUID(),
-        role: "user",
-        content: trimmedInput,
-      };
-      setMessages((prev) => [...prev, queuedUserMessage]);
+      const queuedUserMessageId = crypto.randomUUID();
+      setMessages((prev) => {
+        const queuedUserMessage: Message = {
+          id: queuedUserMessageId,
+          role: "user",
+          content: trimmedInput,
+        };
+        return [...prev, queuedUserMessage];
+      });
       setInput("");
       enqueueMessage(trimmedInput, false);
       return;
@@ -1451,7 +1752,7 @@ export const AIChat = memo(function AIChat() {
   return (
     <div className="relative flex h-full flex-col overflow-hidden bg-background">
       {/* Header */}
-      <div className="z-10 shrink-0 border-b border-border/55 bg-background/80 px-3 py-2 backdrop-blur-sm">
+      <div className="z-10 shrink-0 border-b border-border/55 bg-background px-3 py-2">
         <div className="flex items-center justify-between">
           <div className="min-w-0 space-y-0.5">
             <div className="flex items-center gap-2">
@@ -1558,14 +1859,14 @@ export const AIChat = memo(function AIChat() {
       <div className="z-10 flex-1 overflow-y-auto px-3 py-3" ref={scrollRef}>
         {messages.length === 0 ? (
           <div className="flex h-full items-center justify-center">
-            <div className="max-w-sm space-y-4 rounded-2xl border border-border/55 bg-card/50 p-5 text-center backdrop-blur-sm">
+            <div className="max-w-sm space-y-4 rounded-2xl border border-border/55 bg-card/60 p-5 text-center">
               <div className="flex justify-center">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10">
                   <Bot className="h-5 w-5 text-primary/60" />
                 </div>
               </div>
               <div className="space-y-1">
-                <p className="text-sm font-medium text-foreground">
+                <p className="text-xs font-medium text-foreground">
                   Ask anything about your database
                 </p>
                 <p className="text-xs text-muted-foreground">
@@ -1577,7 +1878,7 @@ export const AIChat = memo(function AIChat() {
                   <button
                     key={action.label}
                     onClick={() => setInput(action.prompt)}
-                    className="rounded-md border border-border/55 bg-muted/30 px-2.5 py-1 text-[11px] text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+                    className="rounded-md border border-border/55 bg-muted/30 px-2.5 py-1 text-[10px] text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
                   >
                     {action.label}
                   </button>
@@ -1599,9 +1900,9 @@ export const AIChat = memo(function AIChat() {
       </div>
 
       {/* Input Area */}
-      <div className="z-10 border-t border-border/45 bg-background/85 px-3 pb-3 pt-2 backdrop-blur-sm">
+      <div className="z-10 border-t border-border/45 bg-background px-3 pb-3 pt-2">
         <form onSubmit={handleSubmit}>
-          <div className="mx-auto w-full max-w-4xl rounded-[28px] border border-white/8 bg-card/50 p-3 supports-[backdrop-filter]:bg-card/40">
+          <div className="mx-auto w-full max-w-4xl rounded-[28px] border border-border/60 bg-card p-3">
             <Textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -1615,25 +1916,11 @@ export const AIChat = memo(function AIChat() {
                 }
               }}
               placeholder="Ask about your database..."
-              className="min-h-[92px] max-h-56 rounded-2xl border-transparent bg-transparent px-2 py-1.5 text-[15px] leading-relaxed placeholder:text-muted-foreground/70 shadow-none focus-visible:border-transparent focus-visible:ring-0"
+              className="min-h-[92px] max-h-56 rounded-xl border-0 !bg-transparent px-2 py-1.5 text-[13px] leading-relaxed placeholder:text-muted-foreground/70 shadow-none dark:!bg-transparent focus-visible:border-transparent focus-visible:ring-0"
             />
 
-            <div className="mt-1 flex flex-wrap items-center gap-1.5 px-1">
-              {quickActions.map((action) => (
-                <button
-                  key={action.label}
-                  type="button"
-                  onClick={() => setInput(action.prompt)}
-                  className="inline-flex items-center gap-1 rounded-full border border-border/55 bg-background/30 px-2.5 py-1 text-[11px] text-muted-foreground transition-colors hover:bg-background/50 hover:text-foreground"
-                >
-                  <Sparkles className="h-3 w-3" />
-                  {action.label}
-                </button>
-              ))}
-            </div>
-
             <div className="mt-2 flex items-center justify-between gap-2 border-t border-white/10 pt-2.5">
-              <div className="flex min-w-0 items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <div className="flex min-w-0 items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 <Popover
                   open={modelPickerOpen}
                   onOpenChange={(open) => {
@@ -1653,7 +1940,7 @@ export const AIChat = memo(function AIChat() {
                       variant="outline"
                       role="combobox"
                       aria-expanded={modelPickerOpen}
-                      className="h-9 min-w-[220px] justify-between rounded-2xl border-border/50 bg-background/30 px-3 text-xs hover:bg-background/40"
+                      className="h-9 min-w-[220px] justify-between rounded-xl border-border/55 bg-background/35 px-3 text-[11px] hover:bg-background/50"
                     >
                       <div className="flex items-center gap-2 truncate">
                         <ProviderIcon
@@ -1666,6 +1953,9 @@ export const AIChat = memo(function AIChat() {
                         />
                         <span className="truncate">
                           {allModels.find((m) => m.id === selectedModel)?.name ?? selectedModel}
+                        </span>
+                        <span className="shrink-0 text-[10px] text-muted-foreground">
+                          {formatTokenCount(selectedModelMaxContext)}
                         </span>
                       </div>
                       <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
@@ -1689,7 +1979,7 @@ export const AIChat = memo(function AIChat() {
                                   handleModelChange(model.id);
                                   setModelPickerOpen(false);
                                 }}
-                                className="text-xs"
+                                className="text-[11px]"
                               >
                                 <Check
                                   className={cn(
@@ -1707,6 +1997,11 @@ export const AIChat = memo(function AIChat() {
                                     ({model.provider})
                                   </span>
                                 </span>
+                                <span className="ml-auto text-[10px] text-muted-foreground">
+                                  {formatTokenCount(
+                                    inferModelMaxContextTokens(model.id, model.provider),
+                                  )}
+                                </span>
                               </CommandItem>
                             ))}
                         </CommandGroup>
@@ -1715,12 +2010,51 @@ export const AIChat = memo(function AIChat() {
                   </PopoverContent>
                 </Popover>
 
+                <TooltipProvider delayDuration={200}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        className="flex h-9 shrink-0 items-center gap-1.5 rounded-xl border border-border/55 bg-background/35 px-2 hover:bg-background/50 focus-visible:outline-hidden"
+                        aria-label="Context usage"
+                      >
+                        <ContextUsageRing
+                          percent={currentContextPercent}
+                          size={20}
+                          strokeWidth={2}
+                          label=""
+                        />
+                        <span
+                          className={cn(
+                            "text-[10px] font-medium",
+                            getContextUsageColorClass(currentContextPercent),
+                          )}
+                        >
+                          {Math.round(currentContextPercent)}%
+                        </span>
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-72 text-xs">
+                      <p className="font-medium">{selectedModelInfo?.name ?? selectedModel}</p>
+                      <p className="text-muted-foreground">
+                        Context used: {formatTokenCount(currentContextTokens)} /{" "}
+                        {formatTokenCount(selectedModelMaxContext)} (
+                        {currentContextPercent.toFixed(1)}%)
+                      </p>
+                      <p className="text-muted-foreground">
+                        Remaining: {formatTokenCount(currentContextRemainingTokens)}
+                      </p>
+                      <p className="text-muted-foreground">Estimated token usage</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+
                 {!isLoading && lastUserMessage && messages.length > 0 && (
                   <Button
                     type="button"
                     variant="outline"
                     onClick={handleRetry}
-                    className="h-9 rounded-2xl border-border/50 bg-background/30 px-3 text-xs hover:bg-background/40"
+                    className="h-9 rounded-xl border-border/55 bg-background/35 px-3 text-[11px] hover:bg-background/50"
                     title="Retry last message"
                   >
                     <RotateCcw className="h-3.5 w-3.5" />
@@ -1728,7 +2062,7 @@ export const AIChat = memo(function AIChat() {
                 )}
 
                 {queuedMessageCount > 0 && (
-                  <span className="rounded-xl border border-border/50 bg-background/30 px-2 py-1 text-[10px] text-muted-foreground">
+                  <span className="rounded-xl border border-border/55 bg-background/35 px-2 py-1 text-[10px] text-muted-foreground">
                     Queue: {queuedMessageCount}
                   </span>
                 )}
@@ -1740,19 +2074,21 @@ export const AIChat = memo(function AIChat() {
                     <Button
                       type="submit"
                       size="icon"
+                      variant="outline"
                       disabled={!input.trim()}
-                      className="h-10 w-10 rounded-2xl border border-border/60 bg-background/35 text-muted-foreground hover:bg-background/50 disabled:opacity-50"
+                      className="h-9 w-9 rounded-xl border border-border/60 bg-background/35 text-muted-foreground hover:bg-background/50 disabled:opacity-50"
                       title="Queue message"
                     >
-                      <Send className="h-4 w-4" />
+                      <Send className="h-3.5 w-3.5" />
                     </Button>
                     <Button
                       type="button"
+                      variant="outline"
                       onClick={handleCancel}
-                      className="h-10 rounded-2xl border border-border/60 bg-background/35 px-3 text-xs text-muted-foreground hover:bg-background/50"
+                      className="h-9 rounded-xl border border-border/60 bg-background/35 px-3 text-[11px] text-muted-foreground hover:bg-background/50"
                       title="Generating... Click to stop"
                     >
-                      <Loader className="mr-1.5 h-4 w-4 animate-spin" />
+                      <Loader className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                       Stop
                     </Button>
                   </>
@@ -1761,9 +2097,9 @@ export const AIChat = memo(function AIChat() {
                     type="submit"
                     size="icon"
                     disabled={!input.trim()}
-                    className="h-10 w-10 rounded-2xl bg-primary/90 text-primary-foreground hover:bg-primary disabled:bg-muted disabled:text-muted-foreground"
+                    className="h-9 w-9 rounded-xl bg-primary/90 text-primary-foreground hover:bg-primary disabled:bg-muted disabled:text-muted-foreground"
                   >
-                    <Send className="h-4 w-4" />
+                    <Send className="h-3.5 w-3.5" />
                   </Button>
                 )}
               </div>

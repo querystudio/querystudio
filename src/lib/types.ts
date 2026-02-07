@@ -124,6 +124,7 @@ export interface Message {
   toolCalls?: ToolCall[];
   toolCallId?: string;
   isLoading?: boolean;
+  usage?: MessageUsage;
 }
 
 export interface ToolCall {
@@ -131,6 +132,18 @@ export interface ToolCall {
   name: string;
   arguments: string;
   result?: string;
+}
+
+export interface MessageUsage {
+  model: AIModelId;
+  maxContextTokens: number;
+  messageTokens: number;
+  contextTokens: number;
+  contextPercent: number;
+  totalTokens: number;
+  promptTokens?: number;
+  completionTokens?: number;
+  estimated: boolean;
 }
 
 export interface ChatSession {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, memo, useMemo } from "react";
+import { useState, useEffect, useCallback, memo, useMemo, useRef } from "react";
 import { Table, LogOut, ChevronRight, Search } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -93,9 +93,14 @@ export const Sidebar = memo(function Sidebar() {
     })),
   );
   const setSidebarWidth = useAIQueryStore((s) => s.setSidebarWidth);
+  const persistSidebarWidth = useAIQueryStore((s) => s.persistSidebarWidth);
 
   const [isResizing, setIsResizing] = useState(false);
   const [tableSearch, setTableSearch] = useState("");
+  const sidebarRef = useRef<HTMLDivElement | null>(null);
+  const resizeRafRef = useRef<number | null>(null);
+  const pendingMouseXRef = useRef<number>(sidebarWidth);
+  const widthRef = useRef(sidebarWidth);
 
   const { data: fetchedTables } = useTables(activeConnectionId);
   const disconnect = useDisconnect(activeConnectionId ?? undefined);
@@ -106,11 +111,29 @@ export const Sidebar = memo(function Sidebar() {
     }
   }, [fetchedTables, tables, setTables]);
 
+  useEffect(() => {
+    widthRef.current = sidebarWidth;
+    if (!isResizing && sidebarRef.current) {
+      sidebarRef.current.style.width = `${sidebarWidth}px`;
+    }
+  }, [sidebarWidth, isResizing]);
+
   // Handle resize drag
   const handleResizeStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    pendingMouseXRef.current = e.clientX;
     setIsResizing(true);
+  }, []);
+
+  const applySidebarWidth = useCallback((mouseX: number) => {
+    const clampedWidth = Math.min(MAX_SIDEBAR_WIDTH, Math.max(MIN_SIDEBAR_WIDTH, mouseX));
+    if (clampedWidth !== widthRef.current) {
+      widthRef.current = clampedWidth;
+      if (sidebarRef.current) {
+        sidebarRef.current.style.width = `${clampedWidth}px`;
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -118,11 +141,22 @@ export const Sidebar = memo(function Sidebar() {
 
     const handleMouseMove = (e: MouseEvent) => {
       e.preventDefault();
-      const newWidth = e.clientX;
-      setSidebarWidth(Math.min(MAX_SIDEBAR_WIDTH, Math.max(MIN_SIDEBAR_WIDTH, newWidth)));
+      pendingMouseXRef.current = e.clientX;
+      if (resizeRafRef.current !== null) return;
+      resizeRafRef.current = window.requestAnimationFrame(() => {
+        resizeRafRef.current = null;
+        applySidebarWidth(pendingMouseXRef.current);
+      });
     };
 
     const handleMouseUp = () => {
+      if (resizeRafRef.current !== null) {
+        window.cancelAnimationFrame(resizeRafRef.current);
+        resizeRafRef.current = null;
+      }
+      applySidebarWidth(pendingMouseXRef.current);
+      setSidebarWidth(widthRef.current);
+      persistSidebarWidth(widthRef.current);
       setIsResizing(false);
     };
 
@@ -132,12 +166,16 @@ export const Sidebar = memo(function Sidebar() {
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
     return () => {
+      if (resizeRafRef.current !== null) {
+        window.cancelAnimationFrame(resizeRafRef.current);
+        resizeRafRef.current = null;
+      }
       document.body.style.cursor = "";
       document.body.style.userSelect = "";
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isResizing, setSidebarWidth]);
+  }, [isResizing, applySidebarWidth, persistSidebarWidth, setSidebarWidth]);
 
   const groupedTables = useMemo(() => {
     const query = tableSearch.trim().toLowerCase();
@@ -237,8 +275,9 @@ export const Sidebar = memo(function Sidebar() {
   return (
     <>
       <motion.div
+        ref={sidebarRef}
         initial={{ x: -20, opacity: 0 }}
-        animate={{ x: 0, opacity: 1, width: sidebarWidth }}
+        animate={{ x: 0, opacity: 1 }}
         transition={isResizing ? { duration: 0 } : { duration: 0.2, ease: "easeInOut" }}
         className="relative flex h-full flex-col border-r border-border bg-card shrink-0"
         style={{ width: sidebarWidth }}

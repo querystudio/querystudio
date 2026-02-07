@@ -5,6 +5,7 @@ import { CommandPalette } from "@/components/command-palette";
 import { PasswordPromptDialog } from "@/components/password-prompt-dialog";
 import { useConnectionStore } from "@/lib/store";
 import { useGlobalShortcuts } from "@/lib/use-global-shortcuts";
+import { openSettingsWindow } from "@/lib/settings-window";
 import type { SavedConnection } from "@/lib/types";
 
 export const Route = createFileRoute("/")({
@@ -35,7 +36,7 @@ function Home() {
     onNewConnection: handleNewConnection,
     onOpenCommandPalette: () => setCommandPaletteOpen((prev) => !prev),
     onOpenSettings: () => {
-      navigate({ to: "/settings" });
+      void openSettingsWindow({ fallback: () => navigate({ to: "/settings" }) });
     },
   });
 

@@ -20,6 +20,7 @@ import {
 import { useConnectionStore, useAIQueryStore } from "@/lib/store";
 import { useLayoutStore } from "@/lib/layout-store";
 import { authClient, signInWithGithub } from "@/lib/auth-client";
+import { openSettingsWindow } from "@/lib/settings-window";
 import { cn } from "@/lib/utils";
 import type { DatabaseType } from "@/lib/types";
 import { create } from "zustand";
@@ -230,7 +231,7 @@ export function StatusBar() {
   }, [connectionId, getActivePane, createTab]);
 
   const handleOpenSettings = useCallback(() => {
-    void navigate({ to: "/settings" });
+    void openSettingsWindow({ fallback: () => navigate({ to: "/settings" }) });
   }, [navigate]);
 
   const handleSignOut = useCallback(async () => {
@@ -253,7 +254,7 @@ export function StatusBar() {
   }, []);
 
   return (
-    <div className="flex h-7 items-center justify-between border-t border-border/70 bg-gradient-to-b from-card to-card/92 px-2.5 text-[11px] text-muted-foreground/90 supports-[backdrop-filter]:bg-card/85 supports-[backdrop-filter]:backdrop-blur-sm">
+    <div className="flex h-7 items-center justify-between border-t border-border/70 bg-card px-2.5 text-[11px] text-muted-foreground/90">
       {/* Left side - Connection info */}
       <div className="flex min-w-0 items-center gap-2">
         {/* Connection status */}
