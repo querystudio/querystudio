@@ -1,11 +1,36 @@
 import { useEffect, useCallback } from "react";
 import { onOpenUrl } from "@tauri-apps/plugin-deep-link";
 import { isTauri } from "@tauri-apps/api/core";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { emit, listen } from "@tauri-apps/api/event";
 import { authClient } from "@/lib/auth-client";
 import { toast } from "sonner";
 
 const AUTH_CALLBACK_HOST = "auth";
 const AUTH_CALLBACK_PATHNAME = "/callback";
+const AUTH_SESSION_UPDATED_EVENT = "auth:session-updated";
+
+function getCurrentWindowLabel(): string | null {
+  if (!isTauri()) {
+    return null;
+  }
+
+  try {
+    return getCurrentWindow().label;
+  } catch {
+    return null;
+  }
+}
+
+function shouldListenForDeepLinks(): boolean {
+  if (!isTauri()) {
+    return false;
+  }
+
+  const label = getCurrentWindowLabel();
+  // Only the main window should verify one-time tokens from deep links.
+  return label === "main";
+}
 
 /**
  * Process an auth callback URL and verify the one-time token.
@@ -65,6 +90,15 @@ export async function handleAuthCallback(
     // Refetch the session to update the UI
     await refetch();
 
+    // Notify other windows (e.g. settings) to refetch their session state too.
+    if (isTauri()) {
+      try {
+        await emit(AUTH_SESSION_UPDATED_EVENT, { sourceWindow: getCurrentWindowLabel() });
+      } catch (error) {
+        console.error("Failed to emit auth session update event:", error);
+      }
+    }
+
     toast.success("Signed in successfully!");
     return true;
   } catch (error) {
@@ -78,7 +112,13 @@ export async function handleAuthCallback(
  * Hook that listens for deep-link auth callbacks and verifies the one-time token.
  * Should be used in the root component of the app.
  */
-export function useAuthDeepLink() {
+interface UseAuthDeepLinkOptions {
+  enableDeepLinkListener?: boolean;
+  enableSessionSync?: boolean;
+}
+
+export function useAuthDeepLink(options: UseAuthDeepLinkOptions = {}) {
+  const { enableDeepLinkListener = true, enableSessionSync = true } = options;
   // Get the refetch function from useSession to trigger UI updates
   const { refetch } = authClient.useSession();
 
@@ -90,7 +130,7 @@ export function useAuthDeepLink() {
   );
 
   useEffect(() => {
-    if (!isTauri()) {
+    if (!enableDeepLinkListener || !shouldListenForDeepLinks()) {
       return;
     }
 
@@ -113,7 +153,34 @@ export function useAuthDeepLink() {
     return () => {
       cleanup?.();
     };
-  }, [handleDeepLinkUrl]);
+  }, [enableDeepLinkListener, handleDeepLinkUrl]);
+
+  useEffect(() => {
+    if (!enableSessionSync || !isTauri()) {
+      return;
+    }
+
+    let cleanup: (() => void) | undefined;
+
+    const setupSessionSyncListener = async () => {
+      try {
+        cleanup = await listen<{ sourceWindow?: string }>(AUTH_SESSION_UPDATED_EVENT, (event) => {
+          if (event.payload?.sourceWindow === getCurrentWindowLabel()) {
+            return;
+          }
+          void refetch();
+        });
+      } catch (error) {
+        console.error("Failed to setup auth session sync listener:", error);
+      }
+    };
+
+    void setupSessionSyncListener();
+
+    return () => {
+      cleanup?.();
+    };
+  }, [enableSessionSync, refetch]);
 
   // Return the handler for manual use in dev mode
   return { handleAuthCallback: (url: string) => handleAuthCallback(url, refetch) };

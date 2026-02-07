@@ -79,7 +79,10 @@ export function CommandPalette({
   const [appVersion, setAppVersion] = useState<string | null>(null);
   const { canSave, maxSaved } = useCanSaveConnection();
   const { checking, checkForUpdates } = useUpdateChecker({ autoCheckOnMount: false });
-  const { handleAuthCallback } = useAuthDeepLink();
+  const { handleAuthCallback } = useAuthDeepLink({
+    enableDeepLinkListener: false,
+    enableSessionSync: false,
+  });
   const [isProcessingAuth, setIsProcessingAuth] = useState(false);
 
   const handlePasteAuthUrl = useCallback(async () => {
@@ -427,7 +430,7 @@ export function CommandPalette({
                 ) : (
                   <ClipboardPaste className={iconClassName} />
                 )}
-                <span>{isProcessingAuth ? "Processing..." : "Paste Auth URL (Dev)"}</span>
+                <span>{isProcessingAuth ? "Processing..." : "Paste Auth URL"}</span>
               </CommandItem>
               <CommandItem disabled className={cn(itemClassName, "opacity-70")}>
                 <Info className={iconClassName} />
