@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { useConnect, useCanConnect } from "@/lib/hooks";
 import { useAIQueryStore } from "@/lib/store";
 import { openSettingsWindow } from "@/lib/settings-window";
+import { resolveSavedConnectionString } from "@/lib/connection-secrets";
 import { toast } from "sonner";
 import type { SavedConnection } from "@/lib/types";
 import { useNavigate } from "@tanstack/react-router";
@@ -37,7 +38,9 @@ export function PasswordPromptDialog({
     connection?.id,
     connection?.db_type,
   );
-  const multiConnectionsEnabled = useAIQueryStore((s) => s.multiConnectionsEnabled);
+  const multiConnectionsEnabled = useAIQueryStore(
+    (s) => s.multiConnectionsEnabled,
+  );
   const canAttemptConnection = canConnect || !multiConnectionsEnabled;
 
   // Auto-connect for connection strings or SQLite (password optional)
@@ -48,7 +51,9 @@ export function PasswordPromptDialog({
     if (!isConnectionString && !isSqlite) return;
     if (connectingRef.current) return;
     if (!canAttemptConnection) {
-      const errorMsg = dialectLimitMessage || `Connection limit reached. Free tier allows ${maxConnections} connections.`;
+      const errorMsg =
+        dialectLimitMessage ||
+        `Connection limit reached. Free tier allows ${maxConnections} connections.`;
       toast.error(errorMsg);
       onOpenChange(false);
       return;
@@ -56,25 +61,28 @@ export function PasswordPromptDialog({
 
     connectingRef.current = true;
 
-    const config =
-      "connection_string" in connection.config
-        ? {
-            db_type: connection.db_type || "postgres",
-            connection_string: connection.config.connection_string,
-          }
-        : {
-            db_type: connection.db_type || "postgres",
-            ...connection.config,
-            password: "",
-          };
+    const connectWithResolvedConfig = async () => {
+      const config =
+        "connection_string" in connection.config
+          ? {
+              db_type: connection.db_type || "postgres",
+              connection_string: await resolveSavedConnectionString(connection),
+            }
+          : {
+              db_type: connection.db_type || "postgres",
+              ...connection.config,
+              password: "",
+            };
 
-    connect
-      .mutateAsync({
+      return connect.mutateAsync({
         id: connection.id,
         name: connection.name,
         db_type: connection.db_type || "postgres",
         config,
-      })
+      });
+    };
+
+    connectWithResolvedConfig()
       .then(() => {
         toast.success("Connected successfully");
         onOpenChange(false);
@@ -94,7 +102,9 @@ export function PasswordPromptDialog({
     if ("connection_string" in connection.config) return;
 
     if (!canAttemptConnection) {
-      const errorMsg = dialectLimitMessage || `Connection limit reached. Free tier allows ${maxConnections} connections.`;
+      const errorMsg =
+        dialectLimitMessage ||
+        `Connection limit reached. Free tier allows ${maxConnections} connections.`;
       toast.error(errorMsg);
       return;
     }
@@ -129,7 +139,8 @@ export function PasswordPromptDialog({
   };
 
   // Don't show dialog for connection strings or SQLite (auto-connect via useEffect)
-  const isConnectionString = connection && "connection_string" in connection.config;
+  const isConnectionString =
+    connection && "connection_string" in connection.config;
   const isSqlite = connection?.db_type === "sqlite";
   if (isConnectionString || isSqlite) {
     return null;
@@ -146,7 +157,10 @@ export function PasswordPromptDialog({
           <DialogDescription>
             {connection?.name && (
               <>
-                Connecting to <span className="font-medium text-foreground">{connection.name}</span>
+                Connecting to{" "}
+                <span className="font-medium text-foreground">
+                  {connection.name}
+                </span>
               </>
             )}
           </DialogDescription>
@@ -157,7 +171,9 @@ export function PasswordPromptDialog({
           <div className="flex items-start gap-3 rounded-lg border border-amber-500/50 bg-amber-500/10 p-3">
             <AlertTriangle className="h-5 w-5 shrink-0 text-amber-500" />
             <div className="flex-1 space-y-2">
-              <p className="text-sm font-medium text-amber-500">Connection limit reached</p>
+              <p className="text-sm font-medium text-amber-500">
+                Connection limit reached
+              </p>
               <p className="text-xs text-muted-foreground">
                 {dialectLimitMessage ||
                   `Free tier allows ${maxConnections} simultaneous connections. Disconnect an existing connection or upgrade to Pro.`}
@@ -167,7 +183,9 @@ export function PasswordPromptDialog({
                 size="sm"
                 onClick={() => {
                   onOpenChange(false);
-                  void openSettingsWindow({ fallback: () => navigate({ to: "/settings" }) });
+                  void openSettingsWindow({
+                    fallback: () => navigate({ to: "/settings" }),
+                  });
                 }}
                 className="gap-1.5"
               >
@@ -191,11 +209,20 @@ export function PasswordPromptDialog({
             />
           </div>
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => handleOpenChange(false)}
+            >
               Cancel
             </Button>
-            <Button type="submit" disabled={connect.isPending || !canAttemptConnection}>
-              {connect.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <Button
+              type="submit"
+              disabled={connect.isPending || !canAttemptConnection}
+            >
+              {connect.isPending && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
               Connect
             </Button>
           </div>

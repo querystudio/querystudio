@@ -141,6 +141,29 @@ export const api = {
 
   getConnectionCount: () => invoke<number>("get_connection_count"),
 
+  keychainSetConnectionSecret: (
+    connectionId: string,
+    kind: string,
+    secret: string,
+  ) =>
+    invoke<void>("keychain_set_connection_secret", {
+      connectionId,
+      kind,
+      secret,
+    }),
+
+  keychainGetConnectionSecret: (connectionId: string, kind: string) =>
+    invoke<string | null>("keychain_get_connection_secret", {
+      connectionId,
+      kind,
+    }),
+
+  keychainDeleteConnectionSecret: (connectionId: string, kind: string) =>
+    invoke<void>("keychain_delete_connection_secret", {
+      connectionId,
+      kind,
+    }),
+
   getSavedConnectionCount: () => storage.getSavedConnectionCount(),
 
   // Chat history persistence (desktop file-backed; local fallback in ai-agent)

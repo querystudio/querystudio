@@ -1,5 +1,9 @@
 import { invoke, isTauri } from "@tauri-apps/api/core";
-import { defaultAppSettings, normalizeSettings, type AppSettings } from "./settings-schema";
+import {
+  defaultAppSettings,
+  normalizeSettings,
+  type AppSettings,
+} from "./settings-schema";
 
 interface RustAppSettings {
   schema_version: number;
@@ -13,6 +17,7 @@ interface RustAppSettings {
   multi_connections_enabled: boolean;
   experimental_terminal: boolean;
   experimental_plugins: boolean;
+  keychain_credentials: boolean;
   debug_mode: boolean;
   custom_font_family: string;
   ui_font_scale: "small" | "default" | "large";
@@ -34,6 +39,7 @@ function fromRustSettings(settings: RustAppSettings): AppSettings {
     multiConnectionsEnabled: settings.multi_connections_enabled,
     experimentalTerminal: settings.experimental_terminal,
     experimentalPlugins: settings.experimental_plugins,
+    keychainCredentials: settings.keychain_credentials,
     debugMode: settings.debug_mode,
     customFontFamily: settings.custom_font_family,
     uiFontScale: settings.ui_font_scale,
@@ -55,6 +61,7 @@ function toRustSettings(settings: AppSettings): RustAppSettings {
     multi_connections_enabled: normalized.multiConnectionsEnabled,
     experimental_terminal: normalized.experimentalTerminal,
     experimental_plugins: normalized.experimentalPlugins,
+    keychain_credentials: normalized.keychainCredentials,
     debug_mode: normalized.debugMode,
     custom_font_family: normalized.customFontFamily,
     ui_font_scale: normalized.uiFontScale,
@@ -65,14 +72,21 @@ function toRustSettings(settings: AppSettings): RustAppSettings {
 function patchToRust(patch: Partial<AppSettings>): Partial<RustAppSettings> {
   const rustPatch: Partial<RustAppSettings> = {};
 
-  if (patch.schemaVersion !== undefined) rustPatch.schema_version = patch.schemaVersion;
+  if (patch.schemaVersion !== undefined)
+    rustPatch.schema_version = patch.schemaVersion;
   if (patch.activeTab !== undefined) rustPatch.active_tab = patch.activeTab;
-  if (patch.aiPanelOpen !== undefined) rustPatch.ai_panel_open = patch.aiPanelOpen;
-  if (patch.aiPanelWidth !== undefined) rustPatch.ai_panel_width = patch.aiPanelWidth;
-  if (patch.sidebarWidth !== undefined) rustPatch.sidebar_width = patch.sidebarWidth;
-  if (patch.sidebarCollapsed !== undefined) rustPatch.sidebar_collapsed = patch.sidebarCollapsed;
-  if (patch.statusBarVisible !== undefined) rustPatch.status_bar_visible = patch.statusBarVisible;
-  if (patch.autoReconnect !== undefined) rustPatch.auto_reconnect = patch.autoReconnect;
+  if (patch.aiPanelOpen !== undefined)
+    rustPatch.ai_panel_open = patch.aiPanelOpen;
+  if (patch.aiPanelWidth !== undefined)
+    rustPatch.ai_panel_width = patch.aiPanelWidth;
+  if (patch.sidebarWidth !== undefined)
+    rustPatch.sidebar_width = patch.sidebarWidth;
+  if (patch.sidebarCollapsed !== undefined)
+    rustPatch.sidebar_collapsed = patch.sidebarCollapsed;
+  if (patch.statusBarVisible !== undefined)
+    rustPatch.status_bar_visible = patch.statusBarVisible;
+  if (patch.autoReconnect !== undefined)
+    rustPatch.auto_reconnect = patch.autoReconnect;
   if (patch.multiConnectionsEnabled !== undefined) {
     rustPatch.multi_connections_enabled = patch.multiConnectionsEnabled;
   }
@@ -81,6 +95,9 @@ function patchToRust(patch: Partial<AppSettings>): Partial<RustAppSettings> {
   }
   if (patch.experimentalPlugins !== undefined) {
     rustPatch.experimental_plugins = patch.experimentalPlugins;
+  }
+  if (patch.keychainCredentials !== undefined) {
+    rustPatch.keychain_credentials = patch.keychainCredentials;
   }
   if (patch.debugMode !== undefined) rustPatch.debug_mode = patch.debugMode;
   if (patch.customFontFamily !== undefined) {

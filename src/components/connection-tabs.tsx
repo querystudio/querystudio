@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { useConnectionStore } from "@/lib/store";
 import { useDisconnect, useSavedConnections, useConnect } from "@/lib/hooks";
+import { resolveSavedConnectionString } from "@/lib/connection-secrets";
 import { cn } from "@/lib/utils";
 import { Plus, X, Database } from "lucide-react";
 import { toast } from "sonner";
@@ -21,7 +22,10 @@ export function ConnectionTabs({ onAddConnection }: ConnectionTabsProps) {
   const connect = useConnect();
   const isReconnecting = useRef(false);
 
-  const handleCloseConnection = async (connectionId: string, e: React.MouseEvent) => {
+  const handleCloseConnection = async (
+    connectionId: string,
+    e: React.MouseEvent,
+  ) => {
     e.stopPropagation();
 
     try {
@@ -53,7 +57,9 @@ export function ConnectionTabs({ onAddConnection }: ConnectionTabsProps) {
         const { api } = await import("@/lib/api");
         await api.listTables(connectionId);
       } catch (_error) {
-        const savedConnection = savedConnections?.find((c) => c.id === connectionId);
+        const savedConnection = savedConnections?.find(
+          (c) => c.id === connectionId,
+        );
         if (!savedConnection) {
           toast.error("Connection configuration not found");
           return;
@@ -65,7 +71,8 @@ export function ConnectionTabs({ onAddConnection }: ConnectionTabsProps) {
           "connection_string" in savedConnection.config
             ? {
                 db_type: savedConnection.db_type || "postgres",
-                connection_string: savedConnection.config.connection_string,
+                connection_string:
+                  await resolveSavedConnectionString(savedConnection),
               }
             : {
                 db_type: savedConnection.db_type || "postgres",
@@ -113,7 +120,9 @@ export function ConnectionTabs({ onAddConnection }: ConnectionTabsProps) {
               )}
             >
               <Database className="h-4 w-4 shrink-0" />
-              <span className="truncate flex-1 text-left">{connection.name}</span>
+              <span className="truncate flex-1 text-left">
+                {connection.name}
+              </span>
               <span
                 onClick={(e) => handleCloseConnection(connection.id, e)}
                 className={cn(

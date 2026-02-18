@@ -16,6 +16,7 @@ export interface AppSettings {
   multiConnectionsEnabled: boolean;
   experimentalTerminal: boolean;
   experimentalPlugins: boolean;
+  keychainCredentials: boolean;
   experimentalOpencode: boolean;
   debugMode: boolean;
   customFontFamily: string;
@@ -35,6 +36,7 @@ export const defaultAppSettings: AppSettings = {
   multiConnectionsEnabled: true,
   experimentalTerminal: false,
   experimentalPlugins: false,
+  keychainCredentials: false,
   experimentalOpencode: false,
   debugMode: false,
   customFontFamily: "",
@@ -51,7 +53,9 @@ export function normalizeSettings(input: Partial<AppSettings>): AppSettings {
 
   return {
     ...merged,
-    activeTab: merged.activeTab?.trim() ? merged.activeTab : defaultAppSettings.activeTab,
+    activeTab: merged.activeTab?.trim()
+      ? merged.activeTab
+      : defaultAppSettings.activeTab,
     aiPanelWidth: Math.min(800, Math.max(320, merged.aiPanelWidth)),
     sidebarWidth: Math.min(400, Math.max(180, merged.sidebarWidth)),
     customFontFamily: normalizeCustomFontFamily(merged.customFontFamily || ""),

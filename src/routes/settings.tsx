@@ -1,4 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { isTauri } from "@tauri-apps/api/core";
+import { platform } from "@tauri-apps/plugin-os";
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
@@ -25,7 +27,11 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import {
   discoverFontFamilies,
@@ -39,21 +45,27 @@ import { PasswordPromptDialog } from "@/components/password-prompt-dialog";
 import { useGlobalShortcuts } from "@/lib/use-global-shortcuts";
 import { useConnectionStore, useAIQueryStore } from "@/lib/store";
 import { closeSettingsWindow } from "@/lib/settings-window";
-import { useDisconnect } from "@/lib/hooks";
+import { useDisconnect, useSavedConnections } from "@/lib/hooks";
+import { api } from "@/lib/api";
+import { CONNECTION_STRING_SECRET_KIND } from "@/lib/connection-secrets";
 import type { SavedConnection } from "@/lib/types";
 
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,
 });
 
-type SettingsTab = "general" | "account" | "appearance" | "experimental" | "plugins";
+type SettingsTab =
+  | "general"
+  | "account"
+  | "appearance"
+  | "experimental"
+  | "plugins";
 
 function SettingsPage() {
   const navigate = useNavigate();
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
-  const [passwordPromptConnection, setPasswordPromptConnection] = useState<SavedConnection | null>(
-    null,
-  );
+  const [passwordPromptConnection, setPasswordPromptConnection] =
+    useState<SavedConnection | null>(null);
   const [activeTab, setActiveTab] = useState<SettingsTab>("general");
   const experimentalPlugins = useAIQueryStore((s) => s.experimentalPlugins);
 
@@ -90,7 +102,9 @@ function SettingsPage() {
     { id: "account", label: "Account" },
     { id: "appearance", label: "Appearance" },
     { id: "experimental", label: "Experimental" },
-    ...(experimentalPlugins ? [{ id: "plugins" as SettingsTab, label: "Plugins" }] : []),
+    ...(experimentalPlugins
+      ? [{ id: "plugins" as SettingsTab, label: "Plugins" }]
+      : []),
   ];
 
   return (
@@ -110,7 +124,11 @@ function SettingsPage() {
               variant="ghost"
               size="sm"
               className="w-full justify-start gap-2"
-              onClick={() => void closeSettingsWindow({ fallback: () => navigate({ to: "/" }) })}
+              onClick={() =>
+                void closeSettingsWindow({
+                  fallback: () => navigate({ to: "/" }),
+                })
+              }
             >
               <ArrowLeft className="h-4 w-4" />
               Back
@@ -206,7 +224,9 @@ function AccountSettings() {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold tracking-tight">Account</h2>
-        <p className="text-muted-foreground">Manage your account settings and preferences.</p>
+        <p className="text-muted-foreground">
+          Manage your account settings and preferences.
+        </p>
       </div>
       <Separator />
 
@@ -265,17 +285,33 @@ function AccountSettings() {
 }
 
 function GeneralSettings() {
+  const isMacDesktop = isTauri() && platform() === "macos";
+  const { data: savedConnections } = useSavedConnections();
+  const [isMigratingCredentials, setIsMigratingCredentials] = useState(false);
   const autoReconnect = useAIQueryStore((s) => s.autoReconnect);
   const setAutoReconnect = useAIQueryStore((s) => s.setAutoReconnect);
-  const multiConnectionsEnabled = useAIQueryStore((s) => s.multiConnectionsEnabled);
-  const setMultiConnectionsEnabled = useAIQueryStore((s) => s.setMultiConnectionsEnabled);
+  const multiConnectionsEnabled = useAIQueryStore(
+    (s) => s.multiConnectionsEnabled,
+  );
+  const setMultiConnectionsEnabled = useAIQueryStore(
+    (s) => s.setMultiConnectionsEnabled,
+  );
   const sidebarCollapsed = useAIQueryStore((s) => s.sidebarCollapsed);
   const setSidebarCollapsed = useAIQueryStore((s) => s.setSidebarCollapsed);
   const debugMode = useAIQueryStore((s) => s.debugMode);
   const setDebugMode = useAIQueryStore((s) => s.setDebugMode);
+  const keychainCredentials = useAIQueryStore((s) => s.keychainCredentials);
+  const setKeychainCredentials = useAIQueryStore(
+    (s) => s.setKeychainCredentials,
+  );
   const activeConnections = useConnectionStore((s) => s.activeConnections);
   const activeConnectionId = useConnectionStore((s) => s.activeConnectionId);
   const disconnect = useDisconnect();
+  const connectionStringConnections = (savedConnections ?? []).filter(
+    (connection) =>
+      "connection_string" in connection.config &&
+      connection.config.connection_string.trim().length > 0,
+  );
 
   const handleMultiConnectionsChange = async (enabled: boolean) => {
     setMultiConnectionsEnabled(enabled);
@@ -294,11 +330,77 @@ function GeneralSettings() {
     }
   };
 
+  const handleMigrateCredentials = async () => {
+    if (!keychainCredentials) {
+      toast.info("Enable macOS Keychain credential storage first");
+      return;
+    }
+
+    if (connectionStringConnections.length === 0) {
+      toast.info("No saved connection strings found to migrate");
+      return;
+    }
+
+    setIsMigratingCredentials(true);
+    let migrated = 0;
+    let alreadyInKeychain = 0;
+    let failed = 0;
+
+    for (const connection of connectionStringConnections) {
+      if (!("connection_string" in connection.config)) {
+        continue;
+      }
+
+      try {
+        const existing = await api.keychainGetConnectionSecret(
+          connection.id,
+          CONNECTION_STRING_SECRET_KIND,
+        );
+
+        if (existing && existing.trim().length > 0) {
+          alreadyInKeychain += 1;
+        } else {
+          await api.keychainSetConnectionSecret(
+            connection.id,
+            CONNECTION_STRING_SECRET_KIND,
+            connection.config.connection_string,
+          );
+          migrated += 1;
+        }
+
+        // Re-save after migration to scrub plaintext storage fields.
+        await api.saveConnection(connection);
+      } catch {
+        failed += 1;
+      }
+    }
+
+    setIsMigratingCredentials(false);
+
+    if (failed > 0) {
+      toast.warning(
+        `Migrated ${migrated}, already in keychain ${alreadyInKeychain}, failed ${failed}`,
+      );
+      return;
+    }
+
+    if (migrated === 0) {
+      toast.success("All saved connection strings are already in keychain");
+      return;
+    }
+
+    toast.success(
+      `Migrated ${migrated} saved connection string(s) to keychain`,
+    );
+  };
+
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold tracking-tight">General</h2>
-        <p className="text-muted-foreground">Manage general behavior and application settings.</p>
+        <p className="text-muted-foreground">
+          Manage general behavior and application settings.
+        </p>
       </div>
       <Separator />
 
@@ -308,7 +410,8 @@ function GeneralSettings() {
           <div className="space-y-0.5">
             <Label className="text-base">Auto-reconnect</Label>
             <p className="text-sm text-muted-foreground">
-              Automatically connect to the last used database when the application starts
+              Automatically connect to the last used database when the
+              application starts
             </p>
           </div>
           <Switch checked={autoReconnect} onCheckedChange={setAutoReconnect} />
@@ -337,7 +440,10 @@ function GeneralSettings() {
               Start with the sidebar collapsed to show only icons
             </p>
           </div>
-          <Switch checked={sidebarCollapsed} onCheckedChange={setSidebarCollapsed} />
+          <Switch
+            checked={sidebarCollapsed}
+            onCheckedChange={setSidebarCollapsed}
+          />
         </div>
       </div>
 
@@ -353,6 +459,56 @@ function GeneralSettings() {
           <Switch checked={debugMode} onCheckedChange={setDebugMode} />
         </div>
       </div>
+
+      {isMacDesktop && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-medium">Security</h3>
+          {!keychainCredentials && (
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-400">
+              For better security, enable keychain credential storage so saved
+              connection strings are not kept in plaintext fields.
+            </div>
+          )}
+          <div className="space-y-3 rounded-lg border p-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label className="text-base">
+                  Store Credentials in macOS Keychain
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Save connection string credentials in the system keychain and
+                  remove plaintext values from local storage.
+                </p>
+              </div>
+              <Switch
+                checked={keychainCredentials}
+                onCheckedChange={setKeychainCredentials}
+              />
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs text-muted-foreground">
+                Saved connection strings: {connectionStringConnections.length}
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => void handleMigrateCredentials()}
+                disabled={
+                  isMigratingCredentials ||
+                  connectionStringConnections.length === 0 ||
+                  !keychainCredentials
+                }
+              >
+                {isMigratingCredentials && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Migrate Existing to Keychain
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -369,8 +525,12 @@ function AppearanceSettings() {
   const [fontDraft, setFontDraft] = useState(customFontFamily);
   const [fontPickerOpen, setFontPickerOpen] = useState(false);
   const [fontSearchQuery, setFontSearchQuery] = useState("");
-  const [availableFonts, setAvailableFonts] = useState<string[]>(() => getFallbackFontFamilies());
-  const [fontSource, setFontSource] = useState<"local" | "fallback">("fallback");
+  const [availableFonts, setAvailableFonts] = useState<string[]>(() =>
+    getFallbackFontFamilies(),
+  );
+  const [fontSource, setFontSource] = useState<"local" | "fallback">(
+    "fallback",
+  );
   const [isLoadingFonts, setIsLoadingFonts] = useState(false);
   const [hasLoadedFonts, setHasLoadedFonts] = useState(false);
 
@@ -385,7 +545,9 @@ function AppearanceSettings() {
 
   const filteredFonts = useMemo(() => {
     if (!normalizedSearchQuery) return availableFonts;
-    return availableFonts.filter((font) => font.toLowerCase().includes(normalizedSearchQuery));
+    return availableFonts.filter((font) =>
+      font.toLowerCase().includes(normalizedSearchQuery),
+    );
   }, [availableFonts, normalizedSearchQuery]);
 
   const renderLimit = normalizedSearchQuery
@@ -436,7 +598,9 @@ function AppearanceSettings() {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold tracking-tight">Appearance</h2>
-        <p className="text-muted-foreground">Customize the look and feel of the application.</p>
+        <p className="text-muted-foreground">
+          Customize the look and feel of the application.
+        </p>
       </div>
       <Separator />
 
@@ -476,7 +640,9 @@ function AppearanceSettings() {
                     onClick={() => setUiFontScale(option.value)}
                   >
                     <span>{option.label}</span>
-                    <span className="text-[10px] opacity-80">{option.preview}</span>
+                    <span className="text-[10px] opacity-80">
+                      {option.preview}
+                    </span>
                   </Button>
                 );
               })}
@@ -488,12 +654,18 @@ function AppearanceSettings() {
               Custom Font Family
             </Label>
             <p className="text-sm text-muted-foreground">
-              Select from detected fonts or enter a CSS font-family list manually. Example:{" "}
-              <span className="font-mono text-xs">"SF Pro Text", "Segoe UI", "Helvetica Neue"</span>
+              Select from detected fonts or enter a CSS font-family list
+              manually. Example:{" "}
+              <span className="font-mono text-xs">
+                "SF Pro Text", "Segoe UI", "Helvetica Neue"
+              </span>
             </p>
           </div>
           <div className="flex gap-2">
-            <Popover open={fontPickerOpen} onOpenChange={handleFontPickerOpenChange}>
+            <Popover
+              open={fontPickerOpen}
+              onOpenChange={handleFontPickerOpenChange}
+            >
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
@@ -501,11 +673,16 @@ function AppearanceSettings() {
                   aria-expanded={fontPickerOpen}
                   className="h-9 flex-1 justify-between"
                 >
-                  <span className="truncate">{normalizedDraft || "Default (Geist)"}</span>
+                  <span className="truncate">
+                    {normalizedDraft || "Default (Geist)"}
+                  </span>
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[420px] max-w-[calc(100vw-2rem)] p-0" align="start">
+              <PopoverContent
+                className="w-[420px] max-w-[calc(100vw-2rem)] p-0"
+                align="start"
+              >
                 <Command shouldFilter={false}>
                   <CommandInput
                     placeholder="Search fonts..."
@@ -515,7 +692,9 @@ function AppearanceSettings() {
                   />
                   <CommandList className="max-h-64">
                     <CommandEmpty>
-                      {isLoadingFonts ? "Detecting fonts..." : "No fonts found for this search."}
+                      {isLoadingFonts
+                        ? "Detecting fonts..."
+                        : "No fonts found for this search."}
                     </CommandEmpty>
                     <CommandGroup heading="Fonts">
                       <CommandItem
@@ -526,7 +705,9 @@ function AppearanceSettings() {
                         <Check
                           className={cn(
                             "mr-2 h-3 w-3 shrink-0",
-                            normalizedDraft === "" ? "opacity-100" : "opacity-0",
+                            normalizedDraft === ""
+                              ? "opacity-100"
+                              : "opacity-0",
                           )}
                         />
                         Default (Geist)
@@ -541,7 +722,8 @@ function AppearanceSettings() {
                           <Check
                             className={cn(
                               "mr-2 h-3 w-3 shrink-0",
-                              normalizedDraft === normalizeCustomFontFamily(font)
+                              normalizedDraft ===
+                                normalizeCustomFontFamily(font)
                                 ? "opacity-100"
                                 : "opacity-0",
                             )}
@@ -552,7 +734,8 @@ function AppearanceSettings() {
                     </CommandGroup>
                     {filteredFonts.length > visibleFonts.length && (
                       <div className="px-2 py-1.5 text-[11px] text-muted-foreground">
-                        Showing first {renderLimit} results. Keep typing to narrow down.
+                        Showing first {renderLimit} results. Keep typing to
+                        narrow down.
                       </div>
                     )}
                   </CommandList>
@@ -568,11 +751,14 @@ function AppearanceSettings() {
               title="Refresh local fonts"
               aria-label="Refresh local fonts"
             >
-              <RefreshCw className={cn("h-4 w-4", isLoadingFonts && "animate-spin")} />
+              <RefreshCw
+                className={cn("h-4 w-4", isLoadingFonts && "animate-spin")}
+              />
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">
-            {!hasLoadedFonts && "Open the picker or refresh to detect local fonts on this device."}
+            {!hasLoadedFonts &&
+              "Open the picker or refresh to detect local fonts on this device."}
             {hasLoadedFonts &&
               fontSource === "local" &&
               `Detected ${availableFonts.length} fonts from your system.`}
@@ -601,7 +787,11 @@ function AppearanceSettings() {
               >
                 Apply
               </Button>
-              <Button type="button" variant="outline" onClick={resetFontChanges}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={resetFontChanges}
+              >
                 Reset
               </Button>
             </div>
@@ -615,10 +805,14 @@ function AppearanceSettings() {
           <div className="space-y-0.5">
             <Label className="text-base">Status Bar</Label>
             <p className="text-sm text-muted-foreground">
-              Show connection status, query times, and cursor position at the bottom
+              Show connection status, query times, and cursor position at the
+              bottom
             </p>
           </div>
-          <Switch checked={statusBarVisible} onCheckedChange={setStatusBarVisible} />
+          <Switch
+            checked={statusBarVisible}
+            onCheckedChange={setStatusBarVisible}
+          />
         </div>
       </div>
     </div>
@@ -627,18 +821,25 @@ function AppearanceSettings() {
 
 function ExperimentalSettings() {
   const experimentalTerminal = useAIQueryStore((s) => s.experimentalTerminal);
-  const setExperimentalTerminal = useAIQueryStore((s) => s.setExperimentalTerminal);
+  const setExperimentalTerminal = useAIQueryStore(
+    (s) => s.setExperimentalTerminal,
+  );
   const experimentalPlugins = useAIQueryStore((s) => s.experimentalPlugins);
-  const setExperimentalPlugins = useAIQueryStore((s) => s.setExperimentalPlugins);
+  const setExperimentalPlugins = useAIQueryStore(
+    (s) => s.setExperimentalPlugins,
+  );
   const experimentalOpencode = useAIQueryStore((s) => s.experimentalOpencode);
-  const setExperimentalOpencode = useAIQueryStore((s) => s.setExperimentalOpencode);
+  const setExperimentalOpencode = useAIQueryStore(
+    (s) => s.setExperimentalOpencode,
+  );
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold tracking-tight">Experimental</h2>
         <p className="text-muted-foreground">
-          Try out experimental features. These features may be unstable or change in future updates.
+          Try out experimental features. These features may be unstable or
+          change in future updates.
         </p>
       </div>
       <Separator />
@@ -649,22 +850,28 @@ function ExperimentalSettings() {
           <div className="space-y-0.5">
             <Label className="text-base">Integrated Terminal</Label>
             <p className="text-sm text-muted-foreground">
-              Enable an integrated terminal panel for running shell commands directly within the
-              application
+              Enable an integrated terminal panel for running shell commands
+              directly within the application
             </p>
           </div>
-          <Switch checked={experimentalTerminal} onCheckedChange={setExperimentalTerminal} />
+          <Switch
+            checked={experimentalTerminal}
+            onCheckedChange={setExperimentalTerminal}
+          />
         </div>
 
         <div className="flex items-center justify-between rounded-lg border p-4">
           <div className="space-y-0.5">
             <Label className="text-base">Plugin System</Label>
             <p className="text-sm text-muted-foreground">
-              Enable the plugin system to install and manage custom tab plugins. Adds a Plugins tab
-              to settings.
+              Enable the plugin system to install and manage custom tab plugins.
+              Adds a Plugins tab to settings.
             </p>
           </div>
-          <Switch checked={experimentalPlugins} onCheckedChange={setExperimentalPlugins} />
+          <Switch
+            checked={experimentalPlugins}
+            onCheckedChange={setExperimentalPlugins}
+          />
         </div>
 
         <div className="flex items-center justify-between rounded-lg border p-4">
@@ -672,19 +879,24 @@ function ExperimentalSettings() {
             <Label className="text-base">OpenCode Provider</Label>
             <p className="text-sm text-muted-foreground">
               Enable OpenCode as an AI provider. Connect to a local{" "}
-              <code className="text-xs bg-muted px-1 py-0.5 rounded">opencode serve</code> instance.
-              Tool support is limited — OpenCode uses its own built-in tools rather than
-              QueryStudio's database tools.
+              <code className="text-xs bg-muted px-1 py-0.5 rounded">
+                opencode serve
+              </code>{" "}
+              instance. Tool support is limited — OpenCode uses its own built-in
+              tools rather than QueryStudio's database tools.
             </p>
           </div>
-          <Switch checked={experimentalOpencode} onCheckedChange={setExperimentalOpencode} />
+          <Switch
+            checked={experimentalOpencode}
+            onCheckedChange={setExperimentalOpencode}
+          />
         </div>
       </div>
 
       <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/10 p-4">
         <p className="text-sm text-yellow-600 dark:text-yellow-400">
-          Experimental features are provided as-is and may contain bugs or undergo significant
-          changes. Use at your own discretion.
+          Experimental features are provided as-is and may contain bugs or
+          undergo significant changes. Use at your own discretion.
         </p>
       </div>
     </div>

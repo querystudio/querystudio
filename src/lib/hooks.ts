@@ -48,7 +48,11 @@ export function useAllTableColumns(
   tables: { schema: string; name: string }[],
 ) {
   return useQuery({
-    queryKey: ["allColumns", connectionId, tables.map((t) => `${t.schema}.${t.name}`).join(",")],
+    queryKey: [
+      "allColumns",
+      connectionId,
+      tables.map((t) => `${t.schema}.${t.name}`).join(","),
+    ],
     queryFn: async () => {
       const columnsMap: Record<
         string,
@@ -59,7 +63,11 @@ export function useAllTableColumns(
       const results = await Promise.all(
         tables.map(async (table) => {
           try {
-            const columns = await api.getTableColumns(connectionId!, table.schema, table.name);
+            const columns = await api.getTableColumns(
+              connectionId!,
+              table.schema,
+              table.name,
+            );
             return { table, columns };
           } catch {
             return { table, columns: [] };
@@ -93,7 +101,8 @@ export function useTableData(
 ) {
   return useQuery({
     queryKey: ["tableData", connectionId, schema, table, limit, offset],
-    queryFn: () => api.getTableData(connectionId!, schema!, table!, limit, offset),
+    queryFn: () =>
+      api.getTableData(connectionId!, schema!, table!, limit, offset),
     enabled: !!connectionId && !!schema && !!table,
   });
 }
@@ -120,7 +129,13 @@ export function useInsertRow(connectionId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ query }: { schema: string; table: string; query: string }) => {
+    mutationFn: async ({
+      query,
+    }: {
+      schema: string;
+      table: string;
+      query: string;
+    }) => {
       return api.executeQuery(connectionId, query);
     },
     onSuccess: (_, { schema, table }) => {
@@ -139,7 +154,13 @@ export function useUpdateRow(connectionId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ query }: { schema: string; table: string; query: string }) => {
+    mutationFn: async ({
+      query,
+    }: {
+      schema: string;
+      table: string;
+      query: string;
+    }) => {
       return api.executeQuery(connectionId, query);
     },
     onSuccess: (_, { schema, table }) => {
@@ -154,7 +175,13 @@ export function useDeleteRow(connectionId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ query }: { schema: string; table: string; query: string }) => {
+    mutationFn: async ({
+      query,
+    }: {
+      schema: string;
+      table: string;
+      query: string;
+    }) => {
       return api.executeQuery(connectionId, query);
     },
     onSuccess: (_, { schema, table }) => {
@@ -299,7 +326,8 @@ export function useConnect() {
       config: ConnectionConfig;
       save?: boolean;
     }) => {
-      const multiConnectionsEnabled = useAIQueryStore.getState().multiConnectionsEnabled;
+      const multiConnectionsEnabled =
+        useAIQueryStore.getState().multiConnectionsEnabled;
       const existingConnections = useConnectionStore
         .getState()
         .activeConnections.filter((connection) => connection.id !== id);
@@ -322,7 +350,8 @@ export function useConnect() {
       if (!isPro && save) {
         const savedConnections = await api.getSavedConnections();
         const hasSavedDialect = savedConnections.connections.some(
-          (connection) => connection.id !== id && connection.db_type === db_type,
+          (connection) =>
+            connection.id !== id && connection.db_type === db_type,
         );
 
         if (hasSavedDialect) {
@@ -339,7 +368,10 @@ export function useConnect() {
           try {
             await api.disconnect(connection.id);
           } catch (error) {
-            console.warn(`Failed to disconnect existing connection ${connection.id}:`, error);
+            console.warn(
+              `Failed to disconnect existing connection ${connection.id}:`,
+              error,
+            );
           }
           useConnectionStore.getState().disconnect(connection.id);
         }
@@ -453,7 +485,10 @@ export function useSavedConnectionCount() {
   });
 }
 
-export function useCanConnect(excludeConnectionId?: string, targetDbType?: DatabaseType) {
+export function useCanConnect(
+  excludeConnectionId?: string,
+  targetDbType?: DatabaseType,
+) {
   const { data: session } = authClient.useSession();
   const { data: connectionCount } = useConnectionCount();
   const activeConnections = useConnectionStore((s) => s.activeConnections);
@@ -470,7 +505,9 @@ export function useCanConnect(excludeConnectionId?: string, targetDbType?: Datab
     : false;
 
   const currentConnections = connectionCount ?? 0;
-  const effectiveConnections = isReconnecting ? currentConnections - 1 : currentConnections;
+  const effectiveConnections = isReconnecting
+    ? currentConnections - 1
+    : currentConnections;
 
   // Check total connection limit
   const withinTotalLimit = effectiveConnections < maxConnections;

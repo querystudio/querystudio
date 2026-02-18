@@ -14,6 +14,7 @@ import { useConnectionStore, useAIQueryStore } from "@/lib/store";
 import { useSavedConnections, useConnect } from "@/lib/hooks";
 import { useGlobalShortcuts } from "@/lib/use-global-shortcuts";
 import { openSettingsWindow } from "@/lib/settings-window";
+import { resolveSavedConnectionString } from "@/lib/connection-secrets";
 import type { SavedConnection } from "@/lib/types";
 import { FpsCounter } from "@/components/fps-counter";
 import {
@@ -36,15 +37,15 @@ function DatabaseStudio() {
 
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [connectionPaletteOpen, setConnectionPaletteOpen] = useState(false);
-  const [passwordPromptConnection, setPasswordPromptConnection] = useState<SavedConnection | null>(
-    null,
-  );
+  const [passwordPromptConnection, setPasswordPromptConnection] =
+    useState<SavedConnection | null>(null);
   const [isReconnecting, setIsReconnecting] = useState(false);
 
   const activeConnections = useConnectionStore((s) => s.activeConnections);
   const activeConnectionId = useConnectionStore((s) => s.activeConnectionId);
 
-  const { data: savedConnections, isLoading: isLoadingSaved } = useSavedConnections();
+  const { data: savedConnections, isLoading: isLoadingSaved } =
+    useSavedConnections();
   const connect = useConnect();
   const reconnectAttempted = useRef(false);
 
@@ -61,7 +62,9 @@ function DatabaseStudio() {
   const statusBarVisible = useAIQueryStore((s) => s.statusBarVisible);
 
   const experimentalTerminal = useAIQueryStore((s) => s.experimentalTerminal);
-  const multiConnectionsEnabled = useAIQueryStore((s) => s.multiConnectionsEnabled);
+  const multiConnectionsEnabled = useAIQueryStore(
+    (s) => s.multiConnectionsEnabled,
+  );
 
   const debugMode = useAIQueryStore((s) => s.debugMode);
 
@@ -85,7 +88,9 @@ function DatabaseStudio() {
     aiPanelWidthRef.current = aiPanelWidth;
     if (!isResizing) {
       if (aiPanelContainerRef.current) {
-        aiPanelContainerRef.current.style.width = aiPanelOpen ? `${aiPanelWidth}px` : "0px";
+        aiPanelContainerRef.current.style.width = aiPanelOpen
+          ? `${aiPanelWidth}px`
+          : "0px";
       }
       if (aiPanelAsideRef.current) {
         aiPanelAsideRef.current.style.width = `${aiPanelWidth}px`;
@@ -95,7 +100,10 @@ function DatabaseStudio() {
 
   const applyAiPanelWidth = useCallback(
     (mouseX: number) => {
-      const nextWidth = Math.min(maxWidth, Math.max(minWidth, window.innerWidth - mouseX));
+      const nextWidth = Math.min(
+        maxWidth,
+        Math.max(minWidth, window.innerWidth - mouseX),
+      );
       if (nextWidth !== aiPanelWidthRef.current) {
         aiPanelWidthRef.current = nextWidth;
         if (aiPanelContainerRef.current) {
@@ -155,7 +163,11 @@ function DatabaseStudio() {
       const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
       const modifier = isMac ? e.metaKey : e.ctrlKey;
 
-      if (modifier && e.altKey && (e.key === "b" || e.key === "B" || e.keyCode === 66)) {
+      if (
+        modifier &&
+        e.altKey &&
+        (e.key === "b" || e.key === "B" || e.keyCode === 66)
+      ) {
         e.preventDefault();
         e.stopPropagation();
         toggleAiPanel();
@@ -191,7 +203,9 @@ function DatabaseStudio() {
     onNewConnection: handleNewConnection,
     onOpenCommandPalette: () => setCommandPaletteOpen(true),
     onOpenSettings: () => {
-      void openSettingsWindow({ fallback: () => navigate({ to: "/settings" }) });
+      void openSettingsWindow({
+        fallback: () => navigate({ to: "/settings" }),
+      });
     },
   });
 
@@ -214,32 +228,40 @@ function DatabaseStudio() {
 
     reconnectAttempted.current = true;
 
-    const lastConnectionId = localStorage.getItem("querystudio_last_connection");
+    const lastConnectionId = localStorage.getItem(
+      "querystudio_last_connection",
+    );
     if (!lastConnectionId) return;
 
-    const savedConnection = savedConnections?.find((c) => c.id === lastConnectionId);
+    const savedConnection = savedConnections?.find(
+      (c) => c.id === lastConnectionId,
+    );
     if (!savedConnection) return;
 
     setIsReconnecting(true);
-    const config =
-      "connection_string" in savedConnection.config
-        ? {
-            db_type: savedConnection.db_type || "postgres",
-            connection_string: savedConnection.config.connection_string,
-          }
-        : {
-            db_type: savedConnection.db_type || "postgres",
-            ...savedConnection.config,
-            password: "",
-          };
+    const reconnectWithResolvedConfig = async () => {
+      const config =
+        "connection_string" in savedConnection.config
+          ? {
+              db_type: savedConnection.db_type || "postgres",
+              connection_string:
+                await resolveSavedConnectionString(savedConnection),
+            }
+          : {
+              db_type: savedConnection.db_type || "postgres",
+              ...savedConnection.config,
+              password: "",
+            };
 
-    connect
-      .mutateAsync({
+      return connect.mutateAsync({
         id: savedConnection.id,
         name: savedConnection.name,
         db_type: savedConnection.db_type || "postgres",
         config,
-      })
+      });
+    };
+
+    reconnectWithResolvedConfig()
       .then(() => {
         toast.success("Reconnected successfully");
       })
@@ -275,7 +297,9 @@ function DatabaseStudio() {
     }
   }, [activeConnections.length, isReconnecting, navigate]);
 
-  const activeConnection = activeConnections.find((c) => c.id === activeConnectionId);
+  const activeConnection = activeConnections.find(
+    (c) => c.id === activeConnectionId,
+  );
 
   return (
     <div className="flex h-screen flex-col bg-background text-foreground">
@@ -324,7 +348,9 @@ function DatabaseStudio() {
             size="icon"
             className="h-7 w-7 text-muted-foreground hover:text-foreground"
             onClick={() =>
-              void openSettingsWindow({ fallback: () => navigate({ to: "/settings" }) })
+              void openSettingsWindow({
+                fallback: () => navigate({ to: "/settings" }),
+              })
             }
             title="Settings"
           >
@@ -348,7 +374,9 @@ function DatabaseStudio() {
       </div>
 
       {multiConnectionsEnabled && (
-        <ConnectionTabs onAddConnection={() => setConnectionPaletteOpen(true)} />
+        <ConnectionTabs
+          onAddConnection={() => setConnectionPaletteOpen(true)}
+        />
       )}
 
       <ConnectionPalette
