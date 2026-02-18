@@ -3,6 +3,7 @@ mod chat_storage;
 mod database;
 mod debug;
 mod fonts;
+mod keychain;
 mod settings;
 mod storage;
 mod terminal;
@@ -17,6 +18,10 @@ use chat_storage::{get_chat_history, set_chat_history};
 use database::{test_connection, ConnectionConfig, ConnectionManager};
 use debug::{get_process_stats, DebugState};
 use fonts::{list_local_fonts, refresh_local_fonts_cache, warm_font_cache};
+use keychain::{
+    keychain_delete_connection_secret, keychain_get_connection_secret,
+    keychain_set_connection_secret,
+};
 use log::{debug, error, info, warn};
 use querystudio_providers::{ColumnInfo, QueryResult, TableInfo};
 use settings::{get_settings, load_settings, patch_settings, reset_settings, set_settings};
@@ -265,10 +270,11 @@ pub fn run() {
         .build();
 
     // Define SQLite migrations for connections storage
-    let migrations = vec![Migration {
-        version: 1,
-        description: "create_connections_table",
-        sql: r#"
+    let migrations = vec![
+        Migration {
+            version: 1,
+            description: "create_connections_table",
+            sql: r#"
                 CREATE TABLE IF NOT EXISTS connections (
                     id TEXT PRIMARY KEY NOT NULL,
                     name TEXT NOT NULL,
@@ -281,8 +287,17 @@ pub fn run() {
                     username TEXT
                 );
             "#,
-        kind: MigrationKind::Up,
-    }];
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 2,
+            description: "add_credentials_mode",
+            sql: r#"
+                ALTER TABLE connections ADD COLUMN credentials_mode TEXT NOT NULL DEFAULT 'plaintext';
+            "#,
+            kind: MigrationKind::Up,
+        },
+    ];
 
     tauri::Builder::default()
         .plugin(log_plugin)
@@ -551,6 +566,10 @@ pub fn run() {
             get_app_version,
             list_local_fonts,
             refresh_local_fonts_cache,
+            // Keychain commands
+            keychain_set_connection_secret,
+            keychain_get_connection_secret,
+            keychain_delete_connection_secret,
             // Settings commands
             get_settings,
             set_settings,

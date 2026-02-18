@@ -41,6 +41,7 @@ tauri-plugin-http = "2"
 tauri-plugin-single-instance = "2"
 tauri-plugin-os = "2"
 tauri-plugin-sql = { version = "2", features = ["sqlite"] }
+keyring = "3"
 querystudio-providers = { path = "../crates/providers" }
 querystudio-ai = { path = "../crates/ai" }
 

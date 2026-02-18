@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/command";
 import { Database, Plus } from "lucide-react";
 import { useSavedConnections, useConnect } from "@/lib/hooks";
+import { resolveSavedConnectionString } from "@/lib/connection-secrets";
 import { useNavigate } from "@tanstack/react-router";
 import type { SavedConnection } from "@/lib/types";
 import { toast } from "sonner";
@@ -52,7 +53,8 @@ export function ConnectionPalette({
           db_type: savedConnection.db_type || "postgres",
           config: {
             db_type: savedConnection.db_type || "postgres",
-            connection_string: savedConnection.config.connection_string,
+            connection_string:
+              await resolveSavedConnectionString(savedConnection),
           },
           save: false,
         });
@@ -92,7 +94,10 @@ export function ConnectionPalette({
             <CommandItem disabled>Loading saved connections...</CommandItem>
           ) : (
             filteredConnections?.map((connection) => (
-              <CommandItem key={connection.id} onSelect={() => handleSelectConnection(connection)}>
+              <CommandItem
+                key={connection.id}
+                onSelect={() => handleSelectConnection(connection)}
+              >
                 <Database className="mr-2 h-4 w-4" />
                 <span>{connection.name}</span>
                 <span className="ml-2 text-xs text-muted-foreground">

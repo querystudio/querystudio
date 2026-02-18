@@ -21,6 +21,8 @@ pub struct AppSettings {
     pub multi_connections_enabled: bool,
     pub experimental_terminal: bool,
     pub experimental_plugins: bool,
+    #[serde(alias = "experimental_keychain_credentials")]
+    pub keychain_credentials: bool,
     pub debug_mode: bool,
     pub custom_font_family: String,
     pub ui_font_scale: String,
@@ -41,6 +43,7 @@ impl Default for AppSettings {
             multi_connections_enabled: true,
             experimental_terminal: false,
             experimental_plugins: false,
+            keychain_credentials: false,
             debug_mode: false,
             custom_font_family: String::new(),
             ui_font_scale: "default".to_string(),

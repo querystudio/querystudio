@@ -1,7 +1,12 @@
-import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  useNavigate,
+  useParams,
+} from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useConnectionStore } from "@/lib/store";
 import { useConnect, useSavedConnections } from "@/lib/hooks";
+import { resolveSavedConnectionString } from "@/lib/connection-secrets";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
@@ -19,7 +24,8 @@ function LegacyConnectionRedirect() {
   const activeConnections = useConnectionStore((s) => s.activeConnections);
   const setActiveConnection = useConnectionStore((s) => s.setActiveConnection);
 
-  const { data: savedConnections, isLoading: isLoadingSaved } = useSavedConnections();
+  const { data: savedConnections, isLoading: isLoadingSaved } =
+    useSavedConnections();
   const connect = useConnect();
   const reconnectAttempted = useRef(false);
   const [isReconnecting, setIsReconnecting] = useState(false);
@@ -28,7 +34,9 @@ function LegacyConnectionRedirect() {
     if (isLoadingSaved) return;
 
     // Check if already connected
-    const existingConnection = activeConnections.find((c) => c.id === connectionId);
+    const existingConnection = activeConnections.find(
+      (c) => c.id === connectionId,
+    );
     if (existingConnection) {
       setActiveConnection(connectionId);
       navigate({ to: "/db", replace: true });
@@ -40,7 +48,9 @@ function LegacyConnectionRedirect() {
     reconnectAttempted.current = true;
 
     // Find saved connection
-    const savedConnection = savedConnections?.find((c) => c.id === connectionId);
+    const savedConnection = savedConnections?.find(
+      (c) => c.id === connectionId,
+    );
     if (!savedConnection) {
       toast.error("Connection not found");
       navigate({ to: "/", replace: true });
@@ -49,36 +59,37 @@ function LegacyConnectionRedirect() {
 
     // Connect to it
     setIsReconnecting(true);
-    const config =
-      "connection_string" in savedConnection.config
-        ? {
-            db_type: savedConnection.db_type || "postgres",
-            connection_string: savedConnection.config.connection_string,
-          }
-        : {
-            db_type: savedConnection.db_type || "postgres",
-            ...savedConnection.config,
-            password: "",
-          };
+    const connectWithResolvedConfig = async () => {
+      const config =
+        "connection_string" in savedConnection.config
+          ? {
+              db_type: savedConnection.db_type || "postgres",
+              connection_string:
+                await resolveSavedConnectionString(savedConnection),
+            }
+          : {
+              db_type: savedConnection.db_type || "postgres",
+              ...savedConnection.config,
+              password: "",
+            };
 
-    connect.mutate(
-      {
+      return connect.mutateAsync({
         id: savedConnection.id,
         name: savedConnection.name,
         db_type: savedConnection.db_type || "postgres",
         config,
-      },
-      {
-        onSuccess: () => {
-          toast.success("Connected successfully");
-          navigate({ to: "/db", replace: true });
-        },
-        onError: (error) => {
-          toast.error(`Failed to connect: ${error}`);
-          navigate({ to: "/", replace: true });
-        },
-      },
-    );
+      });
+    };
+
+    void connectWithResolvedConfig()
+      .then(() => {
+        toast.success("Connected successfully");
+        navigate({ to: "/db", replace: true });
+      })
+      .catch((error) => {
+        toast.error(`Failed to connect: ${error}`);
+        navigate({ to: "/", replace: true });
+      });
   }, [
     connectionId,
     activeConnections,

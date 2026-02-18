@@ -2,7 +2,11 @@ import { create } from "zustand";
 import { settingsApi } from "./settings-api";
 import { applyCustomFontFamily } from "./app-font";
 import { applyUiFontScale } from "./app-ui-scale";
-import { defaultAppSettings, normalizeSettings, type AppSettings } from "./settings-schema";
+import {
+  defaultAppSettings,
+  normalizeSettings,
+  type AppSettings,
+} from "./settings-schema";
 
 const LEGACY_UI_STATE_KEY = "querystudio_ui_state";
 const LEGACY_AI_PANEL_WIDTH_KEY = "querystudio_ai_panel_width";
@@ -43,6 +47,7 @@ function pickSettings(state: SettingsStoreState): AppSettings {
     multiConnectionsEnabled: state.multiConnectionsEnabled,
     experimentalTerminal: state.experimentalTerminal,
     experimentalPlugins: state.experimentalPlugins,
+    keychainCredentials: state.keychainCredentials,
     experimentalOpencode: state.experimentalOpencode,
     debugMode: state.debugMode,
     customFontFamily: state.customFontFamily,
@@ -60,11 +65,16 @@ function getLegacySettingsPatch(): Partial<AppSettings> {
       const parsed = JSON.parse(legacyStateRaw) as LegacyUiStateEnvelope;
       const legacy = parsed.state;
       if (legacy?.activeTab !== undefined) patch.activeTab = legacy.activeTab;
-      if (legacy?.aiPanelOpen !== undefined) patch.aiPanelOpen = legacy.aiPanelOpen;
-      if (legacy?.sidebarWidth !== undefined) patch.sidebarWidth = legacy.sidebarWidth;
-      if (legacy?.sidebarCollapsed !== undefined) patch.sidebarCollapsed = legacy.sidebarCollapsed;
-      if (legacy?.statusBarVisible !== undefined) patch.statusBarVisible = legacy.statusBarVisible;
-      if (legacy?.autoReconnect !== undefined) patch.autoReconnect = legacy.autoReconnect;
+      if (legacy?.aiPanelOpen !== undefined)
+        patch.aiPanelOpen = legacy.aiPanelOpen;
+      if (legacy?.sidebarWidth !== undefined)
+        patch.sidebarWidth = legacy.sidebarWidth;
+      if (legacy?.sidebarCollapsed !== undefined)
+        patch.sidebarCollapsed = legacy.sidebarCollapsed;
+      if (legacy?.statusBarVisible !== undefined)
+        patch.statusBarVisible = legacy.statusBarVisible;
+      if (legacy?.autoReconnect !== undefined)
+        patch.autoReconnect = legacy.autoReconnect;
       if (legacy?.experimentalTerminal !== undefined) {
         patch.experimentalTerminal = legacy.experimentalTerminal;
       }
@@ -118,7 +128,9 @@ export const useSettingsStore = create<SettingsStoreState>()((set, get) => ({
           );
           clearLegacyKeys();
         } else {
-          effectiveSettings = await settingsApi.patchSettings({ migratedFromLegacy: true });
+          effectiveSettings = await settingsApi.patchSettings({
+            migratedFromLegacy: true,
+          });
         }
       }
 
@@ -133,7 +145,8 @@ export const useSettingsStore = create<SettingsStoreState>()((set, get) => ({
         ...defaultAppSettings,
         isHydrated: true,
         isSaving: false,
-        lastError: error instanceof Error ? error.message : "Failed to load settings",
+        lastError:
+          error instanceof Error ? error.message : "Failed to load settings",
       });
     }
   },
@@ -160,7 +173,8 @@ export const useSettingsStore = create<SettingsStoreState>()((set, get) => ({
     } catch (error) {
       set({
         isSaving: false,
-        lastError: error instanceof Error ? error.message : "Failed to save settings",
+        lastError:
+          error instanceof Error ? error.message : "Failed to save settings",
       });
     }
   },
@@ -177,7 +191,8 @@ export const useSettingsStore = create<SettingsStoreState>()((set, get) => ({
     } catch (error) {
       set({
         isSaving: false,
-        lastError: error instanceof Error ? error.message : "Failed to reset settings",
+        lastError:
+          error instanceof Error ? error.message : "Failed to reset settings",
       });
     }
   },

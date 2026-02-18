@@ -37,7 +37,9 @@ export const useConnectionStore = create<ConnectionState>()((set, get) => ({
 
   addConnection: (connection: Connection) => {
     set((state) => {
-      const exists = state.activeConnections.some((c) => c.id === connection.id);
+      const exists = state.activeConnections.some(
+        (c) => c.id === connection.id,
+      );
       if (exists) {
         return { activeConnectionId: connection.id };
       }
@@ -53,7 +55,9 @@ export const useConnectionStore = create<ConnectionState>()((set, get) => ({
 
   removeConnection: (connectionId: string) => {
     set((state) => {
-      const newConnections = state.activeConnections.filter((c) => c.id !== connectionId);
+      const newConnections = state.activeConnections.filter(
+        (c) => c.id !== connectionId,
+      );
       let newActiveId = state.activeConnectionId;
 
       if (state.activeConnectionId === connectionId) {
@@ -74,10 +78,16 @@ export const useConnectionStore = create<ConnectionState>()((set, get) => ({
       if (connectionId === null) {
         return { activeConnectionId: null, tables: [], selectedTable: null };
       }
-      const connection = state.activeConnections.find((c) => c.id === connectionId);
+      const connection = state.activeConnections.find(
+        (c) => c.id === connectionId,
+      );
       if (connection) {
         localStorage.setItem(LAST_CONNECTION_KEY, connectionId);
-        return { activeConnectionId: connectionId, tables: [], selectedTable: null };
+        return {
+          activeConnectionId: connectionId,
+          tables: [],
+          selectedTable: null,
+        };
       }
       return state;
     });
@@ -93,7 +103,9 @@ export const useConnectionStore = create<ConnectionState>()((set, get) => ({
     if (!targetId) return;
 
     set((state) => {
-      const newConnections = state.activeConnections.filter((c) => c.id !== targetId);
+      const newConnections = state.activeConnections.filter(
+        (c) => c.id !== targetId,
+      );
       let newActiveId = state.activeConnectionId;
 
       if (state.activeConnectionId === targetId) {
@@ -191,6 +203,8 @@ interface AIQueryState {
   setExperimentalTerminal: (enabled: boolean) => void;
   experimentalPlugins: boolean;
   setExperimentalPlugins: (enabled: boolean) => void;
+  keychainCredentials: boolean;
+  setKeychainCredentials: (enabled: boolean) => void;
   experimentalOpencode: boolean;
   setExperimentalOpencode: (enabled: boolean) => void;
 
@@ -228,7 +242,8 @@ export const useAIQueryStore = create<AIQueryState>()((set, get) => ({
   clearPendingSql: () => set({ pendingSql: null }),
 
   debugRequest: null,
-  requestDebug: (query: string, error: string) => set({ debugRequest: { query, error } }),
+  requestDebug: (query: string, error: string) =>
+    set({ debugRequest: { query, error } }),
   clearDebugRequest: () => set({ debugRequest: null }),
 
   activeTab: useSettingsStore.getState().activeTab,
@@ -244,10 +259,14 @@ export const useAIQueryStore = create<AIQueryState>()((set, get) => ({
     void useSettingsStore.getState().updateSettings({ aiPanelOpen: open });
   },
   setAiPanelWidth: (width: number) => {
-    set((state) => (state.aiPanelWidth === width ? state : { aiPanelWidth: width }));
+    set((state) =>
+      state.aiPanelWidth === width ? state : { aiPanelWidth: width },
+    );
   },
   persistAiPanelWidth: (width) => {
-    void useSettingsStore.getState().updateSettings({ aiPanelWidth: width ?? get().aiPanelWidth });
+    void useSettingsStore
+      .getState()
+      .updateSettings({ aiPanelWidth: width ?? get().aiPanelWidth });
   },
   toggleAiPanel: () => {
     const next = !get().aiPanelOpen;
@@ -258,14 +277,20 @@ export const useAIQueryStore = create<AIQueryState>()((set, get) => ({
   sidebarWidth: useSettingsStore.getState().sidebarWidth,
   sidebarCollapsed: useSettingsStore.getState().sidebarCollapsed,
   setSidebarWidth: (width: number) => {
-    set((state) => (state.sidebarWidth === width ? state : { sidebarWidth: width }));
+    set((state) =>
+      state.sidebarWidth === width ? state : { sidebarWidth: width },
+    );
   },
   persistSidebarWidth: (width) => {
-    void useSettingsStore.getState().updateSettings({ sidebarWidth: width ?? get().sidebarWidth });
+    void useSettingsStore
+      .getState()
+      .updateSettings({ sidebarWidth: width ?? get().sidebarWidth });
   },
   setSidebarCollapsed: (collapsed: boolean) => {
     set({ sidebarCollapsed: collapsed });
-    void useSettingsStore.getState().updateSettings({ sidebarCollapsed: collapsed });
+    void useSettingsStore
+      .getState()
+      .updateSettings({ sidebarCollapsed: collapsed });
   },
   toggleSidebar: () => {
     const next = !get().sidebarCollapsed;
@@ -276,7 +301,9 @@ export const useAIQueryStore = create<AIQueryState>()((set, get) => ({
   statusBarVisible: useSettingsStore.getState().statusBarVisible,
   setStatusBarVisible: (visible: boolean) => {
     set({ statusBarVisible: visible });
-    void useSettingsStore.getState().updateSettings({ statusBarVisible: visible });
+    void useSettingsStore
+      .getState()
+      .updateSettings({ statusBarVisible: visible });
   },
   toggleStatusBar: () => {
     const next = !get().statusBarVisible;
@@ -293,25 +320,41 @@ export const useAIQueryStore = create<AIQueryState>()((set, get) => ({
   multiConnectionsEnabled: useSettingsStore.getState().multiConnectionsEnabled,
   setMultiConnectionsEnabled: (enabled: boolean) => {
     set({ multiConnectionsEnabled: enabled });
-    void useSettingsStore.getState().updateSettings({ multiConnectionsEnabled: enabled });
+    void useSettingsStore
+      .getState()
+      .updateSettings({ multiConnectionsEnabled: enabled });
   },
 
   experimentalTerminal: useSettingsStore.getState().experimentalTerminal,
   setExperimentalTerminal: (enabled: boolean) => {
     set({ experimentalTerminal: enabled });
-    void useSettingsStore.getState().updateSettings({ experimentalTerminal: enabled });
+    void useSettingsStore
+      .getState()
+      .updateSettings({ experimentalTerminal: enabled });
   },
 
   experimentalPlugins: useSettingsStore.getState().experimentalPlugins,
   setExperimentalPlugins: (enabled: boolean) => {
     set({ experimentalPlugins: enabled });
-    void useSettingsStore.getState().updateSettings({ experimentalPlugins: enabled });
+    void useSettingsStore
+      .getState()
+      .updateSettings({ experimentalPlugins: enabled });
+  },
+
+  keychainCredentials: useSettingsStore.getState().keychainCredentials,
+  setKeychainCredentials: (enabled: boolean) => {
+    set({ keychainCredentials: enabled });
+    void useSettingsStore
+      .getState()
+      .updateSettings({ keychainCredentials: enabled });
   },
 
   experimentalOpencode: useSettingsStore.getState().experimentalOpencode,
   setExperimentalOpencode: (enabled: boolean) => {
     set({ experimentalOpencode: enabled });
-    void useSettingsStore.getState().updateSettings({ experimentalOpencode: enabled });
+    void useSettingsStore
+      .getState()
+      .updateSettings({ experimentalOpencode: enabled });
   },
 
   debugMode: useSettingsStore.getState().debugMode,
@@ -323,7 +366,9 @@ export const useAIQueryStore = create<AIQueryState>()((set, get) => ({
   customFontFamily: useSettingsStore.getState().customFontFamily,
   setCustomFontFamily: (fontFamily: string) => {
     set({ customFontFamily: fontFamily });
-    void useSettingsStore.getState().updateSettings({ customFontFamily: fontFamily });
+    void useSettingsStore
+      .getState()
+      .updateSettings({ customFontFamily: fontFamily });
   },
 
   uiFontScale: useSettingsStore.getState().uiFontScale,
@@ -349,6 +394,8 @@ useSettingsStore.subscribe((state) => {
     multiConnectionsEnabled: state.multiConnectionsEnabled,
     experimentalTerminal: state.experimentalTerminal,
     experimentalPlugins: state.experimentalPlugins,
+    keychainCredentials: state.keychainCredentials,
+    experimentalOpencode: state.experimentalOpencode,
     debugMode: state.debugMode,
     customFontFamily: state.customFontFamily,
     uiFontScale: state.uiFontScale,
@@ -367,7 +414,10 @@ interface QueryHistoryEntry {
 interface QueryHistoryState {
   // Map of connectionId -> query history
   history: Record<string, QueryHistoryEntry[]>;
-  addQuery: (connectionId: string, entry: Omit<QueryHistoryEntry, "executedAt">) => void;
+  addQuery: (
+    connectionId: string,
+    entry: Omit<QueryHistoryEntry, "executedAt">,
+  ) => void;
   getHistory: (connectionId: string) => QueryHistoryEntry[];
   clearHistory: (connectionId: string) => void;
 
@@ -383,7 +433,10 @@ export const useQueryHistoryStore = create<QueryHistoryState>()(
       history: {},
       currentQueries: {},
 
-      addQuery: (connectionId: string, entry: Omit<QueryHistoryEntry, "executedAt">) => {
+      addQuery: (
+        connectionId: string,
+        entry: Omit<QueryHistoryEntry, "executedAt">,
+      ) => {
         set((state) => {
           const connectionHistory = state.history[connectionId] || [];
           const newEntry: QueryHistoryEntry = {
